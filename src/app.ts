@@ -1,12 +1,20 @@
-import express from "express";
+import express, { Express } from "express";
 import "dotenv/config";
 import cors from "cors";
-import { router } from "./routes";
-import db from "./config/mongo";
-const PORT = process.env.PORT || 3001;
-const app = express();
-app.use(cors());
-app.use(express.json());
-app.use(router);
-db().then(() => console.log("Conexion Ready"));
-app.listen(PORT, () => console.log(`Listo por el puerto ${PORT}`));
+import bodyParser from "body-parser";
+import { RootRouter } from "./routes/RootRouter";
+
+export class App {
+  private static instance: Express;
+
+  static getInstance() {
+    if (!App.instance) {
+      App.instance = express();
+      App.instance.use(bodyParser.urlencoded({ extended: false }));
+      App.instance.use(bodyParser.json());
+      App.instance.use(cors());
+      App.instance.use(RootRouter.getRouter());
+    }
+    return App.instance;
+  }
+}
