@@ -3,6 +3,7 @@ import {
   registerController,
   loginControllerTest,
   profileCompanyController,
+  getNameController,
 } from "../controllers/authController";
 
 export class AuthRouter {
@@ -14,6 +15,8 @@ export class AuthRouter {
     this.router.post("/register", registerController);
     this.router.post("/profileCompany", profileCompanyController);
     this.router.post("/login", loginControllerTest);
+
+    this.router.get("/getName/", getNameController);
   }
 
   static getRouter(): Router {

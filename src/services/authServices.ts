@@ -42,6 +42,132 @@ export class AuthServices {
     return Math.floor(Date.now() / 1000) + hours * 3600; // 1 hora de expiracion
   };
 
+  static getNameReniec = async (
+    dni?: string,
+    ruc?: string
+  ): Promise<{
+    success: boolean;
+    code?: number;
+    data?: string;
+    error?: { msg: string };
+  }> => {
+    const authToken: string | undefined = process.env.TOKEN_RENIEC;
+    let fullName = "";
+
+    if (!authToken) {
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "AUTH_TOKEN not found in environment variables.",
+        },
+      };
+    }
+
+    const config: AxiosRequestConfig = {
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+      },
+    };
+
+    try {
+      if (dni) {
+        const apiUrl = `https://api.apis.net.pe/v2/reniec/dni?numero=${dni}`;
+        const response = await axios.get(apiUrl, config);
+
+        // Verifica si los datos existen y están correctos
+        if (
+          response.data &&
+          response.data.nombres &&
+          response.data.apellidoPaterno &&
+          response.data.apellidoMaterno
+        ) {
+          fullName = `${response.data.nombres} ${response.data.apellidoPaterno} ${response.data.apellidoMaterno}`;
+          return {
+            success: true,
+            data: fullName,
+          };
+        } else {
+          return {
+            success: false,
+            code: 422,
+            error: {
+              msg: "DNI no encontrado o formato de respuesta inesperado.",
+            },
+          };
+        }
+      } else if (ruc) {
+        const apiUrl = `https://api.apis.net.pe/v2/sunat/ruc/full?numero=${ruc}`;
+        const response = await axios.get(apiUrl, config);
+
+        // Verifica si los datos existen y están correctos
+        if (response.data && response.data.razonSocial) {
+          fullName = response.data.razonSocial;
+          return {
+            success: true,
+            data: fullName,
+          };
+        } else {
+          return {
+            success: false,
+            code: 422,
+            error: {
+              msg: "RUC no encontrado o formato de respuesta inesperado.",
+            },
+          };
+        }
+      } else {
+        return {
+          success: false,
+          code: 400,
+          error: {
+            msg: "No se proporcionó ni DNI ni RUC.",
+          },
+        };
+      }
+    } catch (error: any) {
+      if (axios.isAxiosError(error)) {
+        console.error("Error de Axios:", error.response?.status, error.message);
+
+        // Manejo específico para errores 422 y 404
+        if (error.response?.status === 422) {
+          return {
+            success: false,
+            code: 422,
+            error: {
+              msg: "Documento inválido.",
+            },
+          };
+        } else if (error.response?.status === 404) {
+          return {
+            success: false,
+            code: 404,
+            error: {
+              msg: "Documento no encontrado.",
+            },
+          };
+        } else {
+          return {
+            success: false,
+            code: error.response?.status || 500,
+            error: {
+              msg: "Error al consultar la API.",
+            },
+          };
+        }
+      } else {
+        console.error("Error:", error.message);
+        return {
+          success: false,
+          code: 500,
+          error: {
+            msg: "Error inesperado.",
+          },
+        };
+      }
+    }
+  };
+
   static RegisterNewUser = async (
     email: string,
     password: string,
@@ -120,8 +246,6 @@ export class AuthServices {
         }
       }
 
-      let fullName = "";
-
       const { error } = this.SchemaRegister.validate({
         email,
         password,
@@ -138,93 +262,54 @@ export class AuthServices {
         };
       }
 
-      const authToken: string | undefined = process.env.TOKEN_RENIEC;
+      // Supongamos que `getNameReniec` devuelve un string
+      const responseName = await this.getNameReniec(dni, ruc);
+      let fullName = "";
 
-      if (!authToken) {
-        throw new Error("AUTH_TOKEN not found in enviroment variables.");
-      }
+      if (responseName.success) {
+        fullName = responseName.data || "";
 
-      const config: AxiosRequestConfig = {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      };
+        const metadata: MetadataI = { identity_verified: false };
+        const passwordHash = await encrypt(password);
+        if (ruc) {
+          const company = new Company({
+            name: fullName,
+            email,
+            password: passwordHash,
+            typeID,
+            document: ruc,
+            metadata,
+          });
 
-      if (dni) {
-        const apiUrl = `https://api.apis.net.pe/v2/reniec/dni?numero=${dni}`;
-        try {
-          const response = await axios.get(apiUrl, config);
-          fullName =
-            response.data.nombres +
-            " " +
-            response.data.apellidoPaterno +
-            " " +
-            response.data.apellidoMaterno;
-        } catch (error: any) {
-          if (axios.isAxiosError(error)) {
-            console.error(
-              "Error de Axios:",
-              error.response?.status,
-              error.message
-            );
-          } else {
-            console.error("Error:", error.message);
-          }
-          throw error;
+          const response = await company.save();
+          return {
+            success: true,
+            code: 200,
+            res: response,
+          };
+        } else {
+          const user = new User({
+            name: fullName,
+            email,
+            password: passwordHash,
+            typeID,
+            document: dni,
+            metadata,
+          });
+          const response = await user.save();
+          return {
+            success: true,
+            code: 200,
+            res: response,
+          };
         }
-      }
-
-      if (ruc) {
-        const apiUrl = `https://api.apis.net.pe/v2/sunat/ruc/full?numero=${ruc}`;
-        try {
-          const response = await axios.get(apiUrl, config);
-          fullName = response.data.razonSocial;
-        } catch (error: any) {
-          if (axios.isAxiosError(error)) {
-            console.error(
-              "Error de Axios:",
-              error.response?.status,
-              error.message
-            );
-          } else {
-            console.error("Error:", error.message);
-          }
-          throw error;
-        }
-      }
-
-      const metadata: MetadataI = { identity_verified: false };
-      const passwordHash = await encrypt(password);
-      if (ruc) {
-        const company = new Company({
-          name: fullName,
-          email,
-          password: passwordHash,
-          typeID,
-          document: ruc,
-          metadata,
-        });
-
-        const response = await company.save();
-        return {
-          success: true,
-          code: 200,
-          res: response,
-        };
       } else {
-        const user = new User({
-          name: fullName,
-          email,
-          password: passwordHash,
-          typeID,
-          document: dni,
-          metadata,
-        });
-        const response = await user.save();
         return {
-          success: true,
-          code: 200,
-          res: response,
+          success: false,
+          code: 500,
+          error: {
+            msg: "Error al obtener el Nombre",
+          },
         };
       }
     } catch (error: any) {
