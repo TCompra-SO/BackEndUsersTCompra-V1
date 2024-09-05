@@ -1,6 +1,6 @@
 import { Auth } from "../interfaces/auth.interface";
 import { UserTest } from "../interfaces/userTest.interface";
-
+import moment from "moment";
 import Joi from "joi";
 import User from "../models/userModel";
 import Company from "../models/companyModel";
@@ -12,8 +12,15 @@ import { ErrorMessages } from "../utils/ErrorMessages";
 import axios, { AxiosRequestConfig } from "axios";
 import { MetadataI } from "../interfaces/utils.interface";
 import { CompanyI } from "../interfaces/company.interface";
-import { Profile } from "./../interfaces/profile.interface";
+import { UserI } from "../interfaces/user.interface";
+import { expireInEspecificMinutes, getNow } from "../utils/DateTools";
+import bcrypt from "bcrypt";
+import { sendEmail } from "../utils/NodeMailer";
 
+enum UserType {
+  User = 1,
+  Company = 0,
+}
 export class AuthServices {
   static SchemaRegister = Joi.object({
     email: Joi.string().min(6).max(255).required().email(),
@@ -32,6 +39,15 @@ export class AuthServices {
     age: Joi.number(),
     specialtyID: Joi.number().required(),
     about_me: Joi.string().min(3).max(500),
+    categories: Joi.array().items(Joi.number()).max(3),
+  });
+
+  static SchemaProfileUser = Joi.object({
+    uid: Joi.string().min(4).max(20).required(),
+    phone: Joi.string().min(6).max(20).required(),
+    address: Joi.string().min(4).max(100).required(),
+    country: Joi.string().min(1).max(50).required(),
+    city: Joi.string().min(1).max(50).required(),
     categories: Joi.array().items(Joi.number()).max(3),
   });
 
@@ -408,7 +424,395 @@ export class AuthServices {
       };
     }
   };
+
+  static CompleteProfileUser = async (data: UserI) => {
+    const { uid, phone, address, country, city, categories } = data;
+
+    // Validar los datos
+    const { error } = this.SchemaProfileUser.validate(data);
+    if (error) {
+      return {
+        success: false,
+        code: 400,
+        error: {
+          msg: ErrorMessages(error.details[0].message),
+        },
+      };
+    }
+
+    // Buscar el perfil existente
+    const profileUser = await User.findOne({ uid });
+    if (!profileUser) {
+      return {
+        success: false,
+        code: 409,
+        error: {
+          msg: "No existe el perfil",
+        },
+      };
+    }
+
+    // Actualizar el perfil
+    try {
+      const updatedProfileUser = await User.findOneAndUpdate(
+        { uid }, // Criterio de búsqueda
+        {
+          $set: {
+            phone,
+            address,
+            country,
+            city,
+            categories,
+          },
+        }, // Campos a actualizar
+        { new: true, runValidators: true } // Devuelve el documento actualizado y ejecuta validaciones
+      );
+
+      if (!updatedProfileUser) {
+        return {
+          success: false,
+          code: 500,
+          error: {
+            msg: "Error al actualizar el perfil",
+          },
+        };
+      }
+
+      return {
+        success: true,
+        code: 200,
+        res: {
+          msg: "Perfil actualizado correctamente",
+        },
+      };
+    } catch (error) {
+      console.error("Error actualizando el perfil:", error);
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error al actualizar el perfil",
+        },
+      };
+    }
+  };
+
+  static SendCode = async (
+    email: string,
+    type: "repassword" | "identity_verified"
+  ) => {
+    try {
+      const UserPipeline = [
+        {
+          $match: {
+            email: email,
+          },
+        },
+        {
+          $limit: 1,
+        },
+        {
+          $project: {
+            _id: 1,
+            email: 1,
+          },
+        },
+      ];
+
+      let user = await User.aggregate(UserPipeline);
+      let userType = UserType.User;
+
+      if (!user || user.length == 0) {
+        user = await Company.aggregate(UserPipeline);
+        userType = UserType.Company;
+
+        if (!user || user.length == 0) {
+          return {
+            success: false,
+            code: 404,
+            error: {
+              msg: "Usuario no encontrado",
+            },
+          };
+        }
+      }
+
+      const uid = user[0]?.uid;
+      const uidPipeline = [
+        {
+          $match: {
+            uid: uid,
+          },
+        },
+        {
+          $limit: 1,
+        },
+      ];
+
+      /// PROFILE
+
+      const now = getNow();
+      const expireIn = expireInEspecificMinutes(1);
+
+      const code = this.VerificationNumber();
+      // encriptamos cidigo
+      const salt = await bcrypt.genSalt(10);
+      const hashCode = await bcrypt.hash(code, salt);
+
+      if (new Date(now) < new Date(user[0].metadata?.expireIn)) {
+        return {
+          success: false,
+          code: 409,
+          error: {
+            msg: `Genera nuevamente ${moment(
+              user[0].metadata?.expireIn
+            ).fromNow()}`,
+          },
+        };
+      }
+      if (type === "identity_verified") {
+        try {
+          if (user[0].metadata?.identity_verified) {
+            return {
+              success: false,
+              code: 410,
+              error: {
+                msg: "Este usuario ya esta verificado",
+              },
+            };
+          }
+
+          sendEmail(email, code);
+          if (userType === UserType.User) {
+            await User.findOneAndUpdate(
+              { email },
+              {
+                "metadata.code": hashCode,
+                "metadata.expireIn": expireIn,
+              }
+            );
+          } else {
+            await Company.findOneAndUpdate(
+              { email },
+              {
+                "metadata.code": hashCode,
+                "metadata.expireIn": expireIn,
+              }
+            );
+          }
+
+          return {
+            success: true,
+            code: 200,
+            res: {
+              msg: "Código de verificación enviado por correo",
+              uid: user[0].uid,
+            },
+          };
+        } catch (error) {
+          return {
+            success: false,
+            code: 500,
+            error: {
+              msg: "Error at identity_verified",
+            },
+          };
+        }
+      }
+
+      if (!user[0].metadata?.identity_verified) {
+        return {
+          success: false,
+          code: 403,
+          error: {
+            msg: "Verifica tu cuenta",
+          },
+        };
+      }
+
+      if (user[0].metadata?.repassword) {
+        return {
+          success: false,
+          code: 410,
+          error: {
+            msg: "Usuario ya validado",
+          },
+        };
+      }
+
+      sendEmail(email, code);
+      if (userType == UserType.User)
+        await User.findOneAndUpdate(
+          { email },
+          {
+            "metadata.code": hashCode,
+            "metadata.expireIn": expireIn,
+          }
+        );
+      else
+        await Company.findOneAndUpdate(
+          { email },
+          {
+            "metadata.code": hashCode,
+            "metadata.expireIn": expireIn,
+          }
+        );
+
+      return {
+        success: true,
+        code: 200,
+        res: {
+          msg: "Código de recuperación enviado",
+          uid: user[0].uid,
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error at SendCode",
+        },
+      };
+    }
+  };
+
+  static ValidateCodeService = async (
+    email: string,
+    code: string,
+    type: "repassword" | "identity_verified"
+  ) => {
+    try {
+      const iniUserPipeline = [
+        {
+          $match: {
+            email: email,
+          },
+        },
+        {
+          $limit: 1,
+        },
+      ];
+
+      let user = await User.aggregate(iniUserPipeline);
+      let userType = UserType.User;
+      if (!user || user.length === 0) {
+        user = await Company.aggregate(iniUserPipeline);
+        userType = UserType.Company;
+
+        if (!user || user.length === 0) {
+          return {
+            success: false,
+            code: 404,
+            error: {
+              msg: "Usuario no encontrado",
+            },
+          };
+        }
+      }
+
+      // Verificar si el usuario ya está verificado
+      if (user[0].metadata?.identity_verified) {
+        return {
+          success: false,
+          code: 400,
+          error: {
+            msg: "El usuario ya está verificado",
+          },
+        };
+      }
+
+      if (!user[0].metadata?.code) {
+        return {
+          success: false,
+          code: 400,
+          error: {
+            msg: "Este usuario no tiene código de validación",
+          },
+        };
+      }
+
+      const now = getNow();
+      if (new Date(now) > new Date(user[0].metadata.expireIn)) {
+        return {
+          success: false,
+          code: 410,
+          error: {
+            msg: "El código ha expirado, vuelve a generar otro",
+          },
+        };
+      }
+
+      const hashCode = await bcrypt.compare(code, user[0].metadata.code);
+      if (!hashCode) {
+        return {
+          success: false,
+          code: 401,
+          error: {
+            msg: "El código ingresado es el incorrecto",
+          },
+        };
+      }
+
+      let update;
+      if (type === "repassword") {
+        update = { "metadata.repassword": true };
+      } else if (type === "identity_verified") {
+        update = {
+          $unset: {
+            "metadata.code": 1,
+            "metadata.expireIn": 1,
+          },
+          $set: { "metadata.identity_verified": true },
+        };
+      }
+
+      // Verifica si `update` está definido
+      if (!update) {
+        return {
+          success: false,
+          code: 400,
+          error: {
+            msg: "Tipo de actualización no válido",
+          },
+        };
+      }
+
+      // Realiza la actualización
+      const updateResult =
+        userType === UserType.User
+          ? await User.updateOne({ email: email }, update)
+          : await Company.updateOne({ email: email }, update);
+
+      if (updateResult.modifiedCount === 0) {
+        return {
+          success: false,
+          code: 400,
+          error: {
+            msg: "No se pudo actualizar el usuario",
+          },
+        };
+      }
+
+      return {
+        success: true,
+        code: 200,
+        res: {
+          msg: "Usuario verificado",
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error at ValidateCode",
+        },
+      };
+    }
+  };
 }
+
 // ----------------------------------------
 const registerNewUserTEST = async ({ email, password, name }: UserTest) => {
   const checkIs = await UserTestModel.findOne({ email });

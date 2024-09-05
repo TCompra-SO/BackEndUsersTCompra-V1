@@ -2,19 +2,44 @@ import { Request, Response, response } from "express";
 import { registerNewUserTEST, loginUserTEST } from "../services/authServices";
 import { AuthServices } from "../services/authServices";
 
-type ApiResponse = {
-  success: boolean;
-  code?: number; // code es opcional
-  data?: string;
-  error?: {
-    msg: string;
-  };
-};
-
 const getNameController = async (req: Request, res: Response) => {
-  const { dni, ruc } = req.body; // Asegúrate de que estos parámetros estén en el cuerpo de la solicitud
+  // Obtener el parámetro de la consulta
+  const { document } = req.params;
+
+  // Verificar que el parámetro esté presente
+  if (!document) {
+    return res.status(400).send({
+      success: false,
+      msg: "Debe proporcionar el parámetro: document.",
+    });
+  }
+
+  // Validar longitud del parámetro
+  if (typeof document !== "string") {
+    return res.status(400).send({
+      success: false,
+      msg: "El parámetro debe ser una cadena de texto.",
+    });
+  }
+
+  const docLength = document.length;
+  let ruc: string | undefined;
+  let dni: string | undefined;
+
+  // Determinar si es ruc o dni
+  if (docLength === 11) {
+    ruc = document;
+  } else if (docLength === 8) {
+    dni = document;
+  } else {
+    return res.status(400).send({
+      success: false,
+      msg: "El número de documento ingresado no es válido.",
+    });
+  }
 
   try {
+    // Llamar al servicio correspondiente
     const responseName = await AuthServices.getNameReniec(dni, ruc);
 
     if (responseName.success) {
@@ -59,7 +84,10 @@ const registerController = async ({ body }: Request, res: Response) => {
   }
 };
 
-const profileCompanyController = async ({ body }: Request, res: Response) => {
+const UpdateprofileCompanyController = async (
+  { body }: Request,
+  res: Response
+) => {
   const data = body;
   try {
     const responseUser = await AuthServices.CompleteProfileCompany(data);
@@ -76,6 +104,68 @@ const profileCompanyController = async ({ body }: Request, res: Response) => {
     });
   }
 };
+
+const UpdateprofileUserController = async (
+  { body }: Request,
+  res: Response
+) => {
+  const data = body;
+  try {
+    const responseUser = await AuthServices.CompleteProfileUser(data);
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser);
+    } else {
+      res.status(responseUser.code).send(responseUser.error);
+    }
+  } catch (error) {
+    console.error("Error en profileCompanyController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
+const SendCodeController = async (req: Request, res: Response) => {
+  try {
+    const { email, type } = req.body;
+    const responseUser = await AuthServices.SendCode(email, type);
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser);
+    } else {
+      res.status(responseUser.code).send(responseUser.error);
+    }
+  } catch (error) {
+    console.error("Error en SendCodeController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
+const ValidateCodeController = async (req: Request, res: Response) => {
+  try {
+    const { email, code, type } = req.body;
+    const responseUser = await AuthServices.ValidateCodeService(
+      email,
+      code,
+      type
+    );
+
+    if (!responseUser.success) {
+      return res.status(responseUser.code).send(responseUser.error);
+    }
+    return res.status(responseUser.code).send(responseUser.res);
+  } catch (error: any) {
+    return res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
+////////////////////////////////
 
 const registerControllerTest = async ({ body }: Request, res: Response) => {
   const responseUser = await registerNewUserTEST(body);
@@ -97,6 +187,9 @@ export {
   loginControllerTest,
   registerControllerTest,
   registerController,
-  profileCompanyController,
+  UpdateprofileCompanyController,
+  UpdateprofileUserController,
   getNameController,
+  SendCodeController,
+  ValidateCodeController,
 };
