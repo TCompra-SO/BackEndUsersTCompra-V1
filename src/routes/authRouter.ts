@@ -1,13 +1,15 @@
 import { Request, Response, Router } from "express";
 import {
   registerController,
-  loginControllerTest,
+  LoginController,
   UpdateprofileCompanyController,
   UpdateprofileUserController,
   getNameController,
   SendCodeController,
   ValidateCodeController,
+  NewPasswordController,
 } from "../controllers/authController";
+import { checkJwt } from "../middleware/session";
 
 export class AuthRouter {
   private static instance: AuthRouter;
@@ -18,10 +20,12 @@ export class AuthRouter {
     this.router.post("/register", registerController);
     this.router.post("/profileCompany", UpdateprofileCompanyController);
     this.router.post("/profileUser", UpdateprofileUserController);
-    this.router.post("/login", loginControllerTest);
+    this.router.post("/login", LoginController);
     this.router.post("/sendCode", SendCodeController);
-    this.router.get("/getName/:document", getNameController);
     this.router.post("/validate-code", ValidateCodeController);
+    this.router.post("/newPassword", checkJwt, NewPasswordController);
+
+    this.router.get("/getName/:document", getNameController);
   }
 
   static getRouter(): Router {

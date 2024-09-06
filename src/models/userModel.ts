@@ -58,7 +58,7 @@ const userSchema = new Schema<UserI>(
       required: false,
     }, // Opcional
     planID: {
-      type: String,
+      type: Number,
       required: false,
     },
     metadata: {

@@ -13,14 +13,14 @@ export interface CompanyI {
   city: string;
   categories: number[]; // Array de cadenas
   age: number;
-  specialtyID: number;
+  specialtyID?: string;
   about_me?: string; // Opcional
   auth_users: AuthUserI; // Objeto anidado
   email: string;
   password: string;
   typeID: number;
   avatar?: string; // Opcional
-  planID: string;
+  planID: number;
   metadata?: MetadataI;
   ultimate_session: Date;
 }

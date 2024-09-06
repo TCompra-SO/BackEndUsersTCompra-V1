@@ -1,5 +1,4 @@
 import { Request, Response, response } from "express";
-import { registerNewUserTEST, loginUserTEST } from "../services/authServices";
 import { AuthServices } from "../services/authServices";
 
 const getNameController = async (req: Request, res: Response) => {
@@ -129,7 +128,7 @@ const UpdateprofileUserController = async (
 const SendCodeController = async (req: Request, res: Response) => {
   try {
     const { email, type } = req.body;
-    const responseUser = await AuthServices.SendCode(email, type);
+    const responseUser = await AuthServices.SendCodeService(email, type);
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
     } else {
@@ -165,31 +164,46 @@ const ValidateCodeController = async (req: Request, res: Response) => {
   }
 };
 
-////////////////////////////////
+const LoginController = async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+    const responseUser = await AuthServices.LoginService(email, password);
 
-const registerControllerTest = async ({ body }: Request, res: Response) => {
-  const responseUser = await registerNewUserTEST(body);
-  res.send(responseUser);
+    if (!responseUser.success) {
+      return res.status(responseUser.code).send(responseUser.error);
+    }
+    return res.status(responseUser.code).send(responseUser.res);
+  } catch (error: any) {
+    return res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
 };
 
-const loginControllerTest = async ({ body }: Request, res: Response) => {
-  const { email, password } = body;
-  const responseUser = await loginUserTEST({ email, password });
-  if (responseUser === "PASSWORD_INCORRECT") {
-    res.status(403);
-    res.send(responseUser);
-  } else {
-    res.send(responseUser);
+const NewPasswordController = async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+    const responseUser = await AuthServices.NewPasswordService(email, password);
+    if (!responseUser.success) {
+      return res.status(responseUser.code).send(responseUser.error);
+    }
+    return res.status(responseUser.code).send(responseUser.res);
+  } catch (error: any) {
+    return res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor",
+    });
   }
 };
 
 export {
-  loginControllerTest,
-  registerControllerTest,
   registerController,
   UpdateprofileCompanyController,
   UpdateprofileUserController,
   getNameController,
   SendCodeController,
   ValidateCodeController,
+  LoginController,
+  NewPasswordController,
 };

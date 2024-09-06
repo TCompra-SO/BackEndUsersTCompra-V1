@@ -13,7 +13,7 @@ export interface UserI {
   password: string;
   typeID: number; // Contraseña del usuario
   avatar?: string; // URL del avatar del usuario (opcional)
-  planID: string;
+  planID: number;
   metadata?: MetadataI;
   ultimate_session: Date; // Identificador del plan al que el usuario está suscrito
 }

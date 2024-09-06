@@ -7,7 +7,7 @@ export class RootRouter {
 
   constructor() {
     this.router = Router();
-    this.router.use("/v1/", AuthRouter.getRouter());
+    this.router.use("/v1/auth/", AuthRouter.getRouter());
     this.router.use("/v1/util/", UtilRouter.getRouter());
   }
 

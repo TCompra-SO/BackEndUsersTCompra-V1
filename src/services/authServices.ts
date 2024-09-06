@@ -1,11 +1,8 @@
-import { Auth } from "../interfaces/auth.interface";
-import { UserTest } from "../interfaces/userTest.interface";
 import moment from "moment";
-import Joi from "joi";
+import Joi, { string } from "joi";
 import User from "../models/userModel";
 import Company from "../models/companyModel";
 
-import UserTestModel from "../models/userTestModel";
 import { encrypt, verified } from "../utils/bcrypt.handle";
 import { generateToken } from "../utils/jwt.handle";
 import { ErrorMessages } from "../utils/ErrorMessages";
@@ -15,7 +12,9 @@ import { CompanyI } from "../interfaces/company.interface";
 import { UserI } from "../interfaces/user.interface";
 import { expireInEspecificMinutes, getNow } from "../utils/DateTools";
 import bcrypt from "bcrypt";
-import { sendEmail } from "../utils/NodeMailer";
+import { sendEmail, sendEmailRecovery } from "../utils/NodeMailer";
+import jwt from "jsonwebtoken";
+import { error } from "console";
 
 enum UserType {
   User = 1,
@@ -37,9 +36,10 @@ export class AuthServices {
     country: Joi.string().min(1).max(50).required(),
     city: Joi.string().min(1).max(50).required(),
     age: Joi.number(),
-    specialtyID: Joi.number().required(),
+    specialtyID: Joi.string(),
     about_me: Joi.string().min(3).max(500),
     categories: Joi.array().items(Joi.number()).max(3),
+    planID: Joi.number(),
   });
 
   static SchemaProfileUser = Joi.object({
@@ -49,6 +49,12 @@ export class AuthServices {
     country: Joi.string().min(1).max(50).required(),
     city: Joi.string().min(1).max(50).required(),
     categories: Joi.array().items(Joi.number()).max(3),
+    planID: Joi.number(),
+  });
+
+  static SchemaLogin = Joi.object({
+    email: Joi.string().min(6).max(255).required().email(),
+    password: Joi.string().min(6).max(1024).required(),
   });
 
   static VerificationNumber = () => {
@@ -351,6 +357,7 @@ export class AuthServices {
       specialtyID,
       about_me,
       categories,
+      planID,
     } = data;
 
     // Validar los datos
@@ -391,6 +398,7 @@ export class AuthServices {
             specialtyID,
             about_me,
             categories,
+            planID,
           },
         }, // Campos a actualizar
         { new: true, runValidators: true } // Devuelve el documento actualizado y ejecuta validaciones
@@ -426,7 +434,7 @@ export class AuthServices {
   };
 
   static CompleteProfileUser = async (data: UserI) => {
-    const { uid, phone, address, country, city, categories } = data;
+    const { uid, phone, address, country, city, categories, planID } = data;
 
     // Validar los datos
     const { error } = this.SchemaProfileUser.validate(data);
@@ -463,6 +471,7 @@ export class AuthServices {
             country,
             city,
             categories,
+            planID,
           },
         }, // Campos a actualizar
         { new: true, runValidators: true } // Devuelve el documento actualizado y ejecuta validaciones
@@ -497,7 +506,7 @@ export class AuthServices {
     }
   };
 
-  static SendCode = async (
+  static SendCodeService = async (
     email: string,
     type: "repassword" | "identity_verified"
   ) => {
@@ -538,16 +547,6 @@ export class AuthServices {
       }
 
       const uid = user[0]?.uid;
-      const uidPipeline = [
-        {
-          $match: {
-            uid: uid,
-          },
-        },
-        {
-          $limit: 1,
-        },
-      ];
 
       /// PROFILE
 
@@ -811,35 +810,225 @@ export class AuthServices {
       };
     }
   };
-}
 
-// ----------------------------------------
-const registerNewUserTEST = async ({ email, password, name }: UserTest) => {
-  const checkIs = await UserTestModel.findOne({ email });
-  if (checkIs) return "ALREADy_USER";
-  const passHash = await encrypt(password);
-  const registerNewUser = await UserTestModel.create({
-    email,
-    password: passHash,
-    name,
-  });
+  static LoginService = async (email: string, password: string) => {
+    try {
+      const { error } = this.SchemaLogin.validate({ email, password });
+      if (error) {
+        return {
+          success: false,
+          code: 400,
+          error: {
+            msg: ErrorMessages(error.details[0].message),
+          },
+        };
+      }
 
-  return registerNewUser;
-};
+      interface UserDocument extends Document {
+        _id: string;
+        email: string;
+        password: string;
+        uid: string;
+        name: string;
+        metadata?: {
+          userType: string;
+        };
+      }
 
-const loginUserTEST = async ({ email, password }: Auth) => {
-  const checkIs = await UserTestModel.findOne({ email });
-  if (!checkIs) return "NOT_FOUND_USER";
-  const passwordHash = checkIs.password;
-  const isCorrect = await verified(password, passwordHash);
-  if (!isCorrect) return "PASSWORD_INCORRECT";
-  const token = generateToken(checkIs.email);
+      const pipeline = [
+        {
+          $match: {
+            email: email,
+          },
+        },
+        {
+          $limit: 1,
+        },
+        {
+          $project: {
+            _id: 1,
+            email: 1,
+            password: 1,
+            uid: 1,
+            name: 1,
+            metadata: 1,
+          },
+        },
+      ];
 
-  const data = {
-    token,
-    user: checkIs,
+      let user: UserDocument[] = await User.aggregate(pipeline);
+
+      if (!user || user.length == 0) {
+        user = await Company.aggregate(pipeline);
+
+        if (!user || user.length == 0) {
+          return {
+            success: false,
+            code: 401,
+            error: {
+              msg: "Usuario no encontrado",
+            },
+          };
+        }
+      }
+
+      const hashPassword = await bcrypt.compare(password, user[0].password);
+      if (!hashPassword) {
+        return {
+          success: false,
+          code: 401,
+          error: {
+            msg: "Contraseña incorrecta",
+          },
+        };
+      }
+
+      const token = jwt.sign(
+        {
+          uid: user[0].uid,
+          name: user[0].name,
+          email: user[0].email,
+          id: user[0]._id,
+          type: user[0].metadata?.userType,
+          exp: this.ExpirationDate(12),
+        },
+        process.env.JWT_SECRET as string
+      );
+      return {
+        success: true,
+        code: 200,
+        res: {
+          msg: "Sesión iniciada correctamente",
+          token,
+          type: user[0].metadata?.userType,
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error at Login",
+        },
+      };
+    }
   };
-  return token;
-};
 
-export { registerNewUserTEST, loginUserTEST };
+  static NewPasswordService = async (email: string, password: string) => {
+    try {
+      let user = await User.findOne({ email });
+      let isCompany = false;
+
+      if (!user) {
+        user = await Company.findOne({ email });
+        if (!user) {
+          return {
+            success: false,
+            code: 404,
+            error: {
+              msg: "Usuario no encontrado",
+            },
+          };
+        }
+        isCompany = true;
+      }
+
+      const salt = await bcrypt.genSalt(10);
+      const newPassword = await bcrypt.hash(password, salt);
+
+      const updateQuery = {
+        $unset: {
+          "metadata.code": 1,
+          "metadata.repassword": 1,
+          "metadata.expireIn": 1,
+        },
+        $set: { password: newPassword },
+      };
+
+      if (isCompany) {
+        await Company.findOneAndUpdate({ email }, updateQuery);
+      } else {
+        await User.findOneAndUpdate({ email }, updateQuery);
+      }
+
+      return {
+        success: true,
+        code: 200,
+        res: {
+          msg: "Contraseña reestablecida",
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error at NewPassword",
+        },
+      };
+    }
+  };
+
+  static SendCodeRecovery = async (email: string) => {
+    try {
+      const userPipeline = [
+        {
+          $match: {
+            email: email,
+          },
+        },
+        {
+          $limit: 1,
+        },
+        {
+          $project: {
+            _id: 1,
+            email: 1,
+          },
+        },
+      ];
+
+      let user = await User.aggregate(userPipeline);
+      let userType = UserType.User;
+
+      if (!user || user.length == 0) {
+        user = await Company.aggregate(userPipeline);
+        userType = UserType.Company;
+
+        if (!user || user.length == 0) {
+          return {
+            success: false,
+            code: 404,
+            error: {
+              msg: "Usuario no encontrado",
+            },
+          };
+        }
+
+        const now = getNow();
+        const expireIn = expireInEspecificMinutes(1);
+
+        const code = this.VerificationNumber();
+        const salt = await bcrypt.genSalt(10);
+        const hashCode = await bcrypt.hash(code, salt);
+
+        if (new Date(now) < new Date(user[0].metadata?.expireIn)) {
+          return {
+            success: false,
+            code: 409,
+            error: {
+              msg: `Genera nuevamente ${moment(
+                user[0].metadata?.expireIn
+              ).fromNow()}`,
+            },
+          };
+        }
+
+        sendEmailRecovery(email, code);
+        if (userType == UserType.Company) {
+          ////////////ver
+        }
+      }
+    } catch (error) {}
+  };
+}

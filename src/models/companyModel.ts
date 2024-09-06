@@ -55,7 +55,7 @@ const CompanySchema = new Schema<CompanyI>(
       required: false,
     },
     specialtyID: {
-      type: Number,
+      type: String,
       required: false,
     },
     about_me: {
@@ -83,7 +83,7 @@ const CompanySchema = new Schema<CompanyI>(
       required: false,
     },
     planID: {
-      type: String,
+      type: Number,
       required: false,
     },
     metadata: {
