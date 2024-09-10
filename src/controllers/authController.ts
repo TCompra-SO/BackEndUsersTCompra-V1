@@ -197,6 +197,42 @@ const NewPasswordController = async (req: Request, res: Response) => {
   }
 };
 
+const SendCodeRecoveryController = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    const responseUser = await AuthServices.SendCodeRecovery(email);
+    if (!responseUser.success) {
+      return res.status(responseUser.code).send(responseUser.error);
+    }
+    return res.status(responseUser.code).send(responseUser.res);
+  } catch (error: any) {
+    return res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor",
+    });
+  }
+};
+
+const RecoveryPasswordController = async (req: Request, res: Response) => {
+  try {
+    const { email, code, password } = req.body;
+    const responseUser = await AuthServices.RecoveryPassword(
+      email,
+      code,
+      password
+    );
+    if (!responseUser.success) {
+      return res.status(responseUser.code).send(responseUser.error);
+    }
+    return res.status(responseUser.code).send(responseUser.res);
+  } catch (error: any) {
+    return res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor",
+    });
+  }
+};
+
 export {
   registerController,
   UpdateprofileCompanyController,
@@ -206,4 +242,6 @@ export {
   ValidateCodeController,
   LoginController,
   NewPasswordController,
+  SendCodeRecoveryController,
+  RecoveryPasswordController,
 };

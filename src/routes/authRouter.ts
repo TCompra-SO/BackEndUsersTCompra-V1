@@ -8,6 +8,8 @@ import {
   SendCodeController,
   ValidateCodeController,
   NewPasswordController,
+  SendCodeRecoveryController,
+  RecoveryPasswordController,
 } from "../controllers/authController";
 import { checkJwt } from "../middleware/session";
 
@@ -24,6 +26,8 @@ export class AuthRouter {
     this.router.post("/sendCode", SendCodeController);
     this.router.post("/validate-code", ValidateCodeController);
     this.router.post("/newPassword", checkJwt, NewPasswordController);
+    this.router.post("/sendCodeRecovery", SendCodeRecoveryController);
+    this.router.post("/recoveryPassword", RecoveryPasswordController);
 
     this.router.get("/getName/:document", getNameController);
   }

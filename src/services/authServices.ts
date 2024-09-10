@@ -15,6 +15,7 @@ import bcrypt from "bcrypt";
 import { sendEmail, sendEmailRecovery } from "../utils/NodeMailer";
 import jwt from "jsonwebtoken";
 import { error } from "console";
+import { matchesGlob } from "path";
 
 enum UserType {
   User = 1,
@@ -284,14 +285,17 @@ export class AuthServices {
         };
       }
 
-      // Supongamos que `getNameReniec` devuelve un string
       const responseName = await this.getNameReniec(dni, ruc);
       let fullName = "";
 
       if (responseName.success) {
         fullName = responseName.data || "";
 
-        const metadata: MetadataI = { identity_verified: false };
+        const metadata: MetadataI = {
+          identity_verified: false,
+          profile_complete: false,
+        };
+
         const passwordHash = await encrypt(password);
         if (ruc) {
           const company = new Company({
@@ -384,6 +388,10 @@ export class AuthServices {
       };
     }
 
+    const metadata: MetadataI = {
+      identity_verified: false,
+      profile_complete: true,
+    };
     // Actualizar el perfil
     try {
       const updatedProfileCompany = await Company.findOneAndUpdate(
@@ -399,6 +407,7 @@ export class AuthServices {
             about_me,
             categories,
             planID,
+            metadata,
           },
         }, // Campos a actualizar
         { new: true, runValidators: true } // Devuelve el documento actualizado y ejecuta validaciones
@@ -459,7 +468,10 @@ export class AuthServices {
         },
       };
     }
-
+    const metadata: MetadataI = {
+      identity_verified: false,
+      profile_complete: true,
+    };
     // Actualizar el perfil
     try {
       const updatedProfileUser = await User.findOneAndUpdate(
@@ -472,6 +484,7 @@ export class AuthServices {
             city,
             categories,
             planID,
+            metadata,
           },
         }, // Campos a actualizar
         { new: true, runValidators: true } // Devuelve el documento actualizado y ejecuta validaciones
@@ -524,6 +537,7 @@ export class AuthServices {
           $project: {
             _id: 1,
             email: 1,
+            "metadata.identity_verified": 1,
           },
         },
       ];
@@ -554,9 +568,20 @@ export class AuthServices {
       const expireIn = expireInEspecificMinutes(1);
 
       const code = this.VerificationNumber();
-      // encriptamos cidigo
+      // encriptamos codigo
       const salt = await bcrypt.genSalt(10);
       const hashCode = await bcrypt.hash(code, salt);
+      ///////////completar
+
+      if (user[0].metadata?.identity_verified === true) {
+        return {
+          success: false,
+          code: 403,
+          error: {
+            msg: "El usuario ya esta verficado",
+          },
+        };
+      }
 
       if (new Date(now) < new Date(user[0].metadata?.expireIn)) {
         return {
@@ -832,6 +857,8 @@ export class AuthServices {
         name: string;
         metadata?: {
           userType: string;
+          identity_verified?: boolean;
+          profile_complete?: boolean;
         };
       }
 
@@ -855,12 +882,12 @@ export class AuthServices {
           },
         },
       ];
-
+      let entity;
       let user: UserDocument[] = await User.aggregate(pipeline);
-
+      entity = "User";
       if (!user || user.length == 0) {
         user = await Company.aggregate(pipeline);
-
+        entity = "Company";
         if (!user || user.length == 0) {
           return {
             success: false,
@@ -879,6 +906,30 @@ export class AuthServices {
           code: 401,
           error: {
             msg: "Contraseña incorrecta",
+          },
+        };
+      }
+
+      if (user[0].metadata?.profile_complete === false) {
+        return {
+          success: false,
+          code: 407,
+          error: {
+            msg: "El usuario no ha completado su perfil",
+            uid: user[0].uid,
+            entity: entity,
+          },
+        };
+      }
+
+      if (user[0].metadata?.identity_verified === false) {
+        return {
+          success: false,
+          code: 403,
+          error: {
+            msg: "Usuario no verificado",
+            uid: user[0].uid,
+            entity: entity,
           },
         };
       }
@@ -972,6 +1023,94 @@ export class AuthServices {
   static SendCodeRecovery = async (email: string) => {
     try {
       const userPipeline = [
+        { $match: { email: email } },
+        { $limit: 1 },
+        { $project: { _id: 1, email: 1, metadata: 1, uid: 1 } },
+      ];
+
+      let user = await User.aggregate(userPipeline);
+      let userType = UserType.User;
+      if (!user || user.length === 0) {
+        user = await Company.aggregate(userPipeline);
+        userType = UserType.Company;
+      }
+      console.log(user);
+      if (!user || user.length === 0) {
+        return {
+          success: false,
+          code: 404,
+          error: { msg: "Usuario no encontrado" },
+        };
+      }
+
+      const userMetadata = user[0].metadata;
+
+      const now = getNow();
+      const expireIn = expireInEspecificMinutes(1);
+
+      if (
+        userMetadata?.expireIn &&
+        new Date(now) < new Date(userMetadata.expireIn)
+      ) {
+        return {
+          success: false,
+          code: 409,
+          error: {
+            msg: "Genera nuevamente el código",
+          },
+        };
+      }
+
+      const code = this.VerificationNumber();
+      const salt = await bcrypt.genSalt(10);
+      const hashCode = await bcrypt.hash(code, salt);
+
+      const update = {
+        "metadata.code": hashCode,
+        "metadata.expireIn": expireIn,
+      };
+
+      const updateResult =
+        userType === UserType.Company
+          ? await Company.findOneAndUpdate({ email }, update)
+          : await User.findOneAndUpdate({ email }, update);
+
+      if (updateResult) {
+        sendEmailRecovery(email, code);
+        return {
+          success: true,
+          code: 200,
+          res: {
+            msg: "Código de verificación enviado por correo",
+          },
+        };
+      } else {
+        return {
+          success: false,
+          code: 500,
+          res: {
+            msg: "Error al enviar el código de verficación",
+          },
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error en el proceso de recuperación",
+        },
+      };
+    }
+  };
+
+  static RecoveryPassword = async (
+    email: string,
+    code: string,
+    password: string
+  ) => {
+    try {
+      const iniUserPipeline = [
         {
           $match: {
             email: email,
@@ -980,19 +1119,13 @@ export class AuthServices {
         {
           $limit: 1,
         },
-        {
-          $project: {
-            _id: 1,
-            email: 1,
-          },
-        },
       ];
 
-      let user = await User.aggregate(userPipeline);
+      let user = await User.aggregate(iniUserPipeline);
       let userType = UserType.User;
 
       if (!user || user.length == 0) {
-        user = await Company.aggregate(userPipeline);
+        user = await Company.aggregate(iniUserPipeline);
         userType = UserType.Company;
 
         if (!user || user.length == 0) {
@@ -1004,31 +1137,71 @@ export class AuthServices {
             },
           };
         }
-
-        const now = getNow();
-        const expireIn = expireInEspecificMinutes(1);
-
-        const code = this.VerificationNumber();
-        const salt = await bcrypt.genSalt(10);
-        const hashCode = await bcrypt.hash(code, salt);
-
-        if (new Date(now) < new Date(user[0].metadata?.expireIn)) {
-          return {
-            success: false,
-            code: 409,
-            error: {
-              msg: `Genera nuevamente ${moment(
-                user[0].metadata?.expireIn
-              ).fromNow()}`,
-            },
-          };
-        }
-
-        sendEmailRecovery(email, code);
-        if (userType == UserType.Company) {
-          ////////////ver
-        }
       }
-    } catch (error) {}
+
+      if (!user[0].metadata?.code) {
+        return {
+          success: false,
+          code: 400,
+          error: {
+            msg: "Este usuario no tiene código de recuperación",
+          },
+        };
+      }
+
+      const now = getNow();
+      if (new Date(now) > new Date(user[0].metadata.expireIn)) {
+        return {
+          success: false,
+          code: 410,
+          error: {
+            msg: "El código ha expirado, vuelve a generar otro",
+          },
+        };
+      }
+      const hashCode = await bcrypt.compare(code, user[0].metadata.code);
+      if (!hashCode) {
+        return {
+          success: false,
+          code: 401,
+          error: {
+            msg: "El código es incorrecto",
+          },
+        };
+      }
+
+      const salt = await bcrypt.genSalt(10);
+      const newPassword = await bcrypt.hash(password, salt);
+
+      let update = {
+        $unset: {
+          "metadata.code": 1,
+          "metadata.expireIn": 1,
+        },
+        $set: { password: newPassword },
+      };
+
+      if (userType == 0) {
+        await Company.findOneAndUpdate({ email }, update);
+      } else {
+        await User.findOneAndUpdate({ email }, update);
+      }
+
+      return {
+        success: true,
+        code: 200,
+        res: {
+          msg: "Contraseña reestablecida",
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error al intentar reestablecer la contraseña",
+        },
+      };
+    }
   };
 }

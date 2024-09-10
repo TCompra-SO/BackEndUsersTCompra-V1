@@ -64,7 +64,7 @@ export const sendEmailRecovery = async (email: string, code: string) => {
           <div style="margin: 20px; margin-right: 23vw; margin-left: 23vw; padding: 0.1%; background-color: #6D23F5; border-radius: 60px;">
             <p style="font-size: 32px; color: #f4e7ff;"><b>${code}</b></p>
           </div>
-          <p style="color: #4a148c;">Por favor, ingresa este código para recuperar tu cuenta.</p>
+          <p style="color: #4a148c;">Por favor, ingresa este código para reestablecer tu contraseña.</p>
         </div>
       </body>
     </html>
