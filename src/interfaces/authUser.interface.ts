@@ -1,7 +1,6 @@
 export interface AuthUserI {
-  id: string;
+  Uid: string;
   email: string;
   password: string;
   typeID: number; // Tipo literal
-  profileID: string;
 }

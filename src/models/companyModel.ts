@@ -1,18 +1,20 @@
 import mongoose, { Schema, Types, model, Model } from "mongoose";
 import { CompanyI } from "../interfaces/company.interface";
 import ShortUniqueId from "short-unique-id";
-const AuthUserSchema = new Schema(
-  {
-    id: { type: String, required: true },
-    email: { type: String, required: true },
-    password: { type: String, required: true },
-    typeID: { type: Number, required: true },
-    profileID: { type: String, required: true },
-  },
-  { _id: false } // Si no necesitas un _id para cada subdocumento
-);
 
 const uid = new ShortUniqueId({ length: 20 });
+
+const AuthUserSchema = new Schema({
+  Uid: {
+    type: String,
+    required: true,
+    unique: true,
+    default: () => uid.rnd(),
+  },
+  email: { type: String, required: true },
+  password: { type: String, required: true },
+  typeID: { type: Number, required: true },
+});
 
 const CompanySchema = new Schema<CompanyI>(
   {
@@ -63,7 +65,7 @@ const CompanySchema = new Schema<CompanyI>(
       required: false,
     },
     auth_users: {
-      type: AuthUserSchema,
+      type: [AuthUserSchema],
       required: false,
     },
     email: {

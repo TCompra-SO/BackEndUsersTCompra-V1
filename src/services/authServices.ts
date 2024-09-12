@@ -913,7 +913,7 @@ export class AuthServices {
       if (user[0].metadata?.profile_complete === false) {
         return {
           success: false,
-          code: 407,
+          code: 409,
           error: {
             msg: "El usuario no ha completado su perfil",
             uid: user[0].uid,

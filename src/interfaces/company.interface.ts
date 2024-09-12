@@ -15,7 +15,7 @@ export interface CompanyI {
   age: number;
   specialtyID?: string;
   about_me?: string; // Opcional
-  auth_users: AuthUserI; // Objeto anidado
+  auth_users: [AuthUserI]; // Objeto anidado
   email: string;
   password: string;
   typeID: number;
