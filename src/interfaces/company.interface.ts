@@ -9,8 +9,8 @@ export interface CompanyI {
   name: string;
   phone: string;
   address: string;
-  country: string;
-  city: string;
+  countryID: number;
+  cityID: number;
   categories: number[]; // Array de cadenas
   age: number;
   specialtyID?: string;
@@ -23,4 +23,6 @@ export interface CompanyI {
   planID: number;
   metadata?: MetadataI;
   ultimate_session: Date;
+  verified: boolean;
+  active_account: boolean;
 }

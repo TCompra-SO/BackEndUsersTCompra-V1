@@ -29,7 +29,7 @@ const profileSchema = new Schema<ProfileI>(
       required: false,
     },
     cityID: {
-      type: String,
+      type: Number,
       required: true,
     },
     avatar: {

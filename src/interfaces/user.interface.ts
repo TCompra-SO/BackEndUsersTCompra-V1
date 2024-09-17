@@ -6,8 +6,8 @@ export interface UserI {
   name: string; // Nombre completo del usuario
   phone: string; // Número de teléfono del usuario
   address: string; // Dirección del usuario
-  country: string; // País del usuario
-  city: string; // Ciudad del usuario
+  countryID: number; // País del usuario
+  cityID: number; // Ciudad del usuario
   categories: number[]; // Array de categorías del usuario
   email: string; // Correo electrónico del usuario
   password: string;
@@ -15,5 +15,6 @@ export interface UserI {
   avatar?: string; // URL del avatar del usuario (opcional)
   planID: number;
   metadata?: MetadataI;
-  ultimate_session: Date; // Identificador del plan al que el usuario está suscrito
+  ultimate_session: Date;
+  active_account: boolean; // Identificador del plan al que el usuario está suscrito
 }

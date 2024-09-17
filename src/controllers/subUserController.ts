@@ -32,4 +32,25 @@ const registerSubUserController = async ({ body }: Request, res: Response) => {
   }
 };
 
-export { registerSubUserController };
+const getSubUserController = async (req: Request, res: Response) => {
+  const { uid } = req.params;
+  try {
+    const responseUser = await subUserServices.getProfileSubUser(uid);
+    if (responseUser && responseUser.success) {
+      res.status(responseUser.code).send(responseUser);
+    } else {
+      res.status(500).send({
+        success: false,
+        msg: "Error interno del servidor, respuesta inválida.",
+      });
+    }
+  } catch (error) {
+    console.error("Error en getSubUserController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
+export { registerSubUserController, getSubUserController };

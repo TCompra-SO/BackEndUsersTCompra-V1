@@ -16,6 +16,24 @@ import { sendEmail, sendEmailRecovery } from "../utils/NodeMailer";
 import jwt from "jsonwebtoken";
 import { error } from "console";
 import { matchesGlob } from "path";
+import { AuthUserI } from "./../interfaces/authUser.interface";
+import { getSubUserController } from "../controllers/subUserController";
+import { subUserServices } from "./subUserServices";
+
+export interface UserDocument extends Document {
+  _id: string;
+  email: string;
+  password: string;
+  uid: string;
+  name: string;
+  metadata?: {
+    identity_verified?: boolean;
+    profile_complete?: boolean;
+  };
+  active_account: boolean;
+  planID: number;
+  typeID: number;
+}
 
 enum UserType {
   User = 1,
@@ -34,8 +52,8 @@ export class AuthServices {
     uid: Joi.string().min(4).max(20).required(),
     phone: Joi.string().min(6).max(20).required(),
     address: Joi.string().min(4).max(100).required(),
-    country: Joi.string().min(1).max(50).required(),
-    city: Joi.string().min(1).max(50).required(),
+    countryID: Joi.number().required(),
+    cityID: Joi.number().required(),
     age: Joi.number(),
     specialtyID: Joi.string(),
     about_me: Joi.string().min(3).max(500),
@@ -47,8 +65,8 @@ export class AuthServices {
     uid: Joi.string().min(4).max(20).required(),
     phone: Joi.string().min(6).max(20).required(),
     address: Joi.string().min(4).max(100).required(),
-    country: Joi.string().min(1).max(50).required(),
-    city: Joi.string().min(1).max(50).required(),
+    countryID: Joi.number().required(),
+    cityID: Joi.number().required(),
     categories: Joi.array().items(Joi.number()).max(3),
     planID: Joi.number(),
   });
@@ -355,8 +373,8 @@ export class AuthServices {
       uid,
       phone,
       address,
-      country,
-      city,
+      countryID,
+      cityID,
       age,
       specialtyID,
       about_me,
@@ -400,14 +418,15 @@ export class AuthServices {
           $set: {
             phone,
             address,
-            country,
-            city,
+            countryID,
+            cityID,
             age,
             specialtyID,
             about_me,
             categories,
             planID,
             metadata,
+            active_account: true,
           },
         }, // Campos a actualizar
         { new: true, runValidators: true } // Devuelve el documento actualizado y ejecuta validaciones
@@ -443,7 +462,7 @@ export class AuthServices {
   };
 
   static CompleteProfileUser = async (data: UserI) => {
-    const { uid, phone, address, country, city, categories, planID } = data;
+    const { uid, phone, address, countryID, cityID, categories, planID } = data;
 
     // Validar los datos
     const { error } = this.SchemaProfileUser.validate(data);
@@ -480,11 +499,12 @@ export class AuthServices {
           $set: {
             phone,
             address,
-            country,
-            city,
+            countryID,
+            cityID,
             categories,
             planID,
             metadata,
+            active_account: true,
           },
         }, // Campos a actualizar
         { new: true, runValidators: true } // Devuelve el documento actualizado y ejecuta validaciones
@@ -537,7 +557,7 @@ export class AuthServices {
           $project: {
             _id: 1,
             email: 1,
-            "metadata.identity_verified": 1,
+            metadata: 1,
           },
         },
       ];
@@ -572,7 +592,15 @@ export class AuthServices {
       const salt = await bcrypt.genSalt(10);
       const hashCode = await bcrypt.hash(code, salt);
       ///////////completar
-
+      if (!user[0].metadata?.profile_complete) {
+        return {
+          success: false,
+          code: 410,
+          error: {
+            msg: "El usuario no ha completado el perfil",
+          },
+        };
+      }
       if (user[0].metadata?.identity_verified === true) {
         return {
           success: false,
@@ -849,23 +877,10 @@ export class AuthServices {
         };
       }
 
-      interface UserDocument extends Document {
-        _id: string;
-        email: string;
-        password: string;
-        uid: string;
-        name: string;
-        metadata?: {
-          userType: string;
-          identity_verified?: boolean;
-          profile_complete?: boolean;
-        };
-      }
-
       const pipeline = [
         {
           $match: {
-            email: email,
+            email: email, // Busca en el campo principal 'email'
           },
         },
         {
@@ -873,87 +888,197 @@ export class AuthServices {
         },
         {
           $project: {
-            _id: 1,
+            _id: 0,
             email: 1,
             password: 1,
             uid: 1,
             name: 1,
+            typeID: 1,
+            planID: 1,
+            active_account: 1,
             metadata: 1,
           },
         },
       ];
       let entity;
+      let result;
       let user: UserDocument[] = await User.aggregate(pipeline);
       entity = "User";
       if (!user || user.length == 0) {
         user = await Company.aggregate(pipeline);
         entity = "Company";
         if (!user || user.length == 0) {
+          result = await this.searchSubUser(email);
+          user = result as UserDocument[];
+          entity = "SubUser";
+          // Verifica si el resultado no es undefined y tiene al menos un elemento // tenemos que trabajar aqui /////////////////////////////////////////////////
+          if (!user || user.length == 0) {
+            // Accede al primer elemento
+
+            return {
+              success: false,
+              code: 401,
+              error: {
+                msg: "Usuario no encontrado",
+              },
+            };
+          } //////////////////////////////////////// ESTO ESTA PENDIENTE ////////////////////////////////////////////
+        }
+      }
+      if (entity === "SubUser" && result && result.length > 0) {
+        const hashPassword = await bcrypt.compare(
+          password,
+          result[0].auth_users.password
+        );
+        if (!result[0].auth_users.active_account) {
+          return {
+            success: false,
+            code: 423,
+            error: {
+              msg: "La cuenta esta inactiva",
+            },
+          };
+        }
+        if (!hashPassword) {
           return {
             success: false,
             code: 401,
             error: {
-              msg: "Usuario no encontrado",
+              msg: "Contraseña incorrecta",
+            },
+          };
+        } else {
+          let profileUser = await subUserServices.getProfileSubUser(
+            result[0].auth_users.Uid
+          );
+
+          const token = jwt.sign(
+            {
+              uid: result[0].auth_users.Uid,
+              name: user[0].name,
+              email: result[0].auth_users.email,
+              id: result[0].auth_users._id,
+              exp: this.ExpirationDate(12),
+            },
+            process.env.JWT_SECRET as string
+          );
+          // AQUI CONTINUAMOS ///////////////////////////////////////////
+          const dataUser = [
+            {
+              CompanyID: result[0].uid,
+              uid: result[0].auth_users.Uid,
+              name: profileUser.res?.profile.name,
+              email: result[0].auth_users.email,
+              type: entity,
+              typeID: result[0].auth_users.typeID,
+              planID: result[0].planID,
+            },
+          ];
+
+          await Company.updateOne(
+            { "auth_users.Uid": result[0].auth_users.Uid }, // Condición de búsqueda por uid
+            { $set: { "auth_users.$.ultimate_session": new Date() } }
+          );
+          return {
+            success: true,
+            code: 200,
+            res: {
+              msg: "Correcto",
+              token,
+              dataUser,
             },
           };
         }
-      }
+      } else {
+        const hashPassword = await bcrypt.compare(password, user[0].password);
+        if (!hashPassword) {
+          return {
+            success: false,
+            code: 401,
+            error: {
+              msg: "Contraseña incorrecta",
+            },
+          };
+        }
 
-      const hashPassword = await bcrypt.compare(password, user[0].password);
-      if (!hashPassword) {
-        return {
-          success: false,
-          code: 401,
-          error: {
-            msg: "Contraseña incorrecta",
-          },
-        };
-      }
+        if (user[0].metadata?.profile_complete === false) {
+          return {
+            success: false,
+            code: 409,
+            error: {
+              msg: "El usuario no ha completado su perfil",
+              uid: user[0].uid,
+              entity: entity,
+            },
+          };
+        }
 
-      if (user[0].metadata?.profile_complete === false) {
-        return {
-          success: false,
-          code: 409,
-          error: {
-            msg: "El usuario no ha completado su perfil",
+        if (user[0].metadata?.identity_verified === false) {
+          return {
+            success: false,
+            code: 403,
+            error: {
+              msg: "Usuario no verificado",
+              uid: user[0].uid,
+              entity: entity,
+            },
+          };
+        }
+
+        if (user[0].active_account === false) {
+          return {
+            success: false,
+            code: 403,
+            error: {
+              msg: "La cuenta se encuentra inactiva",
+              uid: user[0].uid,
+              entity: entity,
+            },
+          };
+        }
+
+        const token = jwt.sign(
+          {
             uid: user[0].uid,
-            entity: entity,
+            name: user[0].name,
+            email: user[0].email,
+            id: user[0]._id,
+            exp: this.ExpirationDate(12),
           },
-        };
-      }
-
-      if (user[0].metadata?.identity_verified === false) {
-        return {
-          success: false,
-          code: 403,
-          error: {
-            msg: "Usuario no verificado",
+          process.env.JWT_SECRET as string
+        );
+        const dataUser = [
+          {
             uid: user[0].uid,
-            entity: entity,
+            name: user[0].name,
+            email: user[0].email,
+            type: entity,
+            typeID: user[0].typeID,
+            planID: user[0].planID,
+          },
+        ];
+        if (entity === "Company") {
+          await Company.updateOne(
+            { uid: user[0].uid }, // Condición de búsqueda por uid
+            { $set: { ultimate_session: new Date() } }
+          );
+        } else {
+          await User.updateOne(
+            { uid: user[0].uid }, // Condición de búsqueda por uid
+            { $set: { ultimate_session: new Date() } }
+          );
+        }
+
+        return {
+          success: true,
+          code: 200,
+          res: {
+            msg: "Sesión iniciada correctamente",
+            token,
+            dataUser,
           },
         };
       }
-
-      const token = jwt.sign(
-        {
-          uid: user[0].uid,
-          name: user[0].name,
-          email: user[0].email,
-          id: user[0]._id,
-          type: user[0].metadata?.userType,
-          exp: this.ExpirationDate(12),
-        },
-        process.env.JWT_SECRET as string
-      );
-      return {
-        success: true,
-        code: 200,
-        res: {
-          msg: "Sesión iniciada correctamente",
-          token,
-          type: user[0].metadata?.userType,
-        },
-      };
     } catch (error) {
       return {
         success: false,
@@ -964,7 +1089,45 @@ export class AuthServices {
       };
     }
   };
-
+  private static searchSubUser = async (email: string) => {
+    const pipeline = [
+      {
+        $match: {
+          "auth_users.email": email, // Busca en el campo 'auth_users.email'
+        },
+      },
+      {
+        $unwind: "$auth_users", // Descompone el array 'auth_users' para trabajar con elementos individuales
+      },
+      {
+        $match: {
+          "auth_users.email": email, // Filtra para asegurar que el email es el correcto
+        },
+      },
+      {
+        $limit: 1,
+      },
+      {
+        $project: {
+          _id: 0,
+          uid: 1,
+          "auth_users.Uid": 1,
+          "auth_users.email": 1,
+          "auth_users.password": 1,
+          "auth_users.typeID": 1,
+          "auth_users.active_account": 1,
+          planID: 1,
+        },
+      },
+    ];
+    try {
+      let result = await Company.aggregate(pipeline);
+      // Transformar el resultado
+      return result;
+    } catch (error) {
+      console.error("Error al buscar el subUsuario:", error);
+    }
+  };
   static NewPasswordService = async (email: string, password: string) => {
     try {
       let user = await User.findOne({ email });

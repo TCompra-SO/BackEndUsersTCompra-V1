@@ -7,11 +7,12 @@ import { AuthUserI } from "../interfaces/authUser.interface";
 import { AuthServices } from "../services/authServices";
 import { encrypt } from "../utils/bcrypt.handle";
 import { ErrorMessages } from "../utils/ErrorMessages";
+import { getNow } from "../utils/DateTools";
 export class subUserServices {
   static SchemaRegister = Joi.object({
     dni: Joi.string().min(8).max(12).required(),
     address: Joi.string().min(3).max(255),
-    cityID: Joi.string().required(),
+    cityID: Joi.number().required(),
     phone: Joi.string().min(3).max(25),
     email: Joi.string().min(6).max(255).required().email(),
     typeID: Joi.number().required(),
@@ -22,7 +23,7 @@ export class subUserServices {
     uid: string,
     dni: string,
     address: string,
-    cityID: string,
+    cityID: number,
     phone: string,
     email: string,
     typeID: number
@@ -91,6 +92,8 @@ export class subUserServices {
                 email: email,
                 password: passwordHash,
                 typeID: typeID,
+                ultimate_session: new Date(),
+                active_account: true,
               };
 
               const result = await Company.findOneAndUpdate(
@@ -169,6 +172,40 @@ export class subUserServices {
       }
     } catch (error) {
       console.error("Error en NewSubUser", error);
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error interno del servidor.",
+        },
+      };
+    }
+  };
+
+  static getProfileSubUser = async (uid: string) => {
+    try {
+      // Buscar el perfil del subusuario en la colección de Profiles
+      const profile = await Profile.findOne({ uid }).exec();
+
+      if (profile) {
+        return {
+          success: true,
+          code: 200,
+          res: {
+            profile: profile.toJSON(),
+          },
+        };
+      } else {
+        return {
+          success: false,
+          code: 404,
+          error: {
+            msg: "Perfil no encontrado",
+          },
+        };
+      }
+    } catch (error) {
+      console.error("Error en getProfileSubUser", error);
       return {
         success: false,
         code: 500,

@@ -4,7 +4,7 @@ export interface ProfileI {
   name: string;
   phone: string;
   address: string;
-  cityID: string;
+  cityID: number;
   avatar?: string;
   uid: string;
   companyID: string;
