@@ -1,4 +1,6 @@
 import moment from "moment";
+import "moment/locale/es"; // Importa el idioma español
+moment.locale("es"); // Establece el idioma a español
 import Joi, { string } from "joi";
 import User from "../models/userModel";
 import Company from "../models/companyModel";
@@ -1219,7 +1221,9 @@ export class AuthServices {
           success: false,
           code: 409,
           error: {
-            msg: "Genera nuevamente el código",
+            msg: `Genera nuevamente ${moment(
+              user[0].metadata?.expireIn
+            ).fromNow()}`,
           },
         };
       }
