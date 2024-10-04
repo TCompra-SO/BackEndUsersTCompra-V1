@@ -59,6 +59,71 @@ const getNameController = async (req: Request, res: Response) => {
   }
 };
 
+const getUserController = async (req: Request, res: Response) => {
+  const { uid } = req.params;
+  try {
+    const responseUser = await AuthServices.getEntityService(uid);
+    if (responseUser.success) {
+      res.status(200).send({
+        success: true,
+        data: responseUser.data,
+        typeEntity: responseUser.typeEntity,
+      });
+    } else {
+      res.status(responseUser.code).send(responseUser.error);
+    }
+  } catch (error) {
+    console.log("Error en getUserController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
+const getAuthSubUserController = async (req: Request, res: Response) => {
+  const { uid } = req.params;
+  try {
+    const responseUser = await AuthServices.getAuthSubUser(uid);
+    if (responseUser.success) {
+      res.status(200).send({
+        success: true,
+        data: responseUser.data,
+        typeEntity: responseUser.typeEntity,
+      });
+    } else {
+      res.status(responseUser.code).send(responseUser.error);
+    }
+  } catch (error) {
+    console.log("Error en getAuthSubUserController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
+const getBaseDataUserController = async (req: Request, res: Response) => {
+  const { uid } = req.params;
+  try {
+    const responseUser = await AuthServices.getDataBaseUser(uid);
+    if (responseUser.success) {
+      res.status(200).send({
+        success: true,
+        data: responseUser.data,
+      });
+    } else {
+      res.status(responseUser.code).send(responseUser.error);
+    }
+  } catch (error) {
+    console.log("Error en getAuthSubUserController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
 const registerController = async ({ body }: Request, res: Response) => {
   const { email, password, typeID, dni, ruc } = body;
   try {
@@ -118,6 +183,42 @@ const UpdateprofileUserController = async (
     }
   } catch (error) {
     console.error("Error en profileCompanyController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
+const UpdateCompanyController = async ({ body }: Request, res: Response) => {
+  const data = body;
+  try {
+    const responseUser = await AuthServices.updateCompany(data);
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser);
+    } else {
+      res.status(responseUser.code).send(responseUser.error);
+    }
+  } catch (error) {
+    console.error("Error en updateCompanyController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
+const UpdateUserController = async ({ body }: Request, res: Response) => {
+  const data = body;
+  try {
+    const responseUser = await AuthServices.UpdateUser(data);
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser);
+    } else {
+      res.status(responseUser.code).send(responseUser.error);
+    }
+  } catch (error) {
+    console.error("Error en updateUserController", error);
     res.status(500).send({
       success: false,
       msg: "Error interno del servidor.",
@@ -244,4 +345,9 @@ export {
   NewPasswordController,
   SendCodeRecoveryController,
   RecoveryPasswordController,
+  getUserController,
+  UpdateCompanyController,
+  UpdateUserController,
+  getAuthSubUserController,
+  getBaseDataUserController,
 };

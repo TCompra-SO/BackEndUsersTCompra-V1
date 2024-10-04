@@ -1,5 +1,5 @@
 import moment from "moment";
-import Joi from "joi";
+import Joi, { any, number } from "joi";
 import User from "../models/userModel";
 import Company from "../models/companyModel";
 import Profile from "../models/profileModel";
@@ -8,6 +8,7 @@ import { AuthServices } from "../services/authServices";
 import { encrypt } from "../utils/bcrypt.handle";
 import { ErrorMessages } from "../utils/ErrorMessages";
 import { getNow } from "../utils/DateTools";
+import { ProfileI } from "../interfaces/profile.interface";
 export class subUserServices {
   static SchemaRegister = Joi.object({
     dni: Joi.string().min(8).max(12).required(),
@@ -17,6 +18,13 @@ export class subUserServices {
     email: Joi.string().min(6).max(255).required().email(),
     typeID: Joi.number().required(),
     uid: Joi.string().required(),
+  });
+
+  static SchemaProfile = Joi.object({
+    uid: Joi.string().required(), // Asegúrate de que el campo 'uid' esté aquí
+    cityID: Joi.number().optional(),
+    address: Joi.string().optional(),
+    phone: Joi.string().optional(),
   });
 
   static NewSubUser = async (
@@ -121,7 +129,7 @@ export class subUserServices {
                 if (!resultProfile) {
                   return {
                     success: false,
-                    code: 404,
+                    code: 401,
                     error: {
                       msg: "No se ha podido completar el Perfil",
                     },
@@ -185,15 +193,22 @@ export class subUserServices {
   static getProfileSubUser = async (uid: string) => {
     try {
       // Buscar el perfil del subusuario en la colección de Profiles
-      const profile = await Profile.findOne({ uid }).exec();
-
+      const profile = await Profile.findOne({ uid });
+      
       if (profile) {
+        const dataSubUser = await AuthServices.getAuthSubUser(uid);
+        const authUsers = dataSubUser.data?.[0]?.auth_users;
+      
+        const userData = {
+          ...profile.toObject(), 
+          email: authUsers.email,
+          typeID: authUsers.typeID 
+        };
+
         return {
           success: true,
           code: 200,
-          res: {
-            profile: profile.toJSON(),
-          },
+          data: userData,
         };
       } else {
         return {
@@ -215,4 +230,209 @@ export class subUserServices {
       };
     }
   };
+
+  static updateSubUser = async (data: ProfileI) => {
+    const { uid, cityID, address, phone } = data;
+
+    // Validar los datos
+    const SchemaUser = this.SchemaProfile.fork(["uid", "cityID"], (field) =>
+      field.optional()
+    );
+
+    const { error } = SchemaUser.validate(data);
+    if (error) {
+      return {
+        success: false,
+        code: 400,
+        error: {
+          msg: ErrorMessages(error.details[0].message),
+        },
+      };
+    }
+
+    // Buscar el perfil existente
+    const profileSubUser = await Profile.findOne({ uid });
+    if (!profileSubUser) {
+      return {
+        success: false,
+        code: 409,
+        error: {
+          msg: "No existe el perfil",
+        },
+      };
+    }
+
+    // Actualizar el perfil del usuario
+    try {
+      const updatedProfileSubUser = await Profile.findOneAndUpdate(
+        { uid }, // Criterio de búsqueda
+        {
+          $set: {
+            cityID,
+            address,
+            phone,
+          },
+        }, // Campos a actualizar
+        { new: true, runValidators: true } // Devuelve el documento actualizado y ejecuta validaciones
+      );
+
+      if (!updatedProfileSubUser) {
+        return {
+          success: false,
+          code: 500,
+          error: {
+            msg: "Error al actualizar el perfil",
+          },
+        };
+      }
+
+      return {
+        success: true,
+        code: 200,
+        res: {
+          msg: "Perfil de usuario actualizado correctamente",
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error al actualizar el perfil del SubUsuario",
+        },
+      };
+    }
+  };
+
+  static changeStatus = async (uid: string, status: boolean) => {
+    try {
+      // Buscar la compañía que contenga el subusuario
+      const company = await Company.findOne({
+        "auth_users.Uid": uid,
+      });
+
+      if (!company) {
+        return {
+          success: false,
+          code: 404,
+          error: {
+            msg: "Subusuario no encontrado en ninguna compañía",
+          },
+        };
+      }
+
+      // Modificar el campo active_account del subusuario
+      const updatedCompany = await Company.findOneAndUpdate(
+        { "auth_users.Uid": uid },
+        {
+          $set: {
+            "auth_users.$.active_account": status, // Modifica el campo active_account
+          },
+        },
+        { new: true, runValidators: true } // Devuelve el documento actualizado y aplica validaciones
+      );
+
+      if (!updatedCompany) {
+        return {
+          success: false,
+          code: 500,
+          error: {
+            msg: "Error al actualizar el estado del subusuario",
+          },
+        };
+      }
+
+      return {
+        success: true,
+        code: 200,
+        res: {
+          msg: "Estado del subusuario actualizado correctamente",
+        },
+      };
+    } catch (error) {
+      console.error("Error cambiando el estado del subusuario:", error);
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error al cambiar el estado del subusuario",
+        },
+      };
+    }
+  };
+
+  static changeRole = async (uid: string, typeID: number) => {
+    console.log("tipo: " + typeID);
+    try {
+      if (typeID === 1) {
+        return {
+          success: false,
+          code: 401,
+          error: {
+            msg: "No se puede asignar un rol de tipo ADMIN a una subcuenta",
+          },
+        };
+      }
+      // Buscar la compañía que contenga el subusuario
+      const company = await Company.findOne({
+        "auth_users.Uid": uid,
+      });
+
+      if (!company) {
+        return {
+          success: false,
+          code: 404,
+          error: {
+            msg: "Subusuario no encontrado en ninguna compañía",
+          },
+        };
+      }
+
+      // Modificar el campo typeID del subusuario
+      const updatedCompany = await Company.findOneAndUpdate(
+        { "auth_users.Uid": uid },
+        {
+          $set: {
+            "auth_users.$.typeID": typeID, // Modifica el campo active_account
+          },
+        },
+        { new: true, runValidators: true } // Devuelve el documento actualizado y aplica validaciones
+      );
+
+      if (!updatedCompany) {
+        return {
+          success: false,
+          code: 500,
+          error: {
+            msg: "Error al actualizar el estado del subusuario",
+          },
+        };
+      }
+
+      return {
+        success: true,
+        code: 200,
+        res: {
+          msg: "Estado del subusuario actualizado correctamente",
+        },
+      };
+    } catch (error) {
+      console.error("Error cambiando el estado del subusuario:", error);
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error al cambiar el estado del subusuario",
+        },
+      };
+    }
+  };
+
+  static getSubUsers = async (uid: string) => {
+    try {
+      
+    } catch (error) {
+      
+    }
+  }
 }

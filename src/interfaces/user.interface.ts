@@ -1,5 +1,5 @@
 import { MetadataI } from "./utils.interface";
-
+import { ScoreI } from "./score.interface";
 export interface UserI {
   uid: string; // Identificador único del usuario
   document: string; // Número de documento del usuario
@@ -15,6 +15,8 @@ export interface UserI {
   avatar?: string; // URL del avatar del usuario (opcional)
   planID: number;
   metadata?: MetadataI;
+  score_provider: [ScoreI];
+  score_client: [ScoreI];
   ultimate_session: Date;
   active_account: boolean; // Identificador del plan al que el usuario está suscrito
 }

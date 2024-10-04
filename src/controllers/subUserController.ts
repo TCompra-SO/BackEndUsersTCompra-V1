@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Request, Response, response } from "express";
 import { subUserServices } from "../services/subUserServices";
 
 const registerSubUserController = async ({ body }: Request, res: Response) => {
@@ -36,13 +36,10 @@ const getSubUserController = async (req: Request, res: Response) => {
   const { uid } = req.params;
   try {
     const responseUser = await subUserServices.getProfileSubUser(uid);
-    if (responseUser && responseUser.success) {
-      res.status(responseUser.code).send(responseUser);
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser.data);
     } else {
-      res.status(500).send({
-        success: false,
-        msg: "Error interno del servidor, respuesta inválida.",
-      });
+      res.status(responseUser.code).send(responseUser.error);
     }
   } catch (error) {
     console.error("Error en getSubUserController", error);
@@ -53,4 +50,64 @@ const getSubUserController = async (req: Request, res: Response) => {
   }
 };
 
-export { registerSubUserController, getSubUserController };
+const updateSubUserController = async ({ body }: Request, res: Response) => {
+  const data = body;
+  try {
+    const responseUser = await subUserServices.updateSubUser(data);
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser);
+    } else {
+      res.status(responseUser.code).send(responseUser.error);
+    }
+  } catch (error) {
+    console.error("Error en updateUserController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
+const changeStatusController = async ({ body }: Request, res: Response) => {
+  const { uid, status } = body;
+  try {
+    const responseUser = await subUserServices.changeStatus(uid, status);
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser);
+    } else {
+      res.status(responseUser.code).send(responseUser.error);
+    }
+  } catch (error) {
+    console.error("Error en changeStatusController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
+const changeRoleController = async ({ body }: Request, res: Response) => {
+  const { uid, typeID } = body;
+  try {
+    const responseUser = await subUserServices.changeRole(uid, typeID);
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser);
+    } else {
+      res.status(responseUser.code).send(responseUser.error);
+    }
+  } catch (error) {
+    console.error("Error en changeRolController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
+export {
+  registerSubUserController,
+  getSubUserController,
+  updateSubUserController,
+  changeStatusController,
+  changeRoleController,
+};

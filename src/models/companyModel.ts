@@ -1,7 +1,6 @@
 import mongoose, { Schema, Types, model, Model } from "mongoose";
 import { CompanyI } from "../interfaces/company.interface";
 import ShortUniqueId from "short-unique-id";
-import { required } from "joi";
 
 const uid = new ShortUniqueId({ length: 20 });
 
@@ -17,6 +16,12 @@ const AuthUserSchema = new Schema({
   typeID: { type: Number, required: true },
   ultimate_session: { type: Date, default: Date.now, required: false },
   active_account: { type: Boolean, required: false },
+});
+
+const ScoreSchema = new Schema({
+  uid: { type: String, required: true },
+  score: { type: Number, required: true },
+  comments: { type: String, required: true },
 });
 
 const CompanySchema = new Schema<CompanyI>(
@@ -69,6 +74,14 @@ const CompanySchema = new Schema<CompanyI>(
     },
     auth_users: {
       type: [AuthUserSchema],
+      required: false,
+    },
+    score_provider: {
+      type: [ScoreSchema],
+      required: false,
+    },
+    score_client: {
+      type: [ScoreSchema],
       required: false,
     },
     email: {

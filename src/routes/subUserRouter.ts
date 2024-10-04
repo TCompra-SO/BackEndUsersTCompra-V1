@@ -2,6 +2,9 @@ import { Request, Response, Router } from "express";
 import {
   registerSubUserController,
   getSubUserController,
+  updateSubUserController,
+  changeStatusController,
+  changeRoleController,
 } from "../controllers/subUserController";
 import { checkJwt } from "../middleware/session";
 
@@ -12,7 +15,10 @@ export class SubUserRouter {
   private constructor() {
     this.router = Router();
     this.router.post("/register", registerSubUserController);
-    this.router.get("/:uid", checkJwt, getSubUserController);
+    this.router.post("/update", updateSubUserController);
+    this.router.post("/changeStatus", changeStatusController);
+    this.router.post("/changeRole", changeRoleController);
+    this.router.get("/getUser/:uid", getSubUserController);
   }
 
   static getRouter(): Router {

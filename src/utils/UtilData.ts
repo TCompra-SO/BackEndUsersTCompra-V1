@@ -104,5 +104,101 @@ export const UtilData = [
         },
       ],
     },
+    requeriment_state: {
+      value: "Estados del Requerimiento",
+      states: [
+        {
+          id: 1,
+          value: "Publicado",
+        },
+        {
+          id: 2,
+          value: "Seleccionado",
+        },
+        {
+          id: 3,
+          value: "Finalizado",
+        },
+        {
+          id: 4,
+          value: "Desertado",
+        },
+        {
+          id: 5,
+          value: "Expirado",
+        },
+        {
+          id: 6,
+          value: "Cancelado",
+        },
+        {
+          id: 7,
+          value: "Eliminado",
+        },
+        {
+          id: 8,
+          value: "En Disputa",
+        },
+      ],
+    },
+    TimeMeasurement: {
+      value: "Medición del Tiempo",
+      types: [
+        {
+          id: 1,
+          value: "Dias",
+        },
+        {
+          id: 2,
+          value: "Meses",
+        },
+        {
+          id: 3,
+          value: "Años",
+        },
+      ],
+    },
+    stateProduct: {
+      value: "Estado del Producto",
+      states: [
+        {
+          id: 1,
+          value: "Nuevo",
+        },
+        {
+          id: 2,
+          value: "Usado",
+        },
+      ],
+    },
+    stateOffer: {
+      value: "Estado de la Oferta",
+      states: [
+        {
+          id: 1,
+          value: "Activo",
+        },
+        {
+          id: 2,
+          value: "Ganador",
+        },
+        {
+          id: 3,
+          value: "Finalizado",
+        },
+        {
+          id: 4,
+          value: "En Disputa",
+        },
+        {
+          id: 5,
+          value: "Cancelado",
+        },
+        {
+          id: 7,
+          value: "Eliminado",
+        },
+      ],
+    },
   },
 ];

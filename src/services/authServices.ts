@@ -21,6 +21,8 @@ import { matchesGlob } from "path";
 import { AuthUserI } from "./../interfaces/authUser.interface";
 import { getSubUserController } from "../controllers/subUserController";
 import { subUserServices } from "./subUserServices";
+import { pipeline } from "stream";
+import { configDotenv } from "dotenv";
 
 export interface UserDocument extends Document {
   _id: string;
@@ -219,10 +221,10 @@ export class AuthServices {
     ruc?: string
   ) => {
     try {
-      const emailToVerifyPipeline = [
+      const emailToVerifyPipeline = (emailField: string) => [
         {
           $match: {
-            email: email,
+            [emailField]: email,
           },
         },
         {
@@ -241,50 +243,65 @@ export class AuthServices {
         },
       ];
 
+      // Función para verificar email en User, Company (email y auth_users.email)
+      const checkEmailExists = async () => {
+        const userEmail = await User.aggregate(emailToVerifyPipeline("email"));
+        const companyEmail = await Company.aggregate(
+          emailToVerifyPipeline("email")
+        );
+        const companyAuthUsersEmail = await Company.aggregate(
+          emailToVerifyPipeline("auth_users.email")
+        );
+
+        return (
+          userEmail.length > 0 ||
+          companyEmail.length > 0 ||
+          companyAuthUsersEmail.length > 0
+        );
+      };
+
+      // Función para verificar documento en User o Company
+      const checkDocExists = async (collection: any) => {
+        const docExists = await collection.aggregate(docToVerifyPipeline);
+        return docExists.length > 0;
+      };
+
       if (dni) {
-        const emailToverify = await User.aggregate(emailToVerifyPipeline);
-        if (emailToverify.length == 0) {
-          const docToVerify = await User.aggregate(docToVerifyPipeline);
-          if (docToVerify.length > 0) {
-            return {
-              success: false,
-              code: 403,
-              error: {
-                msg: "Documento ya registrado",
-              },
-            };
-          }
-        } else {
+        const emailExists = await checkEmailExists();
+        if (emailExists) {
           return {
             success: false,
             code: 409,
-            error: {
-              msg: "Email ya registrado",
-            },
+            error: { msg: "Email ya registrado" },
+          };
+        }
+
+        const docExists = await checkDocExists(User);
+        if (docExists) {
+          return {
+            success: false,
+            code: 403,
+            error: { msg: "Documento ya registrado" },
           };
         }
       }
 
       if (ruc) {
-        const emailToverify = await Company.aggregate(emailToVerifyPipeline);
-        if (emailToverify.length == 0) {
-          const docToVerify = await Company.aggregate(docToVerifyPipeline);
-          if (docToVerify.length > 0) {
-            return {
-              success: false,
-              code: 403,
-              error: {
-                msg: "Documento ya registrado",
-              },
-            };
-          }
-        } else {
+        const emailExists = await checkEmailExists();
+        if (emailExists) {
           return {
             success: false,
             code: 409,
-            error: {
-              msg: "Email ya registrado",
-            },
+            error: { msg: "Email ya registrado" },
+          };
+        }
+
+        const docExists = await checkDocExists(Company);
+        if (docExists) {
+          return {
+            success: false,
+            code: 403,
+            error: { msg: "Documento ya registrado" },
           };
         }
       }
@@ -969,7 +986,7 @@ export class AuthServices {
             {
               CompanyID: result[0].uid,
               uid: result[0].auth_users.Uid,
-              name: profileUser.res?.profile.name,
+              name: profileUser.data?.name,
               email: result[0].auth_users.email,
               type: entity,
               typeID: result[0].auth_users.typeID,
@@ -1199,7 +1216,7 @@ export class AuthServices {
         user = await Company.aggregate(userPipeline);
         userType = UserType.Company;
       }
-      console.log(user);
+
       if (!user || user.length === 0) {
         return {
           success: false,
@@ -1367,6 +1384,368 @@ export class AuthServices {
         code: 500,
         error: {
           msg: "Error al intentar reestablecer la contraseña",
+        },
+      };
+    }
+  };
+
+  static getEntityService = async (uid: string) => {
+    try {
+      let typeEntity;
+
+      const pipeline = [
+        { $match: { uid } }, // Filtra por el uid proporcionado
+        {
+          $project: {
+            password: 0, // Excluye el campo 'password'
+            __v: 0,
+            _id: 0,
+            createdAt: 0,
+            updatedAt: 0,
+            auth_users: 0,
+          },
+        },
+      ];
+      let entity = await Company.aggregate(pipeline);
+      typeEntity = "Company";
+      if (entity.length === 0) {
+        entity = await User.aggregate(pipeline);
+        typeEntity = "User";
+        if (entity.length === 0) {
+          return {
+            success: false,
+            code: 401,
+            error: {
+              msg: "No se encontró el usuario con el uid proporcionado",
+            },
+          };
+        }
+      }
+
+      return {
+        success: true,
+        code: 200,
+        data: entity,
+        typeEntity: typeEntity,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error con el servidor",
+        },
+      };
+    }
+  };
+
+  static getDataBaseUser = async (uid: string) => {
+    try {
+      let Entitydata = this.getEntityService(uid);
+      if ((await Entitydata).success === false) {
+        Entitydata = this.getAuthSubUser(uid);
+        if ((await Entitydata).success === false) {
+          return {
+            success: false,
+            code: 401,
+            error: {
+              msg: "Usuario no Encontrado",
+            },
+          };
+        }
+      }
+      const entityData = await Entitydata;
+      let data = new Array();
+      switch (entityData.typeEntity) {
+        case "Company":
+          data = [
+            {
+              uid: entityData.data[0].uid,
+              name: entityData.data[0].name,
+              email: entityData.data[0].email,
+              typeEntity: entityData.typeEntity,
+              image: entityData.data[0].avatar,
+              tenure: entityData.data[0].age,
+            },
+          ];
+          break;
+
+        case "User":
+          data = [
+            {
+              uid: entityData.data[0].uid,
+              name: entityData.data[0].name,
+              email: entityData.data[0].email,
+              typeEntity: entityData.typeEntity,
+              image: entityData.data[0].avatar,
+            },
+          ];
+          break;
+
+        case "SubUser":
+          const dataProfile = await subUserServices.getProfileSubUser(uid);
+          let authUsers = entityData.data[0].auth_users;
+          authUsers.name = dataProfile?.data?.name ?? "";
+          authUsers.typeEntity = entityData.typeEntity;
+
+          let dataCompany = this.getEntityService(entityData.data[0].uid);
+          data = [
+            {
+              uid: entityData.data[0].uid,
+              name: entityData.data[0].name,
+              email: (await dataCompany).data?.[0].email,
+              typeEntity: "Company",
+              image: entityData.data[0].avatar,
+              auth_users: entityData.data[0].auth_users,
+            },
+          ];
+          break;
+
+        default:
+          return {
+            success: false,
+            code: 403,
+            error: {
+              msg: "No se encontro el Usuario",
+            },
+          };
+          break;
+      }
+      return {
+        success: true,
+        code: 200,
+        data: data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error con el serivdor",
+        },
+      };
+    }
+  };
+
+  static getAuthSubUser = async (uid: string) => {
+    const pipeline = [
+      {
+        $match: {
+          "auth_users.Uid": uid, // Filtra solo los documentos donde haya un auth_user con el Uid buscado
+        },
+      },
+      {
+        $unwind: "$auth_users", // Desenrolla el array 'auth_users' para que sea un solo objeto
+      },
+      {
+        $match: {
+          "auth_users.Uid": uid, // Filtra solo el auth_user que coincida con el Uid buscado
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          uid: 1,
+          name: 1,
+          document: 1,
+          cityID: 1,
+          planID: 1,
+          avatar: 1,
+          "auth_users.email": 1,
+          "auth_users.typeID": 1,
+          "auth_users.ultimate_session": 1,
+          "auth_users.active_account": 1,
+          "auth_users.Uid": 1,
+        },
+      },
+    ];
+
+    try {
+      const subuser = await Company.aggregate(pipeline);
+      if (!subuser) {
+        return {
+          success: false,
+          code: 401,
+          error: {
+            msg: "No se encontró el usuario con el uid proporcionado",
+          },
+        };
+      }
+      return {
+        success: true,
+        code: 200,
+        data: subuser,
+        typeEntity: "SubUser",
+      };
+    } catch (error) {
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Hubo un error interno con el Servidor",
+        },
+      };
+    }
+  };
+
+  static updateCompany = async (data: CompanyI) => {
+    const {
+      uid,
+      phone,
+      address,
+      countryID,
+      cityID,
+      age,
+      specialtyID,
+      about_me,
+      categories,
+    } = data;
+
+    // Validar los datos
+    const SchemaCompany = this.SchemaProfileCompany.fork(
+      ["countryID"],
+      (field) => field.optional()
+    );
+    const { error } = SchemaCompany.validate(data);
+    if (error) {
+      return {
+        success: false,
+        code: 400,
+        error: {
+          msg: ErrorMessages(error.details[0].message),
+        },
+      };
+    }
+
+    // Buscar el perfil existente
+    const profileCompany = await Company.findOne({ uid });
+    if (!profileCompany) {
+      return {
+        success: false,
+        code: 409,
+        error: {
+          msg: "No existe el perfil",
+        },
+      };
+    }
+
+    // Actualizar el perfil
+    try {
+      const updatedProfileCompany = await Company.findOneAndUpdate(
+        { uid }, // Criterio de búsqueda
+        {
+          $set: {
+            phone,
+            address,
+            countryID,
+            cityID,
+            age,
+            specialtyID,
+            about_me,
+            categories,
+          },
+        }, // Campos a actualizar
+        { new: true, runValidators: true } // Devuelve el documento actualizado y ejecuta validaciones
+      );
+
+      if (!updatedProfileCompany) {
+        return {
+          success: false,
+          code: 500,
+          error: {
+            msg: "Error al actualizar el perfil",
+          },
+        };
+      }
+
+      return {
+        success: true,
+        code: 200,
+        res: {
+          msg: "Perfil actualizado correctamente",
+        },
+      };
+    } catch (error) {
+      console.error("Error actualizando el perfil:", error);
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error al actualizar el perfil",
+        },
+      };
+    }
+  };
+
+  static UpdateUser = async (data: UserI) => {
+    const { uid, cityID, address, phone } = data;
+
+    // Validar los datos
+    const SchemaUser = this.SchemaProfileUser.fork(["countryID"], (field) =>
+      field.optional()
+    );
+
+    const { error } = SchemaUser.validate(data);
+    if (error) {
+      return {
+        success: false,
+        code: 400,
+        error: {
+          msg: ErrorMessages(error.details[0].message),
+        },
+      };
+    }
+
+    // Buscar el perfil existente
+    const profileUser = await User.findOne({ uid });
+    if (!profileUser) {
+      return {
+        success: false,
+        code: 409,
+        error: {
+          msg: "No existe el perfil de usuario",
+        },
+      };
+    }
+
+    // Actualizar el perfil del usuario
+    try {
+      const updatedProfileUser = await User.findOneAndUpdate(
+        { uid }, // Criterio de búsqueda
+        {
+          $set: {
+            cityID,
+            address,
+            phone,
+          },
+        }, // Campos a actualizar
+        { new: true, runValidators: true } // Devuelve el documento actualizado y ejecuta validaciones
+      );
+
+      if (!updatedProfileUser) {
+        return {
+          success: false,
+          code: 500,
+          error: {
+            msg: "Error al actualizar el perfil del usuario",
+          },
+        };
+      }
+
+      return {
+        success: true,
+        code: 200,
+        res: {
+          msg: "Perfil de usuario actualizado correctamente",
+        },
+      };
+    } catch (error) {
+      console.error("Error actualizando el perfil del usuario:", error);
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error al actualizar el perfil del usuario",
         },
       };
     }

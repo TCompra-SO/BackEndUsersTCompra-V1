@@ -5,6 +5,12 @@ import { number } from "joi";
 
 const uid = new ShortUniqueId({ length: 20 });
 
+const ScoreSchema = new Schema({
+  uid: { type: String, required: true },
+  score: { type: Number, required: true },
+  comments: { type: String, required: true },
+});
+
 const userSchema = new Schema<UserI>(
   {
     uid: {
@@ -60,6 +66,14 @@ const userSchema = new Schema<UserI>(
     }, // Opcional
     planID: {
       type: Number,
+      required: false,
+    },
+    score_provider: {
+      type: [ScoreSchema],
+      required: false,
+    },
+    score_client: {
+      type: [ScoreSchema],
       required: false,
     },
     metadata: {

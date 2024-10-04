@@ -10,6 +10,11 @@ import {
   NewPasswordController,
   SendCodeRecoveryController,
   RecoveryPasswordController,
+  getUserController,
+  UpdateCompanyController,
+  UpdateUserController,
+  getAuthSubUserController,
+  getBaseDataUserController,
 } from "../controllers/authController";
 import { checkJwt } from "../middleware/session";
 
@@ -23,6 +28,10 @@ export class AuthRouter {
     this.router.post("/profileCompany", UpdateprofileCompanyController);
     this.router.post("/profileUser", UpdateprofileUserController);
     this.router.post("/login", LoginController);
+
+    this.router.post("/updateCompany", UpdateCompanyController);
+    this.router.post("/updateUser", UpdateUserController);
+
     this.router.post("/sendCode", SendCodeController);
     this.router.post("/validate-code", ValidateCodeController);
     this.router.post("/newPassword", checkJwt, NewPasswordController);
@@ -30,6 +39,9 @@ export class AuthRouter {
     this.router.post("/recoveryPassword", RecoveryPasswordController);
 
     this.router.get("/getName/:document", getNameController);
+    this.router.get("/getUser/:uid", getUserController);
+    this.router.get("/getAuthSubUser/:uid", getAuthSubUserController);
+    this.router.get("/getBaseDataUser/:uid", getBaseDataUserController);
   }
 
   static getRouter(): Router {
