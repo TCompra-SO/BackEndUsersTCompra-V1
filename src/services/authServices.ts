@@ -23,6 +23,7 @@ import { getSubUserController } from "../controllers/subUserController";
 import { subUserServices } from "./subUserServices";
 import { pipeline } from "stream";
 import { configDotenv } from "dotenv";
+import { ScoreService } from "./scoreServices";
 
 export interface UserDocument extends Document {
   _id: string;
@@ -1456,8 +1457,14 @@ export class AuthServices {
       }
       const entityData = await Entitydata;
       let data = new Array();
+      let scores, customerCount, customerScore, sellerCount, sellerScore;
       switch (entityData.typeEntity) {
         case "Company":
+          scores = ScoreService.getScoreCount(entityData.data[0].uid);
+          customerCount = (await scores).data?.customerCount;
+          customerScore = (await scores).data?.customerScore;
+          sellerCount = (await scores).data?.sellerCount;
+          sellerScore = (await scores).data?.sellerScore;
           data = [
             {
               uid: entityData.data[0].uid,
@@ -1466,11 +1473,23 @@ export class AuthServices {
               typeEntity: entityData.typeEntity,
               image: entityData.data[0].avatar,
               tenure: entityData.data[0].age,
+              customerCount,
+              customerScore,
+              sellerCount,
+              sellerScore,
             },
           ];
           break;
 
         case "User":
+          // aqui corregir
+
+          scores = ScoreService.getScoreCount(entityData.data[0].uid);
+
+          customerCount = (await scores).data?.customerCount;
+          customerScore = (await scores).data?.customerScore;
+          sellerCount = (await scores).data?.sellerCount;
+          sellerScore = (await scores).data?.sellerScore;
           data = [
             {
               uid: entityData.data[0].uid,
@@ -1478,6 +1497,10 @@ export class AuthServices {
               email: entityData.data[0].email,
               typeEntity: entityData.typeEntity,
               image: entityData.data[0].avatar,
+              customerCount,
+              customerScore,
+              sellerCount,
+              sellerScore,
             },
           ];
           break;
@@ -1489,11 +1512,22 @@ export class AuthServices {
           authUsers.typeEntity = entityData.typeEntity;
 
           let dataCompany = this.getEntityService(entityData.data[0].uid);
+          scores = ScoreService.getScoreCount(entityData.data[0].uid);
+
+          customerCount = (await scores).data?.customerCount;
+          customerScore = (await scores).data?.customerScore;
+          sellerCount = (await scores).data?.sellerCount;
+          sellerScore = (await scores).data?.sellerScore;
           data = [
             {
               uid: entityData.data[0].uid,
               name: entityData.data[0].name,
               email: (await dataCompany).data?.[0].email,
+              tenure: (await dataCompany).data?.[0].age,
+              customerCount,
+              customerScore,
+              sellerCount,
+              sellerScore,
               typeEntity: "Company",
               image: entityData.data[0].avatar,
               auth_users: entityData.data[0].auth_users,
@@ -1517,11 +1551,12 @@ export class AuthServices {
         data: data,
       };
     } catch (error) {
+      console.log(error);
       return {
         success: false,
         code: 500,
         error: {
-          msg: "Error con el serivdor",
+          msg: "Error con el servidor" + error,
         },
       };
     }
@@ -1562,7 +1597,7 @@ export class AuthServices {
 
     try {
       const subuser = await Company.aggregate(pipeline);
-      if (!subuser) {
+      if (subuser.length === 0) {
         return {
           success: false,
           code: 401,

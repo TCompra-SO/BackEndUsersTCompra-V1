@@ -1,5 +1,8 @@
 import { Router } from "express";
-import { registerScoreController } from "../controllers/scoreController";
+import {
+  getScoreCountController,
+  registerScoreController,
+} from "../controllers/scoreController";
 export class ScoreRouter {
   private static instance: ScoreRouter;
   private router: Router;
@@ -7,6 +10,8 @@ export class ScoreRouter {
   private constructor() {
     this.router = Router();
     this.router.post("/registerScore", registerScoreController);
+
+    this.router.get("/getScoreCount/:uid", getScoreCountController);
   }
 
   static getRouter(): Router {

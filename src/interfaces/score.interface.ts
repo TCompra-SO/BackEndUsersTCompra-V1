@@ -1,5 +1,5 @@
 export interface ScoreI {
   uid: string;
-  stars: number;
+  score: number;
   comments: string;
 }
