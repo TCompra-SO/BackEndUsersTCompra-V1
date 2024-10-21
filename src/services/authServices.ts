@@ -1469,6 +1469,7 @@ export class AuthServices {
             {
               uid: entityData.data[0].uid,
               name: entityData.data[0].name,
+              document: entityData.data[0].document,
               email: entityData.data[0].email,
               typeEntity: entityData.typeEntity,
               image: entityData.data[0].avatar,
@@ -1494,6 +1495,7 @@ export class AuthServices {
             {
               uid: entityData.data[0].uid,
               name: entityData.data[0].name,
+              document: entityData.data[0].document,
               email: entityData.data[0].email,
               typeEntity: entityData.typeEntity,
               image: entityData.data[0].avatar,
@@ -1509,6 +1511,7 @@ export class AuthServices {
           const dataProfile = await subUserServices.getProfileSubUser(uid);
           let authUsers = entityData.data[0].auth_users;
           authUsers.name = dataProfile?.data?.name ?? "";
+          authUsers.document = dataProfile?.data?.document ?? "";
           authUsers.typeEntity = entityData.typeEntity;
 
           let dataCompany = this.getEntityService(entityData.data[0].uid);
@@ -1522,6 +1525,7 @@ export class AuthServices {
             {
               uid: entityData.data[0].uid,
               name: entityData.data[0].name,
+              document: entityData.data[0].document,
               email: (await dataCompany).data?.[0].email,
               tenure: (await dataCompany).data?.[0].age,
               customerCount,
