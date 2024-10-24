@@ -1,7 +1,8 @@
 export interface AuthUserI {
-  id: string;
+  Uid: string;
   email: string;
   password: string;
-  typeID: number; // Tipo literal
-  profileID: string;
+  typeID: number;
+  ultimate_session: Date;
+  active_account: boolean; // Tipo literal
 }

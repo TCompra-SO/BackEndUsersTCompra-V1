@@ -1,9 +1,22 @@
 import { Request, Response, Router } from "express";
 import {
   registerController,
-  loginControllerTest,
-  profileCompanyController,
+  LoginController,
+  UpdateprofileCompanyController,
+  UpdateprofileUserController,
+  getNameController,
+  SendCodeController,
+  ValidateCodeController,
+  NewPasswordController,
+  SendCodeRecoveryController,
+  RecoveryPasswordController,
+  getUserController,
+  UpdateCompanyController,
+  UpdateUserController,
+  getAuthSubUserController,
+  getBaseDataUserController,
 } from "../controllers/authController";
+import { checkJwt } from "../middleware/session";
 
 export class AuthRouter {
   private static instance: AuthRouter;
@@ -12,8 +25,23 @@ export class AuthRouter {
   private constructor() {
     this.router = Router();
     this.router.post("/register", registerController);
-    this.router.post("/profileCompany", profileCompanyController);
-    this.router.post("/login", loginControllerTest);
+    this.router.post("/profileCompany", UpdateprofileCompanyController);
+    this.router.post("/profileUser", UpdateprofileUserController);
+    this.router.post("/login", LoginController);
+
+    this.router.post("/updateCompany", UpdateCompanyController);
+    this.router.post("/updateUser", UpdateUserController);
+
+    this.router.post("/sendCode", SendCodeController);
+    this.router.post("/validate-code", ValidateCodeController);
+    this.router.post("/newPassword", checkJwt, NewPasswordController);
+    this.router.post("/sendCodeRecovery", SendCodeRecoveryController);
+    this.router.post("/recoveryPassword", RecoveryPasswordController);
+
+    this.router.get("/getName/:document", getNameController);
+    this.router.get("/getUser/:uid", getUserController);
+    this.router.get("/getAuthSubUser/:uid", getAuthSubUserController);
+    this.router.get("/getBaseDataUser/:uid", getBaseDataUserController);
   }
 
   static getRouter(): Router {

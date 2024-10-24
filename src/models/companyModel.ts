@@ -1,18 +1,28 @@
 import mongoose, { Schema, Types, model, Model } from "mongoose";
 import { CompanyI } from "../interfaces/company.interface";
 import ShortUniqueId from "short-unique-id";
-const AuthUserSchema = new Schema(
-  {
-    id: { type: String, required: true },
-    email: { type: String, required: true },
-    password: { type: String, required: true },
-    typeID: { type: Number, required: true },
-    profileID: { type: String, required: true },
-  },
-  { _id: false } // Si no necesitas un _id para cada subdocumento
-);
 
 const uid = new ShortUniqueId({ length: 20 });
+
+const AuthUserSchema = new Schema({
+  Uid: {
+    type: String,
+    required: true,
+    unique: true,
+    default: () => uid.rnd(),
+  },
+  email: { type: String, required: true },
+  password: { type: String, required: true },
+  typeID: { type: Number, required: true },
+  ultimate_session: { type: Date, default: Date.now, required: false },
+  active_account: { type: Boolean, required: false },
+});
+
+const ScoreSchema = new Schema({
+  uid: { type: String, required: true },
+  score: { type: Number, required: true },
+  comments: { type: String, required: true },
+});
 
 const CompanySchema = new Schema<CompanyI>(
   {
@@ -38,12 +48,12 @@ const CompanySchema = new Schema<CompanyI>(
       type: String,
       required: false,
     },
-    country: {
-      type: String,
+    countryID: {
+      type: Number,
       required: false,
     },
-    city: {
-      type: String,
+    cityID: {
+      type: Number,
       required: false,
     },
     categories: {
@@ -55,7 +65,7 @@ const CompanySchema = new Schema<CompanyI>(
       required: false,
     },
     specialtyID: {
-      type: Number,
+      type: String,
       required: false,
     },
     about_me: {
@@ -63,7 +73,15 @@ const CompanySchema = new Schema<CompanyI>(
       required: false,
     },
     auth_users: {
-      type: AuthUserSchema,
+      type: [AuthUserSchema],
+      required: false,
+    },
+    score_provider: {
+      type: [ScoreSchema],
+      required: false,
+    },
+    score_client: {
+      type: [ScoreSchema],
       required: false,
     },
     email: {
@@ -83,7 +101,7 @@ const CompanySchema = new Schema<CompanyI>(
       required: false,
     },
     planID: {
-      type: String,
+      type: Number,
       required: false,
     },
     metadata: {
@@ -93,6 +111,14 @@ const CompanySchema = new Schema<CompanyI>(
     ultimate_session: {
       type: Date,
       default: Date.now,
+      required: false,
+    },
+    verified: {
+      type: Boolean,
+      required: false,
+    },
+    active_account: {
+      type: Boolean,
       required: false,
     },
   },

@@ -1,8 +1,15 @@
 import mongoose, { Schema, Types, model, Model } from "mongoose";
 import { UserI } from "../interfaces/user.interface";
 import ShortUniqueId from "short-unique-id";
+import { number } from "joi";
 
 const uid = new ShortUniqueId({ length: 20 });
+
+const ScoreSchema = new Schema({
+  uid: { type: String, required: true },
+  score: { type: Number, required: true },
+  comments: { type: String, required: true },
+});
 
 const userSchema = new Schema<UserI>(
   {
@@ -28,12 +35,12 @@ const userSchema = new Schema<UserI>(
       type: String,
       required: false,
     },
-    country: {
-      type: String,
+    countryID: {
+      type: Number,
       required: false,
     },
-    city: {
-      type: String,
+    cityID: {
+      type: Number,
       required: false,
     },
     categories: {
@@ -58,17 +65,29 @@ const userSchema = new Schema<UserI>(
       required: false,
     }, // Opcional
     planID: {
-      type: String,
+      type: Number,
+      required: false,
+    },
+    score_provider: {
+      type: [ScoreSchema],
+      required: false,
+    },
+    score_client: {
+      type: [ScoreSchema],
       required: false,
     },
     metadata: {
       type: Object,
-      require: false,
+      required: false,
     },
     ultimate_session: {
       type: Date,
       default: Date.now,
-      require: false,
+      required: false,
+    },
+    active_account: {
+      type: Boolean,
+      required: false,
     },
   },
   {
