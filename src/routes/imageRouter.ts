@@ -1,8 +1,7 @@
-import multer from "multer";
+
 import { uploadAvatarController, upload } from "../controllers/imageController";
 import { Router } from "express";
-import fs from "fs";
-import path from "path";
+
 
 export class ImageRouter {
   private static instance: ImageRouter;

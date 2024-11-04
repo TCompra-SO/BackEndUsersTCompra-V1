@@ -113,15 +113,15 @@ export const UtilData = [
         },
         {
           id: 2,
-          value: "Seleccionado",
+          value: "Atendido",
         },
         {
           id: 3,
-          value: "Finalizado",
+          value: "Culminado",
         },
         {
           id: 4,
-          value: "Desertado",
+          value: "Desierto",
         },
         {
           id: 5,

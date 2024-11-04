@@ -15,6 +15,7 @@ export class ScoreService {
     comments: string
   ) => {
     try {
+      console.log(comments);
       const data = await AuthServices.getDataBaseUser(uidUser);
       if (data.success === false) {
         return {
@@ -283,6 +284,7 @@ export class ScoreService {
         }
       }
     } catch (error) {
+      console.error(error);
       return {
         success: false,
         code: 500,

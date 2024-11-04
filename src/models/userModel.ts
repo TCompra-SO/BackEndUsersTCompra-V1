@@ -8,7 +8,7 @@ const uid = new ShortUniqueId({ length: 20 });
 const ScoreSchema = new Schema({
   uid: { type: String, required: true },
   score: { type: Number, required: true },
-  comments: { type: String, required: true },
+  comments: { type: String, required: false },
 });
 
 const userSchema = new Schema<UserI>(

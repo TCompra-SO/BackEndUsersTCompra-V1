@@ -21,7 +21,7 @@ const AuthUserSchema = new Schema({
 const ScoreSchema = new Schema({
   uid: { type: String, required: true },
   score: { type: Number, required: true },
-  comments: { type: String, required: true },
+  comments: { type: String, required: false },
 });
 
 const CompanySchema = new Schema<CompanyI>(
