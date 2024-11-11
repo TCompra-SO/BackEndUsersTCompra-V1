@@ -51,26 +51,32 @@ export const UtilData = [
         {
           id: 1,
           value: "Inmediato",
+          days: 0,
         },
         {
           id: 2,
           value: "2 Días",
+          days: 2,
         },
         {
           id: 3,
           value: "4 Días",
+          days: 4,
         },
         {
           id: 4,
           value: "7 Días",
+          days: 7,
         },
         {
           id: 5,
           value: "15 Días",
+          days: 15,
         },
         {
           id: 6,
           value: "Mas de 15 Días",
+          days: 999,
         },
       ],
     },
