@@ -9,6 +9,8 @@ import { encrypt } from "../utils/bcrypt.handle";
 import { ErrorMessages } from "../utils/ErrorMessages";
 import { getNow } from "../utils/DateTools";
 import { ProfileI } from "../interfaces/profile.interface";
+import { error } from "console";
+
 export class subUserServices {
   static SchemaRegister = Joi.object({
     dni: Joi.string().min(8).max(12).required(),
@@ -194,15 +196,15 @@ export class subUserServices {
     try {
       // Buscar el perfil del subusuario en la colección de Profiles
       const profile = await Profile.findOne({ uid });
-      
+
       if (profile) {
         const dataSubUser = await AuthServices.getAuthSubUser(uid);
         const authUsers = dataSubUser.data?.[0]?.auth_users;
-      
+
         const userData = {
-          ...profile.toObject(), 
+          ...profile.toObject(),
           email: authUsers.email,
-          typeID: authUsers.typeID 
+          typeID: authUsers.typeID,
         };
 
         return {
@@ -430,9 +432,43 @@ export class subUserServices {
 
   static getSubUsers = async (uid: string) => {
     try {
-      
+      /*  const result = await AuthServices.getDataBaseUser(uid);
+      if (!result.success) {
+        return {
+          success: false,
+          code: 403,
+          error: {
+            msg: "No se ha encontrado el usuario",
+          }
+        }
+      }
+      const typeEntity = result.data?.[0].typeEntity;*/
+      const subUsersData = await Company.aggregate([
+        {
+          $match: { uid }, // Filtra por el UID proporcionado
+        },
+        {
+          $project: {
+            uid: 1, // Incluye el campo 'uid'
+            name: 1, // Incluye el campo 'name'
+            document: 1, // Incluye el campo 'document'
+            auth_users: 1, // Incluye el campo 'auth_users'
+          },
+        },
+      ]);
+      return {
+        success: true,
+        code: 200,
+        data: subUsersData,
+      };
     } catch (error) {
-      
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Ha ocurrido un Error interno con el Servidor",
+        },
+      };
     }
-  }
+  };
 }

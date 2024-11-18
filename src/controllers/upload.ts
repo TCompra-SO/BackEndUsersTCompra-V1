@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { handleHttp } from "../utils/error.handle";
 import { registerUpload } from "../services/storage";
-import fileUploadMiddleware from "../middleware/file";
 import { RequestExt } from "../interfaces/req-ext";
 import { Storage } from "../interfaces/storage.interface";
 

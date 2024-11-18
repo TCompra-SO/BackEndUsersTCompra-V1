@@ -5,6 +5,7 @@ import {
   updateSubUserController,
   changeStatusController,
   changeRoleController,
+  getSubUsersByEntity,
 } from "../controllers/subUserController";
 import { checkJwt } from "../middleware/session";
 
@@ -19,6 +20,7 @@ export class SubUserRouter {
     this.router.post("/changeStatus", changeStatusController);
     this.router.post("/changeRole", changeRoleController);
     this.router.get("/getUser/:uid", getSubUserController);
+    this.router.get("/getSubUsersByEntity/:uid", getSubUsersByEntity);
   }
 
   static getRouter(): Router {

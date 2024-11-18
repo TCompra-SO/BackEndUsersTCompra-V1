@@ -104,10 +104,29 @@ const changeRoleController = async ({ body }: Request, res: Response) => {
   }
 };
 
+const getSubUsersByEntity = async (req: Request, res: Response) => {
+  const { uid } = req.params;
+  try {
+    const responseUser = await subUserServices.getSubUsers(uid);
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser);
+    } else {
+      res.status(responseUser.code).send(responseUser.error);
+    }
+  } catch (error) {
+    console.error("Error en getSubUsersByEntityController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
 export {
   registerSubUserController,
   getSubUserController,
   updateSubUserController,
   changeStatusController,
   changeRoleController,
+  getSubUsersByEntity,
 };
