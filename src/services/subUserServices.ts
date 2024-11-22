@@ -9,8 +9,10 @@ import { encrypt } from "../utils/bcrypt.handle";
 import { ErrorMessages } from "../utils/ErrorMessages";
 import { getNow } from "../utils/DateTools";
 import { ProfileI } from "../interfaces/profile.interface";
-import { error } from "console";
-
+import { Console, error } from "console";
+import CompanyModel from "../models/companyModel";
+import { CollectionType } from "../types/globalTypes";
+import dbConnect from "../database/mongo";
 export class subUserServices {
   static SchemaRegister = Joi.object({
     dni: Joi.string().min(8).max(12).required(),
@@ -432,36 +434,111 @@ export class subUserServices {
 
   static getSubUsers = async (uid: string) => {
     try {
-      /*  const result = await AuthServices.getDataBaseUser(uid);
-      if (!result.success) {
-        return {
-          success: false,
-          code: 403,
-          error: {
-            msg: "No se ha encontrado el usuario",
-          }
-        }
+      // Nombre de la colección en MongoDB
+      // 1. Obtener la cantidad de productos por usuario
+
+      // Convertimos los resultados de countProducts a un mapa
+
+      /*   const countProducts =
+        (await this.getCountService(CollectionType.PRODUCTS, uid)) || [];
+
+      const countOffers =
+        (await this.getCountService(CollectionType.OFFERS, uid)) || [];
+
+      const countPurchaseOrders =
+        (await this.getCountService(CollectionType.PURCHASEORDERS, uid)) || [];
+      /* const countProductsMap = new Map();
+      countProducts.forEach((item) => {
+        countProductsMap.set(item.userID?.toString(), item.totalOfertas); // Usar item.userID en lugar de item._id
+      });*/
+
+      // Arrays de entrada
+      const countProducts =
+        (await this.getCountService(CollectionType.PRODUCTS, uid)) || [];
+      const countOffers =
+        (await this.getCountService(CollectionType.OFFERS, uid)) || [];
+
+      const countPurchaseOrders =
+        (await this.getCountService(CollectionType.PURCHASEORDERS, uid)) || [];
+      // Crear un array vacío para almacenar los objetos combinados
+
+      interface CombinedCount {
+        name: string | undefined;
+        document: string | undefined;
+        typeEntity: string | undefined;
+        userID: string | undefined;
+        typeID: number | undefined; // Puede ser número o texto, según tus datos
+        email: string | undefined;
+        createdAt: Date | undefined;
+        numProducts: number;
+        numOffers: number;
+        numPurchaseOrders: number;
       }
-      const typeEntity = result.data?.[0].typeEntity;*/
-      const subUsersData = await Company.aggregate([
-        {
-          $match: { uid }, // Filtra por el UID proporcionado
-        },
-        {
-          $project: {
-            uid: 1, // Incluye el campo 'uid'
-            name: 1, // Incluye el campo 'name'
-            document: 1, // Incluye el campo 'document'
-            auth_users: 1, // Incluye el campo 'auth_users'
-          },
-        },
-      ]);
+      const combinedCounts: CombinedCount[] = [];
+
+      // Iterar sobre countProducts para combinar los datos
+      for (let i = 0; i < countProducts.length; i++) {
+        const product = countProducts[i];
+
+        // Buscar las coincidencias en countOffers y countPurchaseOrders
+        const offer = countOffers.find((o) => o.userID === product.userID);
+        const purchaseOrder = countPurchaseOrders.find(
+          (po) => po.userID === product.userID
+        );
+
+        // Crear el objeto combinado
+        const combinedObject: CombinedCount = {
+          name: product.name,
+          document: product.document,
+          typeEntity: product.typeEntity,
+          userID: product.userID,
+          typeID: product.typeID,
+          email: product.email,
+          createdAt: product.createdAt,
+          numProducts: product.total,
+          numOffers: offer ? offer.total : 0, // Si no se encuentra, asignar 0
+          numPurchaseOrders: purchaseOrder ? purchaseOrder.total : 0, // Si no se encuentra, asignar 0
+        };
+
+        // Agregar el objeto combinado al array
+        combinedCounts.push(combinedObject);
+      }
+      const subUsersCompany = await this.getDataSubUser(uid);
+
+      console.log(subUsersCompany);
+
+      // Crear el array combinado
+      const updatedSubUsers: any[] = subUsersCompany.map((subUser) => {
+        // Buscar coincidencia en combinedCounts por userID
+        const matchingProduct = combinedCounts.find(
+          (product) => product.userID === subUser.auth_users.Uid
+        );
+
+        // Crear un objeto combinado
+        return {
+          ...subUser.auth_users, // Mantén las propiedades originales del subusuario
+          // name: matchingProduct ? matchingProduct.name : "Unknown",
+          // document: matchingProduct ? matchingProduct.document : "Unknown",
+          typeEntity: matchingProduct ? matchingProduct.typeEntity : "SubUser",
+          //  createdAt: matchingProduct ? matchingProduct.createdAt : null,
+          numProducts: matchingProduct ? matchingProduct.numProducts : 0,
+          numOffers: matchingProduct ? matchingProduct.numOffers : 0,
+          numPurchaseOrders: matchingProduct
+            ? matchingProduct.numPurchaseOrders
+            : 0,
+        };
+      });
+
+      console.log(subUsersCompany);
+      console.log(updatedSubUsers);
+
       return {
         success: true,
         code: 200,
-        data: subUsersData,
+        data: updatedSubUsers,
       };
     } catch (error) {
+      console.error(error);
       return {
         success: false,
         code: 500,
@@ -469,6 +546,228 @@ export class subUserServices {
           msg: "Ha ocurrido un Error interno con el Servidor",
         },
       };
+    }
+  };
+  static getDataSubUser = async (uid: string) => {
+    //  const companyData = await CompanyModel.find({ uid }).lean();
+    const companyData = await CompanyModel.aggregate([
+      {
+        $match: { uid }, // Filtra por el uid en la colección Companys
+      },
+      {
+        $unwind: "$auth_users", // Descompone el array de auth_users
+      },
+      {
+        $lookup: {
+          from: "profiles", // Nombre de la colección Profiles
+          localField: "auth_users.Uid", // Campo en Company que se relaciona con Profiles
+          foreignField: "uid", // Campo en Profiles que se relaciona con Company
+          as: "profileData", // Nombre del nuevo campo con los datos de Profiles
+        },
+      },
+      {
+        $unwind: "$profileData", // Descompone el array profileData para acceder a los campos directamente
+      },
+      {
+        $addFields: {
+          "auth_users.name": "$profileData.name", // Agrega el campo name de profileData a auth_users
+          "auth_users.document": "$profileData.document", // Agrega el campo document de profileData a auth_users
+        },
+      },
+      {
+        $project: {
+          auth_users: 1, // Mantén los datos de auth_users con los nuevos campos
+          _id: 0, // Mantén el _id original
+        },
+      },
+    ]);
+    return companyData;
+  };
+  static getCountService = async (service: CollectionType, uid: string) => {
+    const mongoose = require("mongoose");
+    let uidField;
+    let collectionData;
+    try {
+      switch (service) {
+        case CollectionType.PRODUCTS:
+          collectionData = await mongoose.connection.db.collection("products");
+          uidField = "userID";
+          break;
+        case CollectionType.SERVICES:
+          collectionData = await mongoose.connection.db.collection("services");
+          uidField = "userID";
+          break;
+        case CollectionType.LIQUIDATIONS:
+          collectionData = await mongoose.connection.db.collection(
+            "liquidations"
+          );
+          uidField = "userID";
+          break;
+        case CollectionType.OFFERS:
+          // AQUI DEBERA HACERSE LA SUMA DE TODAS LAS OFERTAS
+          collectionData = await mongoose.connection.db.collection(
+            "offersproducts"
+          );
+          uidField = "userID";
+          break;
+        case CollectionType.PURCHASEORDERS:
+          collectionData = await mongoose.connection.db.collection(
+            "purchaseorderproducts"
+          );
+          uidField = "subUserClientID";
+          break;
+        default:
+          break;
+      }
+
+      interface AgrupacionPorUsuario {
+        _id: string; // userID
+        total: number;
+        userID?: string;
+        name?: string;
+        typeEntity?: string;
+        document?: string;
+        createdAt?: Date;
+        typeID?: number;
+        email?: string;
+      }
+
+      const resultCount: AgrupacionPorUsuario[] = await collectionData
+        .aggregate([
+          {
+            $match: { entityID: uid }, // Filtra por el entityID proporcionado
+          },
+          {
+            $lookup: {
+              from: "profiles", // Nombre de la colección con los datos de los perfiles
+              localField: uidField, // Campo de Products que relaciona con Profiles
+              foreignField: "uid", // Campo de Profiles que se relaciona con Products
+              as: "profileData", // El nombre del campo donde se almacenará la información de Profiles
+            },
+          },
+          {
+            $unwind: { path: "$profileData", preserveNullAndEmptyArrays: true }, // Desestructuramos el arreglo profileData
+          },
+          {
+            $lookup: {
+              from: "companys", // Segunda búsqueda en uid
+              localField: uidField,
+              foreignField: "uid",
+              as: "companyData", // Datos encontrados en uid
+            },
+          },
+          {
+            $unwind: {
+              path: "$companyData",
+              preserveNullAndEmptyArrays: true,
+            }, // Permitir datos vacíos
+          },
+          {
+            $lookup: {
+              from: "users", // Buscamos en la colección users si no encontramos en profiles o companys
+              localField: uidField, // Relacionamos con el userID de Products
+              foreignField: "uid", // Relacionamos con el campo uid de users
+              as: "userData", // Almacenamos los datos de users
+            },
+          },
+          {
+            $unwind: { path: "$userData", preserveNullAndEmptyArrays: true }, // Desestructuramos el campo userData
+          },
+          {
+            $addFields: {
+              name: {
+                $ifNull: [
+                  "$profileData.name", // Si profileData.name existe, lo toma
+                  "$companyData.name", // Si no, intenta companyData.name
+                  "$userData.name", // Si no, intenta userData.name
+                  "Unknown", // Si todo lo anterior es null, asigna "Unknown"
+                ],
+              },
+              document: {
+                $ifNull: [
+                  "$profileData.document", // Si profileData.document existe, lo toma
+                  "$companyData.document", // Si no, intenta companyData.document
+                  "$userData.document", // Si no, intenta userData.document
+                  "Unknown", // Si todo lo anterior es null, asigna "Unknown"
+                ],
+              },
+              createdAt: {
+                $ifNull: [
+                  "$profileData.createdAt", // Si profileData.document existe, lo toma
+                  "$companyData.createdAt", // Si no, intenta companyData.document
+                  "$userData.createdAt", // Si no, intenta userData.document
+                  "Unknown", // Si todo lo anterior es null, asigna "Unknown"
+                ],
+              },
+              email: {
+                $ifNull: [
+                  "$profileData.email", // Si profileData.document existe, lo toma
+                  "$companyData.email", // Si no, intenta companyData.document
+                  "$userData.email", // Si no, intenta userData.document
+                  "Unknown", // Si todo lo anterior es null, asigna "Unknown"
+                ],
+              },
+              typeID: {
+                $ifNull: [
+                  "$profileData.typeID", // Si profileData.document existe, lo toma
+                  "$companyData.typeID", // Si no, intenta companyData.document
+                  "$userData.typeID", // Si no, intenta userData.document
+                  "Unknown", // Si todo lo anterior es null, asigna "Unknown"
+                ],
+              },
+              typeEntity: {
+                $cond: {
+                  if: { $ifNull: ["$profileData.name", false] }, // Si profileData.name existe
+                  then: "SubUser", // Asignamos "SubUser" si está en profiles
+                  else: {
+                    $cond: {
+                      if: { $ifNull: ["$companyData.name", false] }, // Si companyData.name existe
+                      then: "Company", // Asignamos "Company" si está en companys
+                      else: {
+                        // Si no se encuentra en profiles ni en companys, asignamos "User"
+                        $cond: {
+                          if: { $ifNull: ["$userData.name", false] }, // Si userData.name existe
+                          then: "User", // Asignamos "User" si está en users
+                          else: null, // Si ninguno existe, asignamos null
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          {
+            $group: {
+              _id: `$${uidField}`, // Agrupamos por userID
+              total: { $sum: 1 }, // Contamos los productos
+              name: { $first: "$name" }, // Tomamos el primer nombre calculado con $addFields
+              typeEntity: { $first: "$typeEntity" }, // Tomamos el primer tipo de entidad calculado con $addFields
+              document: { $first: "$document" },
+              createdAt: { $first: "$createdAt" },
+              email: { $first: "$email" },
+              typeID: { $first: "$typeID" },
+            },
+          },
+          {
+            $project: {
+              _id: 0, // Excluye el campo _id
+              userID: "$_id", // Renombra _id a userID
+              total: 1, // Incluye el total de productos
+              name: 1, // Incluye el nombre
+              typeEntity: 1, // Incluye el tipo de entidad
+              document: 1,
+              createdAt: 1,
+              typeID: 1,
+              email: 1,
+            },
+          },
+        ])
+        .toArray();
+
+      return resultCount;
+    } catch (error) {
+      console.error(error);
     }
   };
 }

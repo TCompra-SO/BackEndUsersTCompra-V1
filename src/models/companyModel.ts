@@ -1,6 +1,8 @@
 import mongoose, { Schema, Types, model, Model } from "mongoose";
 import { CompanyI } from "../interfaces/company.interface";
 import ShortUniqueId from "short-unique-id";
+import { create } from "domain";
+import { required } from "joi";
 
 const uid = new ShortUniqueId({ length: 20 });
 
