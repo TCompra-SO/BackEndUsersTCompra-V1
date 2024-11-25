@@ -11,8 +11,9 @@ import { getNow } from "../utils/DateTools";
 import { ProfileI } from "../interfaces/profile.interface";
 import { Console, error } from "console";
 import CompanyModel from "../models/companyModel";
-import { CollectionType } from "../types/globalTypes";
+import { CollectionType, TypeOrder } from "../types/globalTypes";
 import dbConnect from "../database/mongo";
+import { pipeline } from "stream";
 export class subUserServices {
   static SchemaRegister = Joi.object({
     dni: Joi.string().min(8).max(12).required(),
@@ -434,25 +435,6 @@ export class subUserServices {
 
   static getSubUsers = async (uid: string) => {
     try {
-      // Nombre de la colección en MongoDB
-      // 1. Obtener la cantidad de productos por usuario
-
-      // Convertimos los resultados de countProducts a un mapa
-
-      /*   const countProducts =
-        (await this.getCountService(CollectionType.PRODUCTS, uid)) || [];
-
-      const countOffers =
-        (await this.getCountService(CollectionType.OFFERS, uid)) || [];
-
-      const countPurchaseOrders =
-        (await this.getCountService(CollectionType.PURCHASEORDERS, uid)) || [];
-      /* const countProductsMap = new Map();
-      countProducts.forEach((item) => {
-        countProductsMap.set(item.userID?.toString(), item.totalOfertas); // Usar item.userID en lugar de item._id
-      });*/
-
-      // Arrays de entrada
       const countProducts =
         (await this.getCountService(CollectionType.PRODUCTS, uid)) || [];
       const countOffers =
@@ -461,7 +443,17 @@ export class subUserServices {
       const countPurchaseOrders =
         (await this.getCountService(CollectionType.PURCHASEORDERS, uid)) || [];
       // Crear un array vacío para almacenar los objetos combinados
+      const countPurchaseOrdersProvider = await this.getCountOrders(
+        CollectionType.PURCHASEORDERSPRODUCTS,
+        uid,
+        TypeOrder.PROVIDER
+      );
 
+      console.log(countPurchaseOrdersProvider);
+
+      const countServices = 0;
+      const countLiquidations = 0;
+      const countSellingOrders = 0;
       interface CombinedCount {
         name: string | undefined;
         document: string | undefined;
@@ -473,6 +465,15 @@ export class subUserServices {
         numProducts: number;
         numOffers: number;
         numPurchaseOrders: number;
+        numServices: number;
+        numLiquidations: number;
+        numSellingOrders: number;
+        numPurchaseOrdersProvider: number;
+      }
+
+      interface OrderI {
+        _id: string;
+        count: number;
       }
       const combinedCounts: CombinedCount[] = [];
 
@@ -484,6 +485,10 @@ export class subUserServices {
         const offer = countOffers.find((o) => o.userID === product.userID);
         const purchaseOrder = countPurchaseOrders.find(
           (po) => po.userID === product.userID
+        );
+
+        const purchaseOrderProvider = countPurchaseOrdersProvider.data.find(
+          (nop: OrderI) => nop._id === product.userID // Ajustar clave según esquema real
         );
 
         // Crear el objeto combinado
@@ -498,14 +503,18 @@ export class subUserServices {
           numProducts: product.total,
           numOffers: offer ? offer.total : 0, // Si no se encuentra, asignar 0
           numPurchaseOrders: purchaseOrder ? purchaseOrder.total : 0, // Si no se encuentra, asignar 0
+          numServices: countServices,
+          numLiquidations: countLiquidations,
+          numSellingOrders: countSellingOrders,
+          numPurchaseOrdersProvider: purchaseOrderProvider
+            ? purchaseOrderProvider.count
+            : 0,
         };
 
         // Agregar el objeto combinado al array
         combinedCounts.push(combinedObject);
       }
       const subUsersCompany = await this.getDataSubUser(uid);
-
-      console.log(subUsersCompany);
 
       // Crear el array combinado
       const updatedSubUsers: any[] = subUsersCompany.map((subUser) => {
@@ -516,21 +525,18 @@ export class subUserServices {
 
         // Crear un objeto combinado
         return {
-          ...subUser.auth_users, // Mantén las propiedades originales del subusuario
-          // name: matchingProduct ? matchingProduct.name : "Unknown",
-          // document: matchingProduct ? matchingProduct.document : "Unknown",
+          ...subUser.auth_users,
           typeEntity: matchingProduct ? matchingProduct.typeEntity : "SubUser",
-          //  createdAt: matchingProduct ? matchingProduct.createdAt : null,
           numProducts: matchingProduct ? matchingProduct.numProducts : 0,
           numOffers: matchingProduct ? matchingProduct.numOffers : 0,
-          numPurchaseOrders: matchingProduct
-            ? matchingProduct.numPurchaseOrders
+          numPurchaseOrdersProvider: matchingProduct
+            ? matchingProduct.numPurchaseOrdersProvider
             : 0,
+          numServices: countServices,
+          numLiquidations: countSellingOrders,
+          numSellingOrders: countSellingOrders,
         };
       });
-
-      console.log(subUsersCompany);
-      console.log(updatedSubUsers);
 
       return {
         success: true,
@@ -614,7 +620,7 @@ export class subUserServices {
           collectionData = await mongoose.connection.db.collection(
             "purchaseorderproducts"
           );
-          uidField = "subUserClientID";
+          uidField = "subUserProviderID";
           break;
         default:
           break;
@@ -768,6 +774,58 @@ export class subUserServices {
       return resultCount;
     } catch (error) {
       console.error(error);
+    }
+  };
+
+  static getCountOrders = async (
+    service: CollectionType,
+    uid: string,
+    typeOrder: TypeOrder
+  ) => {
+    try {
+      let collectionData;
+      const mongoose = require("mongoose");
+      collectionData = await mongoose.connection.db.collection(service);
+      // Pipeline de agregación
+      let pipeline;
+      if (typeOrder === TypeOrder.PROVIDER) {
+        pipeline = [
+          { $match: { userProviderID: uid } }, // Filtra por userProviderID
+          {
+            $group: {
+              _id: "$subUserProviderID", // Agrupa por subUserProviderID
+              count: { $sum: 1 }, // Cuenta los documentos en cada grupo
+            },
+          },
+        ];
+      } else {
+        pipeline = [
+          { $match: { userClientID: uid } }, // Filtra por userProviderID
+          {
+            $group: {
+              _id: "$subUserClientID", // Agrupa por subUserProviderID
+              count: { $sum: 1 }, // Cuenta los documentos en cada grupo
+            },
+          },
+        ];
+      }
+
+      // Ejecutar la agregación
+      const resulData = await collectionData.aggregate(pipeline).toArray();
+      return {
+        success: true,
+        code: 200,
+        data: resulData,
+      };
+    } catch (error) {
+      console.log("Error en getCountOrders:", error);
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error en el servidor",
+        },
+      };
     }
   };
 }

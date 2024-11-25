@@ -11,4 +11,10 @@ export enum CollectionType {
   LIQUIDATIONS = 3,
   OFFERS = 4,
   PURCHASEORDERS = 5,
+  PURCHASEORDERSPRODUCTS = "purchaseorderproducts",
+}
+
+export enum TypeOrder {
+  PROVIDER = 1,
+  CLIENT = 2,
 }

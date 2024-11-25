@@ -67,7 +67,6 @@ const getUserController = async (req: Request, res: Response) => {
       res.status(200).send({
         success: true,
         data: responseUser.data,
-        typeEntity: responseUser.typeEntity,
       });
     } else {
       res.status(responseUser.code).send(responseUser.error);

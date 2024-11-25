@@ -309,19 +309,13 @@ export class ScoreService {
         }, 0);
       };
 
-      if (
-        data.data?.[0].score_client &&
-        data.data?.[0].score_client.length > 0
-      ) {
-        customerCount = data.data?.[0].score_client.length;
-        customerScore = sumScores(data.data?.[0].score_client) / customerCount;
+      if (data.data?.score_client && data.data?.score_client.length > 0) {
+        customerCount = data.data?.score_client.length;
+        customerScore = sumScores(data.data?.score_client) / customerCount;
       }
-      if (
-        data.data?.[0].score_provider &&
-        data.data?.[0].score_provider.length
-      ) {
-        sellerCount = data.data?.[0].score_provider.length;
-        sellerScore = sumScores(data.data?.[0].score_provider) / sellerCount;
+      if (data.data?.score_provider && data.data?.score_provider.length) {
+        sellerCount = data.data?.score_provider.length;
+        sellerScore = sumScores(data.data?.score_provider) / sellerCount;
       }
 
       if (!data) {
