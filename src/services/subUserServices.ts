@@ -449,11 +449,18 @@ export class subUserServices {
         TypeOrder.PROVIDER
       );
 
+      const countPurchaseOrdersClient = await this.getCountOrders(
+        CollectionType.PURCHASEORDERSPRODUCTS,
+        uid,
+        TypeOrder.CLIENT
+      );
+
       console.log(countPurchaseOrdersProvider);
 
       const countServices = 0;
       const countLiquidations = 0;
-      const countSellingOrders = 0;
+      const countSellingOrdersProvider = 0;
+      const countSellingOrdersClient = 0;
       interface CombinedCount {
         name: string | undefined;
         document: string | undefined;
@@ -467,8 +474,10 @@ export class subUserServices {
         numPurchaseOrders: number;
         numServices: number;
         numLiquidations: number;
-        numSellingOrders: number;
+        numSellingOrdersProvider: number;
+        numSellingOrdersClient: number;
         numPurchaseOrdersProvider: number;
+        numPurchaseOrdersClient: number;
       }
 
       interface OrderI {
@@ -490,6 +499,9 @@ export class subUserServices {
         const purchaseOrderProvider = countPurchaseOrdersProvider.data.find(
           (nop: OrderI) => nop._id === product.userID // Ajustar clave según esquema real
         );
+        const purchaseOrderClient = countPurchaseOrdersClient.data.find(
+          (nop: OrderI) => nop._id === product.userID // Ajustar clave según esquema real
+        );
 
         // Crear el objeto combinado
         const combinedObject: CombinedCount = {
@@ -505,10 +517,14 @@ export class subUserServices {
           numPurchaseOrders: purchaseOrder ? purchaseOrder.total : 0, // Si no se encuentra, asignar 0
           numServices: countServices,
           numLiquidations: countLiquidations,
-          numSellingOrders: countSellingOrders,
           numPurchaseOrdersProvider: purchaseOrderProvider
             ? purchaseOrderProvider.count
             : 0,
+          numPurchaseOrdersClient: purchaseOrderClient
+            ? purchaseOrderClient.count
+            : 0,
+          numSellingOrdersProvider: countSellingOrdersProvider,
+          numSellingOrdersClient: countSellingOrdersClient,
         };
 
         // Agregar el objeto combinado al array
@@ -532,9 +548,13 @@ export class subUserServices {
           numPurchaseOrdersProvider: matchingProduct
             ? matchingProduct.numPurchaseOrdersProvider
             : 0,
+          numPurchaseOrdersClient: matchingProduct
+            ? matchingProduct.numPurchaseOrdersClient
+            : 0,
           numServices: countServices,
-          numLiquidations: countSellingOrders,
-          numSellingOrders: countSellingOrders,
+          numLiquidations: countLiquidations,
+          numSellingOrdersProvider: countSellingOrdersProvider,
+          numSellingOrdersClient: countSellingOrdersClient,
         };
       });
 
