@@ -1484,9 +1484,10 @@ export class AuthServices {
 
   static getDataBaseUser = async (uid: string) => {
     try {
-      let Entitydata = this.getEntityService(uid);
+      let Entitydata = await this.getEntityService(uid);
       if ((await Entitydata).success === false) {
-        Entitydata = this.getAuthSubUser(uid);
+        Entitydata = await this.getAuthSubUser(uid);
+
         if ((await Entitydata).success === false) {
           return {
             success: false,
@@ -1641,7 +1642,7 @@ export class AuthServices {
     ];
 
     try {
-      const subuser = await Company.aggregate(pipeline);
+      let subuser = await Company.aggregate(pipeline);
       if (subuser.length === 0) {
         return {
           success: false,
@@ -1651,6 +1652,11 @@ export class AuthServices {
           },
         };
       }
+      let typeEntity = "SubUser";
+      subuser = {
+        ...subuser[0],
+        typeEntity,
+      };
       return {
         success: true,
         code: 200,

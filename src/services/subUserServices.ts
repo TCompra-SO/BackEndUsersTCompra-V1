@@ -206,8 +206,8 @@ export class subUserServices {
 
         const userData = {
           ...profile.toObject(),
-          email: authUsers.email,
-          typeID: authUsers.typeID,
+          email: authUsers?.email,
+          typeID: authUsers?.typeID,
         };
 
         return {
