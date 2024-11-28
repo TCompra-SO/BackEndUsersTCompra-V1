@@ -25,6 +25,7 @@ import { pipeline } from "stream";
 import { configDotenv } from "dotenv";
 import { ScoreService } from "./scoreServices";
 import { ScoreI } from "./../interfaces/score.interface";
+import { TypeOrder } from "../types/globalTypes";
 
 export interface UserDocument extends Document {
   _id: string;
@@ -1443,6 +1444,23 @@ export class AuthServices {
         sellerScore = sumScores(entityData[0].score_provider) / sellerCount;
       }
 
+      const numProducts = await this.getCountService("products", uid);
+      const numServices = 0;
+      const numLiquidations = 0;
+      const numOffers = await this.getCountService("offersproducts", uid);
+      const numPurchaseOrdersProvider = await this.getCountOrders(
+        "purchaseorderproducts",
+        uid,
+        TypeOrder.PROVIDER
+      );
+      const numPurchaseOrdersClient = await this.getCountOrders(
+        "purchaseorderproducts",
+        uid,
+        TypeOrder.CLIENT
+      );
+      const numSellingOrdersProvider = 0;
+      const numSellingOrdersClient = 0;
+
       data = [
         {
           uid: entityData[0].uid,
@@ -1455,6 +1473,14 @@ export class AuthServices {
           customerScore,
           sellerCount,
           sellerScore,
+          numProducts,
+          numServices,
+          numLiquidations,
+          numOffers,
+          numPurchaseOrdersProvider,
+          numPurchaseOrdersClient,
+          numSellingOrdersProvider,
+          numSellingOrdersClient,
         },
       ];
       EntityData = {
@@ -1464,6 +1490,14 @@ export class AuthServices {
         customerScore,
         sellerCount,
         sellerScore,
+        numProducts,
+        numServices,
+        numLiquidations,
+        numOffers,
+        numPurchaseOrdersProvider,
+        numPurchaseOrdersClient,
+        numSellingOrdersProvider,
+        numSellingOrdersClient,
       };
 
       return {
@@ -1479,6 +1513,44 @@ export class AuthServices {
           msg: "Error con el servidor",
         },
       };
+    }
+  };
+
+  static getCountService = async (service: string, uid: string) => {
+    try {
+      const mongoose = require("mongoose");
+
+      let collectionData;
+      let total;
+
+      collectionData = await mongoose.connection.db.collection(service);
+      total = await collectionData.countDocuments({ userID: uid });
+      return total;
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  static getCountOrders = async (
+    orderType: string,
+    uid: string,
+    typeorder: TypeOrder
+  ) => {
+    try {
+      const mongoose = require("mongoose");
+
+      let collectionData;
+      let total;
+
+      collectionData = await mongoose.connection.db.collection(orderType);
+      if (typeorder === TypeOrder.PROVIDER) {
+        total = await collectionData.countDocuments({ subUserProviderID: uid });
+      } else {
+        total = await collectionData.countDocuments({ subUserClientID: uid });
+      }
+
+      return total;
+    } catch (error) {
+      console.log(error);
     }
   };
 
