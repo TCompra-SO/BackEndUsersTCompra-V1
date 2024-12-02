@@ -203,10 +203,49 @@ export class subUserServices {
       if (profile) {
         const dataSubUser = await AuthServices.getAuthSubUser(uid);
         const authUsers = (dataSubUser.data as any).auth_users;
+
+        const mongoose = require("mongoose");
+
+        let collection = await mongoose.connection.db.collection("products");
+
+        const numProducts = await collection.countDocuments({
+          userID: uid,
+        });
+
+        collection = await mongoose.connection.db.collection("offersproducts");
+        const numOffers = await collection.countDocuments({
+          userID: uid,
+        });
+
+        collection = await mongoose.connection.db.collection(
+          "purchaseorderproducts"
+        );
+
+        const numPurchaseOrdersProvider = await collection.countDocuments({
+          subUserProviderID: uid,
+        });
+
+        const numPurchaseOrdersClient = await collection.countDocuments({
+          subUserClientID: uid,
+        });
+
+        const numServices = 0;
+        const numLiquidations = 0;
+        const numSellingOrdersProvider = 0;
+        const numSellingOrdersClient = 0;
+
         const userData = {
           ...profile.toObject(),
           email: authUsers?.email,
           typeID: authUsers?.typeID,
+          numProducts: numProducts,
+          numServices: numServices,
+          numLiquidations: numLiquidations,
+          numOffers: numOffers,
+          numPurchaseOrdersProvider: numPurchaseOrdersProvider,
+          numPurchaseOrdersClient: numPurchaseOrdersClient,
+          numSellingOrdersProvider: numSellingOrdersProvider,
+          numSellingOrdersClient: numSellingOrdersClient,
         };
 
         return {
@@ -452,10 +491,6 @@ export class subUserServices {
         TypeOrder.CLIENT
       );
 
-      console.log(countProducts);
-      console.log(countOffers);
-      console.log(countPurchaseOrdersProvider);
-
       const countServices = 0;
       const countLiquidations = 0;
       const countSellingOrdersProvider = 0;
@@ -470,7 +505,6 @@ export class subUserServices {
         createdAt: Date | undefined;
         numProducts: number;
         numOffers: number;
-        numPurchaseOrders: number;
         numServices: number;
         numLiquidations: number;
         numSellingOrdersProvider: number;
@@ -481,10 +515,6 @@ export class subUserServices {
         count?: number;
       }
 
-      interface OrderI {
-        _id: string;
-        count: number;
-      }
       let subUsersData: SubUserDataI[] = [];
 
       const subUsersCompany = await this.getDataSubUser(uid);
@@ -532,7 +562,6 @@ export class subUserServices {
           createdAt: user.createdAt,
           numProducts: productsMap.get(user.Uid) ?? 0, // Si no hay coincidencia, usa 0
           numOffers: offersMap.get(user.Uid) ?? 0, // Obtener el total de ofertas
-          numPurchaseOrders: 0, // Placeholder para órdenes de compra generales
           numServices: 0, // Placeholder para servicios
           numLiquidations: 0, // Placeholder para liquidaciones
           numSellingOrdersProvider: 0, // Placeholder
