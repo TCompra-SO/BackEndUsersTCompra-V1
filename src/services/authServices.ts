@@ -1747,7 +1747,7 @@ export class AuthServices {
   };
 
   static updateCompany = async (data: CompanyI) => {
-    const {
+    let {
       uid,
       phone,
       address,
@@ -1759,6 +1759,7 @@ export class AuthServices {
       categories,
     } = data;
 
+    about_me = about_me ?? "";
     // Validar los datos
     const SchemaCompany = this.SchemaProfileCompany.fork(
       ["countryID"],

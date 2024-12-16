@@ -19,7 +19,7 @@ export const upload = multer({
   },
   fileFilter: (req, file, cb) => {
     // Filtra solo archivos de imagen
-    const filetypes = /jpeg|jpg|png|gif/;
+    const filetypes = /jpeg|jpg|png|gif|bmp|webp|tiff|tif|heic|heif|svg|ico/;
     const mimetype = filetypes.test(file.mimetype);
     if (mimetype) {
       cb(null, true);
