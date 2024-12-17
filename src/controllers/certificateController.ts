@@ -149,7 +149,7 @@ export const sendCertificationController = async (
       note
     );
     if (responseUser.success) {
-      res.status(responseUser.code).send(responseUser.data);
+      res.status(responseUser.code).send(responseUser.res);
     } else {
       res.status(responseUser.code).send(responseUser.error);
     }
@@ -205,6 +205,52 @@ export const updateCertifyStateController = async (
     }
   } catch (error) {
     console.error("Error en updateCertifyStateController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
+export const getReceivedRequestsByEntityController = async (
+  req: Request,
+  res: Response
+) => {
+  const { companyID } = req.params;
+  try {
+    const responseUser = await CertificateService.getReceivedRequestsByEntity(
+      companyID
+    );
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser.data);
+    } else {
+      res.status(responseUser.code).send(responseUser.error);
+    }
+  } catch (error) {
+    console.error("Error en getReceiverRequestsByEntityController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
+export const getSentRequestsByEntityController = async (
+  req: Request,
+  res: Response
+) => {
+  const { companyID } = req.params;
+  try {
+    const responseUser = await CertificateService.getSentRequestsByEntity(
+      companyID
+    );
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser.data);
+    } else {
+      res.status(responseUser.code).send(responseUser.error);
+    }
+  } catch (error) {
+    console.error("Error en getSentRequestsByEntityController", error);
     res.status(500).send({
       success: false,
       msg: "Error interno del servidor.",

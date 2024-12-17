@@ -7,8 +7,10 @@ import {
   sendCertificationController,
   updateSentCertificateStatusController,
   updateCertifyStateController,
+  getReceivedRequestsByEntityController,
 } from "../controllers/certificateController";
 import multer from "multer";
+import { getSentRequestsByEntityController } from "../controllers/certificateController";
 
 export class CertificateRouter {
   private static instance: CertificateRouter;
@@ -29,6 +31,14 @@ export class CertificateRouter {
     this.router.get(
       "/getCertificate/:certificateID",
       getCertificateByIdController
+    );
+    this.router.get(
+      "/getReceivedRequestsByEntity/:companyID",
+      getReceivedRequestsByEntityController
+    );
+    this.router.get(
+      "/getSentRequestsByEntity/:companyID",
+      getSentRequestsByEntityController
     );
   }
 

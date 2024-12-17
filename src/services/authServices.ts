@@ -63,7 +63,7 @@ export class AuthServices {
     cityID: Joi.number().required(),
     age: Joi.number(),
     specialtyID: Joi.string(),
-    about_me: Joi.string().min(3).max(500),
+    about_me: Joi.string().allow("").optional(),
     categories: Joi.array().items(Joi.number()).max(3),
     planID: Joi.number(),
   });

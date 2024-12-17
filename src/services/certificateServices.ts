@@ -131,7 +131,9 @@ export class CertificateService {
 
   static getCertificates = async (companyID: string) => {
     try {
-      const resultData = await CertificateModel.find({ companyID });
+      const resultData = await CertificateModel.find({ companyID }).select(
+        "-request"
+      );
       return {
         success: true,
         code: 200,
@@ -151,7 +153,9 @@ export class CertificateService {
 
   static getCertificateById = async (certificateID: string) => {
     try {
-      const resultData = await CertificateModel.findOne({ uid: certificateID });
+      const resultData = await CertificateModel.findOne({
+        uid: certificateID,
+      }).select("-request");
       return {
         success: true,
         code: 200,
@@ -221,7 +225,6 @@ export class CertificateService {
       const resultCerts: { uid: string; state: number; url: string }[] = [];
       let urlCer: string;
       for (const certificate of certificates) {
-        console.log("El estado: " + certificate.state);
         if (!certificate.used) {
           const result = await cloudinary.uploader.upload(certificate.url, {
             folder,
@@ -255,7 +258,6 @@ export class CertificateService {
         state: CertificationState.PENDING, // Asegúrate de que este estado esté definido en CertificationState
         receiverEntityID: companyID,
         sendByentityID: userID,
-        note: "Solicitud pendiente de aprobación", // Este campo es opcional
       };
 
       const responseNewCertificate = (
@@ -277,7 +279,9 @@ export class CertificateService {
       return {
         success: true,
         code: 200,
-        data: userData,
+        res: {
+          msg: "Solicitud enviada con éxito",
+        },
       };
     } catch (error) {
       console.error("Error inesperado al obtener los certificados:", error);
@@ -509,6 +513,98 @@ export class CertificateService {
         code: 500,
         error: {
           msg: "Error inesperado al cambiar el estado de la solicitud certificar.",
+        },
+      };
+    }
+  };
+
+  static getReceivedRequestsByEntity = async (companyID: string) => {
+    try {
+      const resultData = await CertificateRequestModel.aggregate([
+        {
+          $match: { receiverEntityID: companyID },
+        },
+        {
+          $lookup: {
+            from: "companys", // El nombre de la colección de la tabla 'Company'
+            localField: "receiverEntityID", // Campo de la colección 'RequestModel' (recibe el ID)
+            foreignField: "uid", // Campo de la colección 'Company' (campo de unión)
+            as: "companyDetails", // El nombre del campo que almacenará la información de la tabla 'Company'
+          },
+        },
+        {
+          $unwind: "$companyDetails", // Descompone el arreglo de la respuesta del $lookup para que se pueda acceder a los campos de la empresa
+        },
+        {
+          $project: {
+            uid: 1,
+            companyId: "$sendByentityID", // Incluir el campo 'name'
+            companyName: "$companyDetails.name",
+            companyDocument: "$companyDetails.document",
+            creationDate: "$createdAt", // Incluir el campo 'status'
+            note: 1, // Incluir '_id' (se incluye por defecto si no se excluye)
+            state: 1,
+            certificates: 1,
+          },
+        },
+      ]);
+      return {
+        success: true,
+        code: 200,
+        data: resultData,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error inesperado al obtener las solicitudes",
+        },
+      };
+    }
+  };
+
+  static getSentRequestsByEntity = async (companyID: string) => {
+    try {
+      const resultData = await CertificateRequestModel.aggregate([
+        {
+          $match: { sendByentityID: companyID },
+        },
+        {
+          $lookup: {
+            from: "companys", // El nombre de la colección de la tabla 'Company'
+            localField: "sendByentityID", // Campo de la colección 'RequestModel' (recibe el ID)
+            foreignField: "uid", // Campo de la colección 'Company' (campo de unión)
+            as: "companyDetails", // El nombre del campo que almacenará la información de la tabla 'Company'
+          },
+        },
+        {
+          $unwind: "$companyDetails", // Descompone el arreglo de la respuesta del $lookup para que se pueda acceder a los campos de la empresa
+        },
+        {
+          $project: {
+            uid: 1,
+            companyId: "$receiverEntityID", // Incluir el campo 'name'
+            companyName: "$companyDetails.name",
+            companyDocument: "$companyDetails.document",
+            creationDate: "$createdAt", // Incluir el campo 'status'
+            note: 1, // Incluir '_id' (se incluye por defecto si no se excluye)
+            state: 1,
+            certificates: 1,
+          },
+        },
+      ]);
+      return {
+        success: true,
+        code: 200,
+        data: resultData,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error inesperado al obtener las solicitudes",
         },
       };
     }
