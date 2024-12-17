@@ -8,6 +8,7 @@ import {
   updateSentCertificateStatusController,
   updateCertifyStateController,
   getReceivedRequestsByEntityController,
+  deleteCertificateController,
 } from "../controllers/certificateController";
 import multer from "multer";
 import { getSentRequestsByEntityController } from "../controllers/certificateController";
@@ -39,6 +40,11 @@ export class CertificateRouter {
     this.router.get(
       "/getSentRequestsByEntity/:companyID",
       getSentRequestsByEntityController
+    );
+
+    this.router.get(
+      "/deleteCertificate/:certificateID",
+      deleteCertificateController
     );
   }
 

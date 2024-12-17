@@ -257,3 +257,26 @@ export const getSentRequestsByEntityController = async (
     });
   }
 };
+
+export const deleteCertificateController = async (
+  req: Request,
+  res: Response
+) => {
+  const { certificateID } = req.params;
+  try {
+    const responseUser = await CertificateService.deleteCertificateByID(
+      certificateID
+    );
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser.res);
+    } else {
+      res.status(responseUser.code).send(responseUser.error);
+    }
+  } catch (error) {
+    console.error("Error en getSentRequestsByEntityController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};

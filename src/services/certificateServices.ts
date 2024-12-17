@@ -259,11 +259,12 @@ export class CertificateService {
         receiverEntityID: companyID,
         sendByentityID: userID,
       };
-
+      await this.createCertificateRequest(newRequestData);
+      /*
       const responseNewCertificate = (
         await this.createCertificateRequest(newRequestData)
       ).data;
-
+      
       for (const certificate of certificates) {
         const updateData = {
           request: [
@@ -274,7 +275,7 @@ export class CertificateService {
           ],
         };
         await this.updateCertificate(certificate.uid, updateData);
-      }
+      }*/
 
       return {
         success: true,
@@ -607,6 +608,59 @@ export class CertificateService {
           msg: "Error inesperado al obtener las solicitudes",
         },
       };
+    }
+  };
+
+  static deleteCertificateByID = async (certificateID: string) => {
+    try {
+      const resultData = await CertificateModel.findOne({ uid: certificateID });
+      if (resultData) {
+        this.deleteFileFromCloudinary(resultData.url);
+        await CertificateModel.deleteOne({ uid: certificateID });
+      } else {
+        return {
+          success: false,
+          code: 400,
+          error: {
+            msg: "No se ha encontrado el Certificado",
+          },
+        };
+      }
+
+      return {
+        success: true,
+        code: 200,
+        data: resultData,
+        res: {
+          msg: "Certificado eliminado con éxito",
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error inesperado al obtener las solicitudes",
+        },
+      };
+    }
+  };
+
+  // Función para eliminar un archivo
+  static deleteFileFromCloudinary = async (url: string) => {
+    // Verificar si la URL no es undefined o null antes de usarla
+
+    const path = url.split("/upload/")[1];
+
+    // Eliminar la versión (v...) si existe
+    const publicId = path.split("/").slice(1).join("/");
+
+    try {
+      await cloudinary.uploader.destroy(publicId, {
+        resource_type: "raw", // Importante para archivos no procesados (PDF, Word, etc.)
+      });
+    } catch (error) {
+      console.error("Error al eliminar el archivo:", error);
     }
   };
 }

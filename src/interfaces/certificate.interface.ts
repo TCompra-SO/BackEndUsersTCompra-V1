@@ -22,6 +22,7 @@ enum CertificationState {
   REJECTED = 2,
   PENDING = 3,
   RESENT = 4,
+  DELETE = 5,
 }
 
 export { CertificationState };
