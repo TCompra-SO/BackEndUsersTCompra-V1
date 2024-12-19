@@ -123,6 +123,10 @@ const CompanySchema = new Schema<CompanyI>(
       type: Boolean,
       required: false,
     },
+    requiredDocuments: {
+      type: String,
+      required: false,
+    },
   },
   {
     versionKey: false,

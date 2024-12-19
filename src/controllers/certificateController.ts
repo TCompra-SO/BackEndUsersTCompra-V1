@@ -301,3 +301,47 @@ export const resendCertifyController = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const updateRequiredDocumentsController = async (
+  req: Request,
+  res: Response
+) => {
+  const { companyID, requiredDocuments } = req.body;
+  try {
+    const responseUser = await CertificateService.updateRequireddDocuments(
+      companyID,
+      requiredDocuments
+    );
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser.res);
+    } else {
+      res.status(responseUser.code).send(responseUser.error);
+    }
+  } catch (error) {
+    console.error("Error en updateRequiredDocumentsController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
+export const getRequiredDocuments = async (req: Request, res: Response) => {
+  try {
+    const { companyID } = req.params;
+    const responseUser = await CertificateService.getRequiredDocuments(
+      companyID
+    );
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser.data);
+    } else {
+      res.status(responseUser.code).send(responseUser.error);
+    }
+  } catch (error) {
+    console.error("Error en getRequiredDocumentsController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};

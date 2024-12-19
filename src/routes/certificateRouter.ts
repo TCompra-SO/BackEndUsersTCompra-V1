@@ -10,6 +10,8 @@ import {
   getReceivedRequestsByEntityController,
   deleteCertificateController,
   resendCertifyController,
+  updateRequiredDocumentsController,
+  getRequiredDocuments,
 } from "../controllers/certificateController";
 import multer from "multer";
 import { getSentRequestsByEntityController } from "../controllers/certificateController";
@@ -31,6 +33,12 @@ export class CertificateRouter {
 
     this.router.post("/resendCertify", resendCertifyController);
 
+    this.router.post(
+      "/updateRequiredDocuments",
+      updateRequiredDocumentsController
+    );
+
+    this.router.get("/getRequiredDocuments/:companyID", getRequiredDocuments);
     this.router.get("/getCertificates/:companyID", getCertificatesController);
     this.router.get(
       "/getCertificate/:certificateID",

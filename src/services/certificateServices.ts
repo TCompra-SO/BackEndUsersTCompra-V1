@@ -11,6 +11,7 @@ import path from "path";
 import { error } from "console";
 import { CertificateRequestI } from "../interfaces/certificateRequest.interface";
 import CertificateRequestModel from "../models/certificateRequestModel";
+import CompanyModel from "../models/companyModel";
 
 dotenv.config();
 
@@ -779,6 +780,84 @@ export class CertificateService {
         code: 500,
         error: {
           msg: "Error inesperado al obtener las solicitudes",
+        },
+      };
+    }
+  };
+
+  static updateRequireddDocuments = async (
+    companyID: string,
+    requiredDocuments: string
+  ) => {
+    try {
+      // Actualizar los documentos requeridos para la compañía especificada
+      const updateData = await CompanyModel.updateOne(
+        { uid: companyID }, // Filtro: Buscar por el ID de la compañía
+        { $set: { requiredDocuments } } // Actualización: Establecer los nuevos documentos requeridos
+      );
+
+      if (updateData.matchedCount === 0) {
+        // Si no se encuentra la compañía
+        return {
+          success: false,
+          code: 404,
+          error: {
+            msg: "Registro no encontrado",
+          },
+        };
+      }
+
+      return {
+        success: true,
+        code: 200,
+        res: {
+          msg: "Los documentos requeridos se han actualizado con éxito",
+        },
+      };
+    } catch (error) {
+      console.error("Error updating required documents:", error); // Log para depuración
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error inesperado al actualizar los documentos requeridos",
+        },
+      };
+    }
+  };
+
+  static getRequiredDocuments = async (companyID: string) => {
+    try {
+      // Buscar la compañía por su ID utilizando findOne
+      const company = await CompanyModel.findOne(
+        { uid: companyID }, // Filtro por companyID
+        "uid name requiredDocuments"
+      );
+
+      // Si no se encuentra la compañía
+      if (!company) {
+        return {
+          success: false,
+          code: 404,
+          error: {
+            msg: "Registro no encontrado",
+          },
+        };
+      }
+
+      // Si la compañía existe, devolver los documentos requeridos
+      return {
+        success: true,
+        code: 200,
+        data: company, // Devuelve los documentos requeridos
+      };
+    } catch (error) {
+      console.error("Error retrieving required documents:", error); // Log para depuración
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error inesperado al recuperar los documentos requeridos",
         },
       };
     }

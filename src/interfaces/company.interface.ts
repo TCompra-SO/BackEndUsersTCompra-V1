@@ -27,4 +27,5 @@ export interface CompanyI {
   ultimate_session: Date;
   verified: boolean;
   active_account: boolean;
+  requiredDocuments: string;
 }
