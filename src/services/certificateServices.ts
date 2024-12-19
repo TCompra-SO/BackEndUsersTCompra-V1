@@ -177,7 +177,7 @@ export class CertificateService {
     userID: string,
     companyID: string,
     certificateIDs: [string],
-    note: string
+    resend?: boolean
   ) => {
     try {
       console.log(certificateIDs);
@@ -193,18 +193,20 @@ export class CertificateService {
           },
         };
       }
-      const cerRequestData = await CertificateRequestModel.findOne({
+      const cerRequestData = await CertificateRequestModel.find({
         receiverEntityID: companyID,
         sendByentityID: userID,
+        state: { $nin: [CertificationState.REJECTED] },
       });
-      console.log(cerRequestData?.state);
+
       if (
-        cerRequestData?.state === CertificationState.PENDING ||
-        cerRequestData?.state === CertificationState.CERTIFIED
+        cerRequestData?.[0]?.state === CertificationState.PENDING ||
+        cerRequestData?.[0]?.state === CertificationState.CERTIFIED
       ) {
         let state;
-        if (cerRequestData?.state === CertificationState.PENDING) {
+        if (cerRequestData?.[0]?.state === CertificationState.PENDING) {
           state = "Tienes una certificación Pendiente con esta empresa";
+          console.log(cerRequestData?.[0].uid);
         } else {
           state = "Tu empresa se encuentra Certificada con esta empresa";
         }
@@ -237,6 +239,8 @@ export class CertificateService {
         // Crear el objeto con los datos necesarios
         const certificateData = {
           uid: certificate.uid, // El UID del certificado
+          name: certificate.name,
+          documentName: certificate.documentName,
           state: CertificationState.PENDING, // El estado del certificado
           url: urlCer, // La URL segura obtenida de Cloudinary
         };
@@ -484,9 +488,20 @@ export class CertificateService {
   static updateCertifyState = async (
     certificateRequestID: string,
     state: CertificationState,
-    note: string
+    note?: string
   ) => {
     try {
+      if (state === CertificationState.REJECTED) {
+        if (!note || note.length < 1) {
+          return {
+            success: false,
+            code: 401,
+            error: {
+              msg: "No ha ingresado el motivo",
+            },
+          };
+        }
+      }
       const updateState = await CertificateRequestModel.updateOne(
         { uid: certificateRequestID },
         { $set: { state: state, note: note } }
@@ -521,6 +536,10 @@ export class CertificateService {
 
   static getReceivedRequestsByEntity = async (companyID: string) => {
     try {
+      const result = await CertificateRequestModel.find({
+        receiverEntityID: companyID,
+      });
+      console.log(result);
       const resultData = await CertificateRequestModel.aggregate([
         {
           $match: { receiverEntityID: companyID },
@@ -528,7 +547,7 @@ export class CertificateService {
         {
           $lookup: {
             from: "companys", // El nombre de la colección de la tabla 'Company'
-            localField: "receiverEntityID", // Campo de la colección 'RequestModel' (recibe el ID)
+            localField: "sendByentityID", // Campo de la colección 'RequestModel' (recibe el ID)
             foreignField: "uid", // Campo de la colección 'Company' (campo de unión)
             as: "companyDetails", // El nombre del campo que almacenará la información de la tabla 'Company'
           },
@@ -574,7 +593,7 @@ export class CertificateService {
         {
           $lookup: {
             from: "companys", // El nombre de la colección de la tabla 'Company'
-            localField: "sendByentityID", // Campo de la colección 'RequestModel' (recibe el ID)
+            localField: "receiverEntityID", // Campo de la colección 'RequestModel' (recibe el ID)
             foreignField: "uid", // Campo de la colección 'Company' (campo de unión)
             as: "companyDetails", // El nombre del campo que almacenará la información de la tabla 'Company'
           },
@@ -595,6 +614,7 @@ export class CertificateService {
           },
         },
       ]);
+
       return {
         success: true,
         code: 200,
@@ -661,6 +681,96 @@ export class CertificateService {
       });
     } catch (error) {
       console.error("Error al eliminar el archivo:", error);
+    }
+  };
+
+  static resendCertify = async (
+    certificateRequesID: string,
+    certificateIDs: [string]
+  ) => {
+    try {
+      const resultData = await CertificateRequestModel.findOne({
+        uid: certificateRequesID,
+      });
+
+      if (
+        resultData?.state !== CertificationState.PENDING &&
+        resultData?.state !== CertificationState.CERTIFIED
+      ) {
+        const certificates = await CertificateModel.find({
+          uid: { $in: certificateIDs },
+        });
+
+        // Copiar Certificado
+        const folder = "certificates-request";
+        const resultCerts: { uid: string; state: number; url: string }[] = [];
+        let urlCer: string;
+        for (const certificate of certificates) {
+          if (!certificate.used) {
+            const result = await cloudinary.uploader.upload(certificate.url, {
+              folder,
+            });
+            urlCer = result.secure_url;
+          } else {
+            urlCer = certificate?.urlRequest ?? "";
+          }
+
+          // Crear el objeto con los datos necesarios
+          const certificateData = {
+            uid: certificate.uid, // El UID del certificado
+            name: certificate.name,
+            documentName: certificate.documentName,
+            state: CertificationState.PENDING, // El estado del certificado
+            url: urlCer, // La URL segura obtenida de Cloudinary
+          };
+
+          // Agregar el objeto a resultCerts
+          resultCerts.push(certificateData);
+          const updateData = {
+            used: true,
+            urlRequest: urlCer,
+          };
+          await this.updateCertificate(certificate.uid, updateData);
+
+          // Guardar solo la URL subida
+        }
+        const updatedRequest = CertificateRequestModel.updateOne(
+          { uid: certificateRequesID }, // Filtrar por el 'uid' del documento
+          {
+            $set: {
+              state: CertificationState.RESENT, // Nuevo estado
+              certificates: resultCerts, // Nuevo array de certificados
+            },
+          }
+        );
+
+        if ((await updatedRequest).modifiedCount === 0) {
+          return {
+            success: false,
+            code: 404,
+            error: {
+              msg: "No se realizó ninguna actualización",
+            },
+          };
+        }
+      }
+
+      return {
+        success: true,
+        code: 200,
+        res: {
+          msg: "la solicitud de reenvio se ha realizado con éxito",
+        },
+      };
+    } catch (error) {
+      console.log(error);
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error inesperado al obtener las solicitudes",
+        },
+      };
     }
   };
 }

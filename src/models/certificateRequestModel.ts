@@ -20,6 +20,14 @@ const CertificateRequestSchema: Schema = new Schema<CertificateRequestI>(
           type: String,
           required: true, // Este es el UID del certificado
         },
+        name: {
+          type: String,
+          required: true,
+        },
+        documentName: {
+          type: String,
+          required: true,
+        },
         state: {
           type: Number, // O usa `String` si el estado es un string
           required: true, // El estado es requerido

@@ -145,8 +145,7 @@ export const sendCertificationController = async (
     const responseUser = await CertificateService.sendCertification(
       userID,
       companyID,
-      certificateIDs,
-      note
+      certificateIDs
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser.res);
@@ -266,6 +265,28 @@ export const deleteCertificateController = async (
   try {
     const responseUser = await CertificateService.deleteCertificateByID(
       certificateID
+    );
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser.res);
+    } else {
+      res.status(responseUser.code).send(responseUser.error);
+    }
+  } catch (error) {
+    console.error("Error en getSentRequestsByEntityController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
+export const resendCertifyController = async (req: Request, res: Response) => {
+  const { certificateRequestID, certificateIDs } = req.body;
+  console.log(certificateIDs);
+  try {
+    const responseUser = await CertificateService.resendCertify(
+      certificateRequestID,
+      certificateIDs
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser.res);

@@ -9,6 +9,7 @@ import {
   updateCertifyStateController,
   getReceivedRequestsByEntityController,
   deleteCertificateController,
+  resendCertifyController,
 } from "../controllers/certificateController";
 import multer from "multer";
 import { getSentRequestsByEntityController } from "../controllers/certificateController";
@@ -27,6 +28,8 @@ export class CertificateRouter {
       updateSentCertificateStatusController
     );
     this.router.post("/updateCertifyState", updateCertifyStateController);
+
+    this.router.post("/resendCertify", resendCertifyController);
 
     this.router.get("/getCertificates/:companyID", getCertificatesController);
     this.router.get(
