@@ -693,6 +693,16 @@ export class CertificateService {
         uid: certificateRequesID,
       });
 
+      if (resultData?.state === CertificationState.RESENT) {
+        return {
+          success: false,
+          code: 403,
+          error: {
+            msg: "Ya has reenviado la solicitud",
+          },
+        };
+      }
+
       if (
         resultData?.state !== CertificationState.PENDING &&
         resultData?.state !== CertificationState.CERTIFIED
