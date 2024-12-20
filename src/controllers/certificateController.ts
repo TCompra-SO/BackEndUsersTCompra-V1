@@ -95,10 +95,14 @@ export const getCertificatesController = async (
   req: Request,
   res: Response
 ) => {
-  const { companyID } = req.params;
+  const { companyID, page, pageSize } = req.params;
 
   try {
-    const responseUser = await CertificateService.getCertificates(companyID);
+    const responseUser = await CertificateService.getCertificates(
+      companyID,
+      Number(page),
+      Number(pageSize)
+    );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser.data);
     } else {
@@ -215,13 +219,15 @@ export const getReceivedRequestsByEntityController = async (
   req: Request,
   res: Response
 ) => {
-  const { companyID } = req.params;
+  const { companyID, page, pageSize } = req.params;
   try {
     const responseUser = await CertificateService.getReceivedRequestsByEntity(
-      companyID
+      companyID,
+      Number(page),
+      Number(pageSize)
     );
     if (responseUser.success) {
-      res.status(responseUser.code).send(responseUser.data);
+      res.status(responseUser.code).send(responseUser);
     } else {
       res.status(responseUser.code).send(responseUser.error);
     }
@@ -238,13 +244,15 @@ export const getSentRequestsByEntityController = async (
   req: Request,
   res: Response
 ) => {
-  const { companyID } = req.params;
+  const { companyID, page, pageSize } = req.params;
   try {
     const responseUser = await CertificateService.getSentRequestsByEntity(
-      companyID
+      companyID,
+      Number(page),
+      Number(pageSize)
     );
     if (responseUser.success) {
-      res.status(responseUser.code).send(responseUser.data);
+      res.status(responseUser.code).send(responseUser);
     } else {
       res.status(responseUser.code).send(responseUser.error);
     }
@@ -339,6 +347,30 @@ export const getRequiredDocuments = async (req: Request, res: Response) => {
     }
   } catch (error) {
     console.error("Error en getRequiredDocumentsController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
+export const verifyCertificationController = async (
+  req: Request,
+  res: Response
+) => {
+  const { userID, CompanyID } = req.params;
+  try {
+    const responseUser = await CertificateService.verifyCertification(
+      userID,
+      CompanyID
+    );
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser);
+    } else {
+      res.status(responseUser.code).send(responseUser.error);
+    }
+  } catch (error) {
+    console.error("Error en verifyCertificationController", error);
     res.status(500).send({
       success: false,
       msg: "Error interno del servidor.",

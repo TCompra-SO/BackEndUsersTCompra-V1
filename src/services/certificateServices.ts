@@ -130,15 +130,32 @@ export class CertificateService {
     }
   };
 
-  static getCertificates = async (companyID: string) => {
+  static getCertificates = async (
+    companyID: string,
+    page: number,
+    pageSize: number
+  ) => {
     try {
-      const resultData = await CertificateModel.find({ companyID }).select(
-        "-request"
-      );
+      const resultData = await CertificateModel.find({ companyID })
+        .select("-request")
+        .skip((page - 1) * pageSize) // Saltar los documentos de las páginas anteriores
+        .limit(pageSize); // Limitar a la cantidad de documentos por página;
+
+      // Obtener el total de documentos coincidentes
+      const totalDocuments = await CertificateModel.countDocuments({
+        companyID,
+      });
+
       return {
         success: true,
         code: 200,
         data: resultData,
+        res: {
+          totalDocuments,
+          totalPages: Math.ceil(totalDocuments / pageSize),
+          currentPage: page,
+          pageSize,
+        },
       };
     } catch (error) {
       console.error("Error inesperado al obtener los certificados:", error);
@@ -156,7 +173,8 @@ export class CertificateService {
     try {
       const resultData = await CertificateModel.findOne({
         uid: certificateID,
-      }).select("-request");
+      });
+
       return {
         success: true,
         code: 200,
@@ -535,13 +553,20 @@ export class CertificateService {
     }
   };
 
-  static getReceivedRequestsByEntity = async (companyID: string) => {
+  static getReceivedRequestsByEntity = async (
+    companyID: string,
+    page: number,
+    pageSize: number
+  ) => {
     try {
+      if (!page || page < 1) page = 1;
+      if (!pageSize || pageSize < 1) pageSize = 10;
+
       const result = await CertificateRequestModel.find({
         receiverEntityID: companyID,
       });
-      console.log(result);
-      const resultData = await CertificateRequestModel.aggregate([
+
+      const pipeline = [
         {
           $match: { receiverEntityID: companyID },
         },
@@ -568,11 +593,30 @@ export class CertificateService {
             certificates: 1,
           },
         },
+      ];
+
+      const resultData = await CertificateRequestModel.aggregate([
+        ...pipeline,
+        {
+          $skip: (page - 1) * pageSize, // Saltar documentos según la página
+        },
+        {
+          $limit: pageSize, // Limitar a la cantidad de documentos por página
+        },
       ]);
+
+      const totalDocuments = (await CertificateRequestModel.aggregate(pipeline))
+        .length;
       return {
         success: true,
         code: 200,
         data: resultData,
+        res: {
+          totalDocuments,
+          totalPages: Math.ceil(totalDocuments / pageSize),
+          currentPage: page,
+          pageSize,
+        },
       };
     } catch (error) {
       return {
@@ -585,9 +629,15 @@ export class CertificateService {
     }
   };
 
-  static getSentRequestsByEntity = async (companyID: string) => {
+  static getSentRequestsByEntity = async (
+    companyID: string,
+    page: number,
+    pageSize: number
+  ) => {
+    if (!page || page < 1) page = 1;
+    if (!pageSize || pageSize < 1) pageSize = 10;
     try {
-      const resultData = await CertificateRequestModel.aggregate([
+      const pipeline = [
         {
           $match: { sendByentityID: companyID },
         },
@@ -614,12 +664,30 @@ export class CertificateService {
             certificates: 1,
           },
         },
+      ];
+      const resultData = await CertificateRequestModel.aggregate([
+        ...pipeline,
+        {
+          $skip: (page - 1) * pageSize, // Saltar documentos según la página
+        },
+        {
+          $limit: pageSize, // Limitar a la cantidad de documentos por página
+        },
       ]);
+
+      const totalDocuments = (await CertificateRequestModel.aggregate(pipeline))
+        .length;
 
       return {
         success: true,
         code: 200,
         data: resultData,
+        res: {
+          totalDocuments,
+          totalPages: Math.ceil(totalDocuments / pageSize),
+          currentPage: page,
+          pageSize,
+        },
       };
     } catch (error) {
       return {
@@ -858,6 +926,47 @@ export class CertificateService {
         code: 500,
         error: {
           msg: "Error inesperado al recuperar los documentos requeridos",
+        },
+      };
+    }
+  };
+
+  static verifyCertification = async (userID: string, companyID: string) => {
+    try {
+      // Consulta a la base de datos para filtrar por sendByentityID y receiverEntityID
+      const result = await CertificateRequestModel.find({
+        $and: [
+          { sendByentityID: userID }, // sendByentityID debe coincidir
+          { receiverEntityID: companyID }, // receiverEntityID debe coincidir
+          { state: CertificationState.CERTIFIED },
+        ],
+      });
+
+      // Verificar si existen resultados
+      if (result.length === 0) {
+        return {
+          success: false,
+          code: 404,
+          error: {
+            msg: "No estas certificado con la empresa",
+          },
+        };
+      }
+
+      return {
+        success: true,
+        code: 200,
+        data: result,
+        res: {
+          msg: "Empresa Certificada",
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error inesperado al verificar la certificación",
         },
       };
     }

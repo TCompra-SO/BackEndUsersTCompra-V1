@@ -12,6 +12,7 @@ import {
   resendCertifyController,
   updateRequiredDocumentsController,
   getRequiredDocuments,
+  verifyCertificationController,
 } from "../controllers/certificateController";
 import multer from "multer";
 import { getSentRequestsByEntityController } from "../controllers/certificateController";
@@ -41,21 +42,26 @@ export class CertificateRouter {
     this.router.get("/getRequiredDocuments/:companyID", getRequiredDocuments);
     this.router.get("/getCertificates/:companyID", getCertificatesController);
     this.router.get(
-      "/getCertificate/:certificateID",
+      "/getCertificate/:certificateID/",
       getCertificateByIdController
     );
     this.router.get(
-      "/getReceivedRequestsByEntity/:companyID",
+      "/getReceivedRequestsByEntity/:companyID/:page/:pageSize",
       getReceivedRequestsByEntityController
     );
     this.router.get(
-      "/getSentRequestsByEntity/:companyID",
+      "/getSentRequestsByEntity/:companyID/:page/:pageSize",
       getSentRequestsByEntityController
     );
 
     this.router.get(
       "/deleteCertificate/:certificateID",
       deleteCertificateController
+    );
+
+    this.router.get(
+      "/verifyCertification/:userID/:CompanyID",
+      verifyCertificationController
     );
   }
 
