@@ -953,9 +953,9 @@ export class CertificateService {
             { receiverEntityID: companyID }, // receiverEntityID debe coincidir
           ],
         }).sort({ updatedAt: -1 });
-        console.log("////////////////////////////////////");
+
         let msgState = "";
-        console.log(requestsData);
+
         switch (requestsData[0].state) {
           case CertificationState.PENDING:
             msgState = "Tienes una Certificación Pendiente";
@@ -976,6 +976,7 @@ export class CertificateService {
           error: {
             msg: msgState,
           },
+          state: requestsData[0].state,
         };
       }
 
@@ -986,6 +987,7 @@ export class CertificateService {
         res: {
           msg: "Empresa Certificada",
         },
+        state: result[0].state,
       };
     } catch (error) {
       return {
