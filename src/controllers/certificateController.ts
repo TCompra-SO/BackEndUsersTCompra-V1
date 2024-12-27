@@ -104,7 +104,7 @@ export const getCertificatesController = async (
       Number(pageSize)
     );
     if (responseUser.success) {
-      res.status(responseUser.code).send(responseUser.data);
+      res.status(responseUser.code).send(responseUser);
     } else {
       res.status(responseUser.code).send(responseUser.error);
     }

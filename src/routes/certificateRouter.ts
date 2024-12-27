@@ -40,7 +40,10 @@ export class CertificateRouter {
     );
 
     this.router.get("/getRequiredDocuments/:companyID", getRequiredDocuments);
-    this.router.get("/getCertificates/:companyID", getCertificatesController);
+    this.router.get(
+      "/getCertificates/:companyID/:page/:pageSize",
+      getCertificatesController
+    );
     this.router.get(
       "/getCertificate/:certificateID/",
       getCertificateByIdController

@@ -226,6 +226,7 @@ export class CertificateService {
         if (cerRequestData?.[0]?.state === CertificationState.PENDING) {
           state = "Tienes una certificación Pendiente con esta empresa";
           console.log(cerRequestData?.[0].uid);
+          console.log(cerRequestData);
         } else {
           state = "Tu empresa se encuentra Certificada con esta empresa";
         }
@@ -933,7 +934,9 @@ export class CertificateService {
 
   static verifyCertification = async (userID: string, companyID: string) => {
     try {
+      //FALTA OBTENER EL MAIN EMPRESA DEL USUARIO LOGEADO
       // Consulta a la base de datos para filtrar por sendByentityID y receiverEntityID
+
       const result = await CertificateRequestModel.find({
         $and: [
           { sendByentityID: userID }, // sendByentityID debe coincidir
@@ -944,11 +947,34 @@ export class CertificateService {
 
       // Verificar si existen resultados
       if (result.length === 0) {
+        const requestsData = await CertificateRequestModel.find({
+          $and: [
+            { sendByentityID: userID }, // sendByentityID debe coincidir
+            { receiverEntityID: companyID }, // receiverEntityID debe coincidir
+          ],
+        }).sort({ updatedAt: -1 });
+        console.log("////////////////////////////////////");
+        let msgState = "";
+        console.log(requestsData);
+        switch (requestsData[0].state) {
+          case CertificationState.PENDING:
+            msgState = "Tienes una Certificación Pendiente";
+            break;
+          case CertificationState.RESENT:
+            msgState = "ya has Reenviado una Certificación";
+            break;
+          case CertificationState.REJECTED:
+            msgState = "Tienes una Certificación Rechazada";
+            break;
+          default:
+            msgState = "No estas certificado con la empresa";
+            break;
+        }
         return {
-          success: false,
-          code: 404,
+          success: true,
+          code: 200,
           error: {
-            msg: "No estas certificado con la empresa",
+            msg: msgState,
           },
         };
       }
