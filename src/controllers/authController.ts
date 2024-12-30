@@ -333,6 +333,22 @@ const RecoveryPasswordController = async (req: Request, res: Response) => {
   }
 };
 
+const SearchCompanyController = async (req: Request, res: Response) => {
+  const { query } = req.params;
+  try {
+    const responseUser = await AuthServices.getSearchCompany(query);
+    if (!responseUser.success) {
+      return res.status(responseUser.code).send(responseUser.error);
+    }
+    return res.status(responseUser.code).send(responseUser);
+  } catch (error) {
+    return res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor",
+    });
+  }
+};
+
 export {
   registerController,
   UpdateprofileCompanyController,
@@ -349,4 +365,5 @@ export {
   UpdateUserController,
   getAuthSubUserController,
   getBaseDataUserController,
+  SearchCompanyController,
 };

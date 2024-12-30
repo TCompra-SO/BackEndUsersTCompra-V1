@@ -15,6 +15,7 @@ import {
   UpdateUserController,
   getAuthSubUserController,
   getBaseDataUserController,
+  SearchCompanyController,
 } from "../controllers/authController";
 import { checkJwt } from "../middleware/session";
 
@@ -42,6 +43,7 @@ export class AuthRouter {
     this.router.get("/getUser/:uid", getUserController);
     this.router.get("/getAuthSubUser/:uid", getAuthSubUserController);
     this.router.get("/getBaseDataUser/:uid", getBaseDataUserController);
+    this.router.get("/searchCompany/:query", SearchCompanyController);
   }
 
   static getRouter(): Router {

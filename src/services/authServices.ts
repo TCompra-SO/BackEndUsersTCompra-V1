@@ -4,7 +4,7 @@ moment.locale("es"); // Establece el idioma a español
 import Joi, { string } from "joi";
 import User from "../models/userModel";
 import Company from "../models/companyModel";
-
+import Fuse from "fuse.js";
 import { encrypt, verified } from "../utils/bcrypt.handle";
 import { generateToken } from "../utils/jwt.handle";
 import { ErrorMessages } from "../utils/ErrorMessages";
@@ -26,6 +26,8 @@ import { configDotenv } from "dotenv";
 import { ScoreService } from "./scoreServices";
 import { ScoreI } from "./../interfaces/score.interface";
 import { TypeOrder } from "../types/globalTypes";
+import CompanyModel from "../models/companyModel";
+import { query } from "express";
 
 export interface UserDocument extends Document {
   _id: string;
@@ -1905,6 +1907,70 @@ export class AuthServices {
         code: 500,
         error: {
           msg: "Error al actualizar el perfil del usuario",
+        },
+      };
+    }
+  };
+
+  static getSearchCompany = async (text: string) => {
+    try {
+      //getSearchCompany
+      // Función para normalizar texto
+      const normalizeText = (textQuery: string) =>
+        textQuery
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, ""); // Elimina tildes y diacríticos
+
+      // Normaliza la consulta
+      const normalizedQuery = normalizeText(text);
+
+      // Consulta inicial más amplia en MongoDB (menos estricta)
+      const resultData = await CompanyModel.find(
+        {},
+        { uid: 1, name: 1, document: 1, image: "$avatar", _id: 0 }
+      ).limit(20);
+
+      if (resultData.length === 0) {
+        // Si no se encuentran coincidencias con MongoDB, devuelve vacío
+        return {
+          success: true,
+          code: 200,
+          data: [],
+        };
+      }
+
+      // Normalizar los datos para Fuse.js
+      const normalizedCompanies = resultData.map((company) => ({
+        ...company.toObject(),
+        name: normalizeText(company.name),
+      }));
+
+      // Configuración de Fuse.js
+      const fuseOptions = {
+        keys: ["name"], // Campo a buscar
+        threshold: 0.4, // Más estricto pero permite errores tipográficos menores
+      };
+      const fuse = new Fuse(normalizedCompanies, fuseOptions);
+
+      // Aplicar Fuse.js para buscar coincidencias
+      const results = fuse.search(normalizedQuery);
+
+      // Mapear resultados relevantes
+      const matchedCompanies = results.map((result) => result.item);
+
+      return {
+        success: true,
+        code: 200,
+        data: matchedCompanies,
+      };
+    } catch (error) {
+      console.error("Error buscando empresas:", error);
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error al buscar empresas",
         },
       };
     }
