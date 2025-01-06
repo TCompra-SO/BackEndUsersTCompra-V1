@@ -105,9 +105,13 @@ const changeRoleController = async ({ body }: Request, res: Response) => {
 };
 
 const getSubUsersByEntity = async (req: Request, res: Response) => {
-  const { uid } = req.params;
+  const { uid, page, limit } = req.params;
   try {
-    const responseUser = await subUserServices.getSubUsers(uid);
+    const responseUser = await subUserServices.getSubUsers(
+      uid,
+      Number(page),
+      Number(limit)
+    );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
     } else {

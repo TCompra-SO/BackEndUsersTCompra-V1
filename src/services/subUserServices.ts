@@ -11,9 +11,11 @@ import { getNow } from "../utils/DateTools";
 import { ProfileI } from "../interfaces/profile.interface";
 import { Console, error } from "console";
 import CompanyModel from "../models/companyModel";
-import { CollectionType, TypeOrder } from "../types/globalTypes";
+import { CollectionType, TypeEntity, TypeOrder } from "../types/globalTypes";
 import dbConnect from "../database/mongo";
 import { pipeline } from "stream";
+import { ResourceCountersI } from "../interfaces/resourceCounters";
+import { ResourceCountersService } from "./resourceCountersServices";
 export class subUserServices {
   static SchemaRegister = Joi.object({
     dni: Joi.string().min(8).max(12).required(),
@@ -198,10 +200,82 @@ export class subUserServices {
   static getProfileSubUser = async (uid: string) => {
     try {
       // Buscar el perfil del subusuario en la colección de Profiles
-      const profile = await Profile.findOne({ uid });
+      const pipeline = [
+        {
+          $match: { uid }, // Filtra el documento de Profile por uid
+        },
+        {
+          $lookup: {
+            from: "companys", // Colección relacionada
+            let: { uid: "$uid" }, // Variable local con el uid de Profile
+            pipeline: [
+              {
+                $unwind: "$auth_users", // Descompone el array auth_users en documentos individuales
+              },
+              {
+                $match: {
+                  $expr: { $eq: ["$auth_users.Uid", "$$uid"] }, // Compara auth_users.Uid con el uid de Profile
+                },
+              },
+              {
+                $project: { email: "$auth_users.email", _id: 0 }, // Solo selecciona el campo email
+              },
+            ],
+            as: "companyData", // Alias para el resultado del lookup
+          },
+        },
+        {
+          $addFields: {
+            email: { $arrayElemAt: ["$companyData.email", 0] }, // Extrae el email correcto
+          },
+        },
+        {
+          $lookup: {
+            from: "resourcecounters", // Colección de ResourceCounters
+            localField: "uid", // Campo de Profile
+            foreignField: "uid", // Campo de ResourceCounters
+            as: "resourceCountersData", // Alias para los datos relacionados
+          },
+        },
+        {
+          $unwind: {
+            path: "$resourceCountersData", // Descompone el array de resourceCountersData
+            preserveNullAndEmptyArrays: true, // Si no hay coincidencia, devuelve null
+          },
+        },
+        {
+          $addFields: {
+            numProducts: { $ifNull: ["$resourceCountersData.numProducts", 0] }, // Si numProducts es null, poner 0
+            numServices: { $ifNull: ["$resourceCountersData.numServices", 0] }, // Si numServices es null, poner 0
+            numLiquidations: {
+              $ifNull: ["$resourceCountersData.numLiquidations", 0],
+            }, // Si numLiquidations es null, poner 0
+            numPurchaseOrdersProvider: {
+              $ifNull: ["$resourceCountersData.numPurchaseOrdersProvider", 0], // Si numPurchaseOrdersProvider es null, poner 0
+            },
+            numPurchaseOrdersClient: {
+              $ifNull: ["$resourceCountersData.numPurchaseOrdersClient", 0], // Si numPurchaseOrdersClient es null, poner 0
+            },
+            numSellingOrdersProvider: {
+              $ifNull: ["$resourceCountersData.numSellingOrdersProvider", 0], // Si numSellingOrdersProvider es null, poner 0
+            },
+            numSellingOrdersClient: {
+              $ifNull: ["$resourceCountersData.numSellingOrdersClient", 0], // Si numSellingOrdersClient es null, poner 0
+            },
+          },
+        },
+        {
+          $project: {
+            companyData: 0, // Excluye el campo companyData
+            resourceCountersData: 0, // Excluye el campo resourceCountersData
+          },
+        },
+      ];
 
-      if (profile) {
-        const dataSubUser = await AuthServices.getAuthSubUser(uid);
+      const profile = await Profile.aggregate(pipeline);
+
+      if (profile.length > 0) {
+        /*  const dataSubUser = await AuthServices.getAuthSubUser(uid);
         const authUsers = (dataSubUser.data as any).auth_users;
 
         const mongoose = require("mongoose");
@@ -233,9 +307,9 @@ export class subUserServices {
         const numLiquidations = 0;
         const numSellingOrdersProvider = 0;
         const numSellingOrdersClient = 0;
-
+        console.log(profile);
         const userData = {
-          ...profile.toObject(),
+           ...profile.toObject(),
           email: authUsers?.email,
           typeID: authUsers?.typeID,
           numProducts: numProducts,
@@ -246,12 +320,12 @@ export class subUserServices {
           numPurchaseOrdersClient: numPurchaseOrdersClient,
           numSellingOrdersProvider: numSellingOrdersProvider,
           numSellingOrdersClient: numSellingOrdersClient,
-        };
+        };*/
 
         return {
           success: true,
           code: 200,
-          data: userData,
+          data: profile,
         };
       } else {
         return {
@@ -471,111 +545,21 @@ export class subUserServices {
     }
   };
 
-  static getSubUsers = async (uid: string) => {
+  static getSubUsers = async (uid: string, page: number, limit: number) => {
     try {
-      const countProducts =
-        (await this.getCountService(CollectionType.PRODUCTS, uid)) || [];
-      const countOffers =
-        (await this.getCountService(CollectionType.OFFERS, uid)) || [];
-
-      // Crear un array vacío para almacenar los objetos combinados
-      const countPurchaseOrdersProvider = await this.getCountOrders(
-        CollectionType.PURCHASEORDERSPRODUCTS,
-        uid,
-        TypeOrder.PROVIDER
-      );
-
-      const countPurchaseOrdersClient = await this.getCountOrders(
-        CollectionType.PURCHASEORDERSPRODUCTS,
-        uid,
-        TypeOrder.CLIENT
-      );
-
-      const countServices = 0;
-      const countLiquidations = 0;
-      const countSellingOrdersProvider = 0;
-      const countSellingOrdersClient = 0;
-      interface SubUserDataI {
-        name: string | undefined;
-        document: string | undefined;
-        typeEntity: string | undefined;
-        userID: string | undefined;
-        typeID: number | undefined; // Puede ser número o texto, según tus datos
-        email: string | undefined;
-        createdAt: Date | undefined;
-        numProducts: number;
-        numOffers: number;
-        numServices: number;
-        numLiquidations: number;
-        numSellingOrdersProvider: number;
-        numSellingOrdersClient: number;
-        numPurchaseOrdersProvider: number;
-        numPurchaseOrdersClient: number;
-        total?: number;
-        count?: number;
+      if (!page || page < 1) {
+        page = 1;
       }
-
-      let subUsersData: SubUserDataI[] = [];
-
-      const subUsersCompany = await this.getDataSubUser(uid);
-
-      const productsMap = new Map<string, number>(
-        countProducts.map((product: SubUserDataI) => [
-          product.userID,
-          product.total,
-        ])
-      );
-
-      const offersMap = new Map<string, number>(
-        countOffers.map((offer: SubUserDataI) => [offer.userID, offer.total])
-      );
-
-      const purchaseOrdersProviderMap = new Map<string, number>(
-        countPurchaseOrdersProvider.data.map(
-          (order: { _id: string; count: number }) => [
-            order._id, // Usamos _id (que es userID en tu caso)
-            order.count, // El valor que queremos asociar (count de la orden)
-          ]
-        )
-      );
-
-      const purchaseOrdersClientMap = new Map<string, number>(
-        countPurchaseOrdersClient.data.map(
-          (order: { _id: string; count: number }) => [
-            order._id, // Usamos _id (que es userID en tu caso)
-            order.count, // El valor que queremos asociar (count de la orden)
-          ]
-        )
-      );
-
-      // Iterar sobre `subUsersCompany` y combinar con `countProducts` y `countOffers`
-      subUsersData = subUsersCompany.map((subUser) => {
-        const user = subUser.auth_users;
-
-        return {
-          name: user.name,
-          document: user.document,
-          typeEntity: "SubUser", // O ajusta según tu lógica
-          userID: user.Uid,
-          typeID: user.typeID,
-          email: user.email,
-          createdAt: user.createdAt,
-          numProducts: productsMap.get(user.Uid) ?? 0, // Si no hay coincidencia, usa 0
-          numOffers: offersMap.get(user.Uid) ?? 0, // Obtener el total de ofertas
-          numServices: 0, // Placeholder para servicios
-          numLiquidations: 0, // Placeholder para liquidaciones
-          numSellingOrdersProvider: 0, // Placeholder
-          numSellingOrdersClient: 0, // Placeholder
-          numPurchaseOrdersProvider:
-            purchaseOrdersProviderMap.get(user.Uid) ?? 0, // Obtener el total de órdenes de compra de proveedor
-          numPurchaseOrdersClient: purchaseOrdersClientMap.get(user.Uid) ?? 0, // Obtener el total de órdenes de compra de cliente
-        };
-      });
+      if (!limit || limit < 1) {
+        limit = 10;
+      }
+      const subUsersCompany = await this.getDataSubUser(uid, page, limit);
 
       return {
         success: true,
         code: 200,
-        data: subUsersData,
+        data: subUsersCompany.data,
+        res: subUsersCompany.res,
       };
     } catch (error) {
       console.error(error);
@@ -588,41 +572,123 @@ export class subUserServices {
       };
     }
   };
-  static getDataSubUser = async (uid: string) => {
+  static getDataSubUser = async (
+    uid: string,
+    page: number,
+    pageSize: number
+  ) => {
     //  const companyData = await CompanyModel.find({ uid }).lean();
-    const companyData = await CompanyModel.aggregate([
-      {
-        $match: { uid }, // Filtra por el uid en la colección Companys
-      },
-      {
-        $unwind: "$auth_users", // Descompone el array de auth_users
-      },
+
+    const skip = (page - 1) * pageSize; // Cálculo de documentos a omitir
+    const pipeline = [
+      { $match: { uid } },
+      { $unwind: "$auth_users" },
       {
         $lookup: {
-          from: "profiles", // Nombre de la colección Profiles
-          localField: "auth_users.Uid", // Campo en Company que se relaciona con Profiles
-          foreignField: "uid", // Campo en Profiles que se relaciona con Company
-          as: "profileData", // Nombre del nuevo campo con los datos de Profiles
+          from: "profiles",
+          localField: "auth_users.Uid",
+          foreignField: "uid",
+          as: "profileData",
+        },
+      },
+      { $unwind: { path: "$profileData", preserveNullAndEmptyArrays: true } },
+      {
+        $addFields: {
+          "auth_users.name": { $ifNull: ["$profileData.name", ""] },
+          "auth_users.document": { $ifNull: ["$profileData.document", ""] },
+          "auth_users.createdAt": { $ifNull: ["$profileData.createdAt", null] },
         },
       },
       {
-        $unwind: "$profileData", // Descompone el array profileData para acceder a los campos directamente
+        $lookup: {
+          from: "resourcecounters",
+          localField: "auth_users.Uid",
+          foreignField: "uid",
+          as: "resourceCounterData",
+        },
+      },
+      {
+        $unwind: {
+          path: "$resourceCounterData",
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $addFields: {
-          "auth_users.name": "$profileData.name", // Agrega el campo name de profileData a auth_users
-          "auth_users.document": "$profileData.document", // Agrega el campo document de profileData a auth_users
-          "auth_users.createdAt": "$profileData.createdAt",
+          "auth_users.numProducts": {
+            $ifNull: ["$resourceCounterData.numProducts", 0],
+          },
+          "auth_users.numOffers": {
+            $ifNull: ["$resourceCounterData.numOffers", 0],
+          },
+          "auth_users.numServices": {
+            $ifNull: ["$resourceCounterData.numServices", 0],
+          },
+          "auth_users.numLiquidations": {
+            $ifNull: ["$resourceCounterData.numLiquidations", 0],
+          },
+          "auth_users.numSellingOrdersProvider": {
+            $ifNull: ["$resourceCounterData.numSellingOrdersProvider", 0],
+          },
+          "auth_users.numSellingOrdersClient": {
+            $ifNull: ["$resourceCounterData.numSellingOrdersClient", 0],
+          },
+          "auth_users.numPurchaseOrdersProvider": {
+            $ifNull: ["$resourceCounterData.numPurchaseOrdersProvider", 0],
+          },
+          "auth_users.numPurchaseOrdersClient": {
+            $ifNull: ["$resourceCounterData.numPurchaseOrdersClient", 0],
+          },
+          "auth_users.typeEntity": {
+            $ifNull: ["$resourceCounterData.typeEntity", "SubUser"],
+          },
         },
       },
       {
         $project: {
-          auth_users: 1, // Mantén los datos de auth_users con los nuevos campos
-          _id: 0, // Mantén el _id original
+          _id: 0,
+          name: "$auth_users.name",
+          document: "$auth_users.document",
+          typeEntity: "$auth_users.typeEntity",
+          userID: "$auth_users.Uid",
+          typeID: "$auth_users.typeID",
+          email: "$auth_users.email",
+          createdAt: "$auth_users.createdAt",
+          numProducts: "$auth_users.numProducts",
+          numOffers: "$auth_users.numOffers",
+          numServices: "$auth_users.numServices",
+          numLiquidations: "$auth_users.numLiquidations",
+          numSellingOrdersProvider: "$auth_users.numSellingOrdersProvider",
+          numSellingOrdersClient: "$auth_users.numSellingOrdersClient",
+          numPurchaseOrdersProvider: "$auth_users.numPurchaseOrdersProvider",
+          numPurchaseOrdersClient: "$auth_users.numPurchaseOrdersClient",
         },
       },
+    ];
+    const companyData = await CompanyModel.aggregate([
+      ...pipeline,
+      {
+        $sort: {
+          publish_date: -1, // Orden descendente (más reciente primero)
+        },
+      },
+      { $skip: skip }, // Omite los documentos según la página
+      { $limit: pageSize }, // Limita el número de documentos por página
     ]);
-    return companyData;
+
+    // Obtener el número total de documentos (sin paginación)
+    const totalData = await CompanyModel.aggregate(pipeline);
+    const totalDocuments = totalData.length;
+
+    return {
+      data: companyData,
+      res: {
+        totalDocuments,
+        totalPages: Math.ceil(totalDocuments / pageSize),
+        currentPage: page,
+        pageSize,
+      },
+    };
   };
   static getCountService = async (service: CollectionType, uid: string) => {
     const mongoose = require("mongoose");

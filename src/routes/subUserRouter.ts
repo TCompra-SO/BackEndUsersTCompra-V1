@@ -20,7 +20,10 @@ export class SubUserRouter {
     this.router.post("/changeStatus", changeStatusController);
     this.router.post("/changeRole", changeRoleController);
     this.router.get("/getUser/:uid", getSubUserController);
-    this.router.get("/getSubUsersByEntity/:uid", getSubUsersByEntity);
+    this.router.get(
+      "/getSubUsersByEntity/:uid/:page/:limit",
+      getSubUsersByEntity
+    );
   }
 
   static getRouter(): Router {

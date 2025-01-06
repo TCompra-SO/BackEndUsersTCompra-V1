@@ -955,20 +955,30 @@ export class CertificateService {
         }).sort({ updatedAt: -1 });
 
         let msgState = "";
+        let state;
 
-        switch (requestsData[0].state) {
-          case CertificationState.PENDING:
-            msgState = "Tienes una Certificación Pendiente";
-            break;
-          case CertificationState.RESENT:
-            msgState = "ya has Reenviado una Certificación";
-            break;
-          case CertificationState.REJECTED:
-            msgState = "Tienes una Certificación Rechazada";
-            break;
-          default:
-            msgState = "No estas certificado con la empresa";
-            break;
+        if (requestsData.length > 0) {
+          switch (requestsData[0].state) {
+            case CertificationState.PENDING:
+              msgState = "Tienes una Certificación Pendiente";
+              state = CertificationState.PENDING;
+              break;
+            case CertificationState.RESENT:
+              msgState = "ya has Reenviado una Certificación";
+              state = CertificationState.RESENT;
+              break;
+            case CertificationState.REJECTED:
+              msgState = "Tienes una Certificación Rechazada";
+              state = CertificationState.REJECTED;
+              break;
+            default:
+              msgState = "No estas certificado con la empresa";
+              state = CertificationState.NONE;
+              break;
+          }
+        } else {
+          msgState = "No estas certificado con la empresa";
+          state = CertificationState.NONE;
         }
         return {
           success: true,
@@ -976,7 +986,7 @@ export class CertificateService {
           error: {
             msg: msgState,
           },
-          state: requestsData[0].state,
+          state: state,
         };
       }
 
@@ -990,6 +1000,7 @@ export class CertificateService {
         state: result[0].state,
       };
     } catch (error) {
+      console.log(error);
       return {
         success: false,
         code: 500,

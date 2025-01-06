@@ -18,3 +18,10 @@ export enum TypeOrder {
   PROVIDER = 1,
   CLIENT = 2,
 }
+
+export enum TypeEntity {
+  COMPANY = "Company",
+  USER = "User",
+  SUBUSER = "SubUser",
+  MASTER = "Master",
+}

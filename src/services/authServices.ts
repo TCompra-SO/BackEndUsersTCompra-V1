@@ -25,9 +25,11 @@ import { pipeline } from "stream";
 import { configDotenv } from "dotenv";
 import { ScoreService } from "./scoreServices";
 import { ScoreI } from "./../interfaces/score.interface";
-import { TypeOrder } from "../types/globalTypes";
+import { TypeEntity, TypeOrder } from "../types/globalTypes";
 import CompanyModel from "../models/companyModel";
-import { query } from "express";
+import mongoose from "mongoose";
+import { ResourceCountersService } from "./resourceCountersServices";
+import { ResourceCountersI } from "../interfaces/resourceCounters";
 
 export interface UserDocument extends Document {
   _id: string;
@@ -991,7 +993,7 @@ export class AuthServices {
             {
               CompanyID: result[0].uid,
               uid: result[0].auth_users.Uid,
-              name: profileUser.data?.name,
+              name: profileUser.data?.[0].name,
               email: result[0].auth_users.email,
               type: entity,
               typeID: result[0].auth_users.typeID,
@@ -1400,15 +1402,54 @@ export class AuthServices {
       let EntityData;
 
       const pipeline = [
-        { $match: { uid } }, // Filtra por el uid proporcionado
+        {
+          $match: { uid }, // Filtra por el uid proporcionado
+        },
+        {
+          $lookup: {
+            from: "resourcecounters", // Nombre de la colección relacionada
+            localField: "uid", // Campo de relación en Company
+            foreignField: "uid", // Campo de relación en ResourceCounters
+            as: "resourceCountersData", // Alias para los datos relacionados
+          },
+        },
+        {
+          $unwind: {
+            // Desenrolla el array de resultados (siempre habrá un único documento por uid)
+            path: "$resourceCountersData",
+            preserveNullAndEmptyArrays: true, // Permite devolver el documento de Company incluso si no hay coincidencias en ResourceCounters
+          },
+        },
+        {
+          $addFields: {
+            numProducts: { $ifNull: ["$resourceCountersData.numProducts", 0] }, // Si numProducts es null, poner 0
+            numServices: { $ifNull: ["$resourceCountersData.numServices", 0] }, // Si numServices es null, poner 0
+            numLiquidations: {
+              $ifNull: ["$resourceCountersData.numLiquidations", 0],
+            }, // Si numLiquidations es null, poner 0
+            numPurchaseOrdersProvider: {
+              $ifNull: ["$resourceCountersData.numPurchaseOrdersProvider", 0], // Si numPurchaseOrdersProvider es null, poner 0
+            },
+            numPurchaseOrdersClient: {
+              $ifNull: ["$resourceCountersData.numPurchaseOrdersClient", 0], // Si numPurchaseOrdersClient es null, poner 0
+            },
+            numSellingOrdersProvider: {
+              $ifNull: ["$resourceCountersData.numSellingOrdersProvider", 0], // Si numSellingOrdersProvider es null, poner 0
+            },
+            numSellingOrdersClient: {
+              $ifNull: ["$resourceCountersData.numSellingOrdersClient", 0], // Si numSellingOrdersClient es null, poner 0
+            },
+          },
+        },
         {
           $project: {
-            password: 0, // Excluye el campo 'password'
+            password: 0, // Excluye los campos de Company
             __v: 0,
             _id: 0,
             createdAt: 0,
             updatedAt: 0,
             auth_users: 0,
+            resourceCountersData: 0,
           },
         },
       ];
@@ -1445,7 +1486,7 @@ export class AuthServices {
         sellerCount = entityData[0].score_provider.length;
         sellerScore = sumScores(entityData[0].score_provider) / sellerCount;
       }
-
+      /*
       const numProducts = await this.getCountService("products", uid);
       const numServices = 0;
       const numLiquidations = 0;
@@ -1462,7 +1503,7 @@ export class AuthServices {
       );
       const numSellingOrdersProvider = 0;
       const numSellingOrdersClient = 0;
-
+*/
       data = [
         {
           uid: entityData[0].uid,
@@ -1475,14 +1516,14 @@ export class AuthServices {
           customerScore,
           sellerCount,
           sellerScore,
-          numProducts,
+          /*   numProducts,
           numServices,
           numLiquidations,
           numOffers,
           numPurchaseOrdersProvider,
           numPurchaseOrdersClient,
           numSellingOrdersProvider,
-          numSellingOrdersClient,
+          numSellingOrdersClient,*/
         },
       ];
       EntityData = {
@@ -1492,14 +1533,14 @@ export class AuthServices {
         customerScore,
         sellerCount,
         sellerScore,
-        numProducts,
+        /*     numProducts,
         numServices,
         numLiquidations,
         numOffers,
         numPurchaseOrdersProvider,
         numPurchaseOrdersClient,
         numSellingOrdersProvider,
-        numSellingOrdersClient,
+        numSellingOrdersClient,*/
       };
 
       return {
@@ -1626,8 +1667,8 @@ export class AuthServices {
         case "SubUser":
           const dataProfile = await subUserServices.getProfileSubUser(uid);
           let authUsers = entityData.data.auth_users;
-          authUsers.name = dataProfile?.data?.name ?? "";
-          authUsers.document = dataProfile?.data?.document ?? "";
+          authUsers.name = dataProfile?.data?.[0].name ?? "";
+          authUsers.document = dataProfile?.data?.[0].document ?? "";
           authUsers.typeEntity = entityData.data.typeEntity;
 
           let dataCompany = this.getEntityService(entityData.data.uid);
@@ -1663,7 +1704,6 @@ export class AuthServices {
               msg: "No se encontro el Usuario",
             },
           };
-          break;
       }
       return {
         success: true,
@@ -1949,7 +1989,7 @@ export class AuthServices {
       // Configuración de Fuse.js
       const fuseOptions = {
         keys: ["name"], // Campo a buscar
-        threshold: 0.4, // Más estricto pero permite errores tipográficos menores
+        threshold: 0.3, // Más estricto pero permite errores tipográficos menores
       };
       const fuse = new Fuse(normalizedCompanies, fuseOptions);
 

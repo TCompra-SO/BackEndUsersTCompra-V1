@@ -11,6 +11,7 @@ const AuthUserSchema = new Schema({
     type: String,
     required: true,
     unique: true,
+    sparse: true,
     default: () => uid.rnd(),
   },
   email: { type: String, required: true },
