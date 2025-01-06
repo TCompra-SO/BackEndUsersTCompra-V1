@@ -24,7 +24,15 @@ const ResourceCountersSchema = new Schema<ResourceCountersI>(
       type: Number,
       default: 0,
     },
-    numOffers: {
+    numOffersProducts: {
+      type: Number,
+      default: 0,
+    },
+    numOffersServices: {
+      type: Number,
+      default: 0,
+    },
+    numOffersLiquidations: {
       type: Number,
       default: 0,
     },
@@ -44,9 +52,21 @@ const ResourceCountersSchema = new Schema<ResourceCountersI>(
       type: Number,
       default: 0,
     },
+    numSubUsers: {
+      type: Number,
+      default: 0,
+    },
     updateDate: {
       type: Date,
       default: Date.now,
+    },
+    numReceivedApprovedCertifications: {
+      type: Number,
+      default: 0,
+    },
+    numSentApprovedCertifications: {
+      type: Number,
+      default: 0,
     },
   },
   {

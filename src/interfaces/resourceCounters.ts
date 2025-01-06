@@ -6,10 +6,15 @@ export interface ResourceCountersI {
   numProducts: number;
   numServices: number;
   numLiquidations: number;
-  numOffers: number;
+  numOffersProducts: number;
+  numOffersServices: number;
+  numOffersLiquidations: number;
   numPurchaseOrdersProvider: number;
   numPurchaseOrdersClient: number;
   numSellingOrdersProvider: number;
   numSellingOrdersClient: number;
   updateDate: Date;
+  numSubUsers: number;
+  numSentApprovedCertifications: number;
+  numReceivedApprovedCertifications: number;
 }

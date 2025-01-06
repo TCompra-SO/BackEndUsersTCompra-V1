@@ -6,6 +6,7 @@ import { ScoreRouter } from "./scoreRouter";
 import { ImageRouter } from "./imageRouter";
 import { CertificateRouter } from "./certificateRouter";
 import { UserMasterRouter } from "./userMasterRouter";
+import { ReportsRouter } from "./reportsRouter";
 
 export class RootRouter {
   private static instance: RootRouter;
@@ -20,6 +21,7 @@ export class RootRouter {
     this.router.use("/v1/image/", ImageRouter.getRouter());
     this.router.use("/v1/certificate/", CertificateRouter.getRouter());
     this.router.use("/v1/userMaster/", UserMasterRouter.getRouter());
+    this.router.use("/v1/reports/", ReportsRouter.getRouter());
   }
 
   static getRouter(): Router {

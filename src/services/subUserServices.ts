@@ -16,6 +16,7 @@ import dbConnect from "../database/mongo";
 import { pipeline } from "stream";
 import { ResourceCountersI } from "../interfaces/resourceCounters";
 import { ResourceCountersService } from "./resourceCountersServices";
+import { ResourceCountersModel } from "../models/resourceCountersModel";
 export class subUserServices {
   static SchemaRegister = Joi.object({
     dni: Joi.string().min(8).max(12).required(),
@@ -142,7 +143,14 @@ export class subUserServices {
                     },
                   };
                 }
-
+                await ResourceCountersModel.updateOne(
+                  { uid: uid },
+                  {
+                    $inc: { numSubUsers: 1 },
+                    $set: { updateDate: new Date() },
+                  },
+                  { upsert: true }
+                );
                 return {
                   success: true,
                   code: 200,

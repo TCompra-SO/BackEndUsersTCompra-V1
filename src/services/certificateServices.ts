@@ -8,10 +8,11 @@ import {
   CertificationState,
 } from "../interfaces/certificate.interface";
 import path from "path";
-import { error } from "console";
+import { Console, error } from "console";
 import { CertificateRequestI } from "../interfaces/certificateRequest.interface";
 import CertificateRequestModel from "../models/certificateRequestModel";
 import CompanyModel from "../models/companyModel";
+import { ResourceCountersModel } from "../models/resourceCountersModel";
 
 dotenv.config();
 
@@ -284,22 +285,6 @@ export class CertificateService {
         sendByentityID: userID,
       };
       await this.createCertificateRequest(newRequestData);
-      /*
-      const responseNewCertificate = (
-        await this.createCertificateRequest(newRequestData)
-      ).data;
-      
-      for (const certificate of certificates) {
-        const updateData = {
-          request: [
-            {
-              receiverEntityID: companyID,
-              certificateRequestID: responseNewCertificate?.uid,
-            },
-          ],
-        };
-        await this.updateCertificate(certificate.uid, updateData);
-      }*/
 
       return {
         success: true,
@@ -522,11 +507,56 @@ export class CertificateService {
           };
         }
       }
+      const certificationData = await CertificateRequestModel.findOne({
+        uid: certificateRequestID,
+      });
+
       const updateState = await CertificateRequestModel.updateOne(
         { uid: certificateRequestID },
         { $set: { state: state, note: note } }
       );
+
       if (updateState.modifiedCount > 0) {
+        if (
+          certificationData?.state !== CertificationState.CERTIFIED &&
+          state === CertificationState.CERTIFIED
+        ) {
+          await ResourceCountersModel.updateOne(
+            { uid: certificationData?.receiverEntityID },
+            {
+              $inc: { numReceivedApprovedCertifications: 1 },
+              $set: { updateDate: new Date() },
+            },
+            { upsert: true }
+          );
+          await ResourceCountersModel.updateOne(
+            { uid: certificationData?.sendByentityID },
+            {
+              $inc: { numSentApprovedCertifications: 1 },
+              $set: { updateDate: new Date() },
+            },
+            { upsert: true }
+          );
+        } else if (
+          certificationData?.state !== state &&
+          certificationData?.state === CertificationState.CERTIFIED
+        ) {
+          await ResourceCountersModel.updateOne(
+            { uid: certificationData?.receiverEntityID },
+            {
+              $inc: { numReceivedApprovedCertifications: -1 },
+              $set: { updateDate: new Date() },
+            }
+          );
+
+          await ResourceCountersModel.updateOne(
+            { uid: certificationData?.sendByentityID },
+            {
+              $inc: { numSentApprovedCertifications: -1 },
+              $set: { updateDate: new Date() },
+            }
+          );
+        }
         return {
           success: true,
           code: 200,
