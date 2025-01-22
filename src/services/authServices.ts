@@ -30,6 +30,7 @@ import CompanyModel from "../models/companyModel";
 import mongoose from "mongoose";
 import { ResourceCountersService } from "./resourceCountersServices";
 import { ResourceCountersI } from "../interfaces/resourceCounters";
+import { Response } from "express";
 
 export interface UserDocument extends Document {
   _id: string;
@@ -981,8 +982,10 @@ export class AuthServices {
           const token = jwt.sign(
             {
               uid: result[0].auth_users.Uid,
-              name: user[0].name,
+              name: profileUser.data?.[0].name,
               email: result[0].auth_users.email,
+              CompanyID: result[0].uid,
+              type: entity,
               id: result[0].auth_users._id,
               exp: this.ExpirationDate(12),
             },
@@ -1068,6 +1071,7 @@ export class AuthServices {
             uid: user[0].uid,
             name: user[0].name,
             email: user[0].email,
+            type: entity,
             id: user[0]._id,
             exp: this.ExpirationDate(12),
           },

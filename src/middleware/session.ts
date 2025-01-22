@@ -38,11 +38,10 @@ const checkJwt = async (req: RequestExt, res: Response, next: NextFunction) => {
       });
     } else {
       req.user = isUser;
-      console.log({ jwtByUser });
+
       next();
     }
   } catch (e) {
-    console.error("Error en checkJwt:", e); // Registra cualquier error inesperado
     res.status(400).send({
       success: false,
       code: 400,

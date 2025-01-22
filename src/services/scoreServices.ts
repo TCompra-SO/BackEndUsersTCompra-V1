@@ -5,6 +5,8 @@ import { AuthServices } from "./authServices";
 import { error } from "console";
 import { ScoreI } from "../interfaces/score.interface";
 import { array } from "joi";
+import mongoose, { Mongoose } from "mongoose";
+import dbConnect from "../database/mongo";
 
 export class ScoreService {
   static registerScore = async (
@@ -12,10 +14,10 @@ export class ScoreService {
     uidEntity: string,
     uidUser: string,
     score: number,
-    comments: string
+    comments: string,
+    offerID?: string
   ) => {
     try {
-      console.log(comments);
       const data = await AuthServices.getDataBaseUser(uidUser);
       if (data.success === false) {
         return {
@@ -96,6 +98,32 @@ export class ScoreService {
               };
           }
           await entity.save();
+
+          const OfferProductModel =
+            mongoose.connection.collection("offersproducts");
+          const OfferServiceModel =
+            mongoose.connection.collection("offersservices");
+          const OfferLiquidationModel =
+            mongoose.connection.collection("offerliquidations");
+          const resultOffer = await OfferProductModel.updateOne(
+            { uid: offerID }, // Filtro para buscar por ID
+            { $set: { cancelRated: true } } // Campos a actualizar
+          );
+
+          if (resultOffer.matchedCount < 1) {
+            const resultService = await OfferServiceModel.updateOne(
+              { uid: offerID }, // Filtro por ID
+              { $set: { cancelRated: true } } // Campos a actualizar
+            );
+
+            if (resultService.matchedCount < 1) {
+              const resultLiquidation = await OfferServiceModel.updateOne(
+                { uid: offerID }, // Filtro por ID
+                { $set: { cancelRated: true } } // Campos a actualizar
+              );
+            }
+          }
+
           return {
             success: true,
             code: 200,

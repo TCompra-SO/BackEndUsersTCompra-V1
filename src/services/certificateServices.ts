@@ -139,6 +139,7 @@ export class CertificateService {
     try {
       const resultData = await CertificateModel.find({ companyID })
         .select("-request")
+        .sort({ creationDate: -1 })
         .skip((page - 1) * pageSize) // Saltar los documentos de las páginas anteriores
         .limit(pageSize); // Limitar a la cantidad de documentos por página;
 

@@ -1,8 +1,11 @@
-import { Request, Response } from "express";
+import { Request, response, Response } from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { CertificateService } from "../services/certificateServices";
+import { RequestExt } from "../interfaces/req-ext";
+
+import { JwtPayload } from "jsonwebtoken";
 
 // Configuración para almacenar archivos en una carpeta temporal
 const storage = multer.diskStorage({
@@ -92,11 +95,18 @@ export const uploadCertificateController = async (
 };
 
 export const getCertificatesController = async (
-  req: Request,
+  req: RequestExt,
   res: Response
 ) => {
   const { companyID, page, pageSize } = req.params;
 
+  const { uid } = req.user as JwtPayload;
+  if (uid !== companyID) {
+    return res.status(400).send({
+      success: false,
+      msg: "Usuario incorrecto.",
+    });
+  }
   try {
     const responseUser = await CertificateService.getCertificates(
       companyID,
@@ -195,6 +205,7 @@ export const updateCertifyStateController = async (
   res: Response
 ) => {
   const { certificateID, state, note } = req.body;
+
   try {
     const responseUser = await CertificateService.updateCertifyState(
       certificateID,
