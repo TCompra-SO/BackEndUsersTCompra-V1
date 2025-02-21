@@ -6,12 +6,12 @@ export const UtilData = [
         {
           id: 1,
           value: "Soles",
-          alias: "PEN",
+          alias: "S/",
         },
         {
           id: 2,
           value: "Dólares",
-          alias: "USD",
+          alias: "$",
         },
         {
           id: 3,
