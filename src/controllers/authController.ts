@@ -1,5 +1,7 @@
 import { Request, Response, response } from "express";
 import { AuthServices } from "../services/authServices";
+import { RequestExt } from "../interfaces/req-ext";
+import { JwtPayload } from "jsonwebtoken";
 
 const getNameController = async (req: Request, res: Response) => {
   // Obtener el parámetro de la consulta
@@ -281,10 +283,17 @@ const LoginController = async (req: Request, res: Response) => {
   }
 };
 
-const NewPasswordController = async (req: Request, res: Response) => {
+const NewPasswordController = async (req: RequestExt, res: Response) => {
   try {
     const { email, password } = req.body;
-    const responseUser = await AuthServices.NewPasswordService(email, password);
+    const { user } = req;
+    const jwtUser = user as JwtPayload;
+    const userID = jwtUser.uid;
+    const responseUser = await AuthServices.NewPasswordService(
+      email,
+      password,
+      userID
+    );
     if (!responseUser.success) {
       return res.status(responseUser.code).send(responseUser.error);
     }

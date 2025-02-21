@@ -2,7 +2,8 @@ import { Request, Response, response } from "express";
 import { ScoreService } from "../services/scoreServices";
 
 const registerScoreController = async ({ body }: Request, res: Response) => {
-  const { typeScore, uidEntity, uidUser, score, comments, offerID } = body;
+  const { typeScore, uidEntity, uidUser, score, comments, offerId, type } =
+    body;
   try {
     const responseUser = await ScoreService.registerScore(
       typeScore,
@@ -10,7 +11,8 @@ const registerScoreController = async ({ body }: Request, res: Response) => {
       uidUser,
       score,
       comments,
-      offerID
+      offerId,
+      type
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);

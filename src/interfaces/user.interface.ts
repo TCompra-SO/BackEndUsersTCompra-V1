@@ -19,7 +19,8 @@ export interface UserI {
   score_client: [ScoreI];
   ultimate_session: Date;
   active_account: boolean; // Identificador del plan al que el usuario está suscrito
-  numProducts: number;
-  numServices: number;
-  numLiquidations: number;
+  customerCount: number;
+  customerScore: number;
+  sellerCount: number;
+  sellerScore: number;
 }

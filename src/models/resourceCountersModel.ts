@@ -52,6 +52,19 @@ const ResourceCountersSchema = new Schema<ResourceCountersI>(
       type: Number,
       default: 0,
     },
+    numDeleteProducts: {
+      type: Number,
+      default: 0,
+    },
+    numDeleteServices: {
+      type: Number,
+      default: 0,
+    },
+    numDeleteLiquidations: {
+      type: Number,
+      default: 0,
+    },
+    
     numSubUsers: {
       type: Number,
       default: 0,

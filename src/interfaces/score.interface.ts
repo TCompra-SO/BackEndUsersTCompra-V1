@@ -1,5 +1,8 @@
 export interface ScoreI {
-  uid: string;
+  userId: string; // Usuario que califica
+  entityId: string; // Empresa calificada
   score: number;
   comments: string;
+  offerId?: string;
+  type?: number;
 }

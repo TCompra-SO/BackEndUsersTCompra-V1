@@ -7,6 +7,9 @@ import { ScoreI } from "../interfaces/score.interface";
 import { array } from "joi";
 import mongoose, { Mongoose } from "mongoose";
 import dbConnect from "../database/mongo";
+import ScoreClientModel from "../models/scoreClient";
+import ScoreProviderModel from "../models/scoreProvider";
+import { CollectionType, TypeScore } from "../types/globalTypes";
 
 export class ScoreService {
   static registerScore = async (
@@ -15,8 +18,10 @@ export class ScoreService {
     uidUser: string,
     score: number,
     comments: string,
-    offerID?: string
+    offerID?: string,
+    type?: CollectionType
   ) => {
+    //CORREGIR EL ESCORE CON LOS NUEVOS MODELO
     try {
       const data = await AuthServices.getDataBaseUser(uidUser);
       if (data.success === false) {
@@ -28,6 +33,7 @@ export class ScoreService {
           },
         };
       }
+
       const entityData = await AuthServices.getDataBaseUser(uidEntity);
 
       if (
@@ -55,7 +61,7 @@ export class ScoreService {
 
       const userdata = data.data?.[0];
       let entity;
-
+      //falta el COMPY
       if (entityData.data?.[0].typeEntity === "Company") {
         entity = await CompanyModel.findOne({ uid: entityData.data?.[0].uid });
 
@@ -68,37 +74,163 @@ export class ScoreService {
             },
           };
         }
-        const dataUserScore = this.getUserScoreEntity(
-          uidEntity,
-          userdata.uid,
-          typeScore,
-          entityData.data?.[0].typeEntity
-        );
+
         const newScore = {
-          uid: userdata.uid,
+          userId: userdata.uid,
+          entityId: uidEntity,
           score,
           comments,
+          offerId: offerID,
+          type,
         };
+        let scoreData;
 
-        if ((await dataUserScore).success === false) {
-          switch (typeScore) {
-            case "Client":
-              entity.score_client.push(newScore);
-              break;
-            case "Provider":
-              entity.score_provider.push(newScore);
-              break;
-            default:
-              return {
-                success: false,
-                code: 401,
-                error: {
-                  msg: "typeScore invalido",
-                },
-              };
-          }
-          await entity.save();
+        switch (typeScore) {
+          case "Client":
+            // entity.score_client.push(newScore);
+            if (offerID && type) {
+              const result = await ScoreClientModel.findOne({
+                entityId: uidEntity,
+                userId: uidUser,
+                offerId: offerID,
+              });
+              if (result) {
+                return {
+                  success: false,
+                  code: 407,
+                  error: {
+                    msg: "Ya haz calificado al Usuario",
+                  },
+                };
+              }
 
+              scoreData = new ScoreClientModel(newScore);
+              let savedScore = await scoreData.save();
+              if (savedScore) {
+                await CompanyModel.updateOne(
+                  { uid: entity.uid },
+                  { $inc: { customerCount: 1 } }, // Incrementa en 1 o lo crea con 1 si no existe
+                  { upsert: true } // Crea el documento si no existe
+                );
+                await this.calculateScore(
+                  entity.uid,
+                  UserModel,
+                  TypeScore.CLIENTSCORE
+                );
+              }
+            } else {
+              const result = await ScoreClientModel.findOne({
+                entityId: uidEntity,
+                userId: uidUser,
+                offerId: { $exists: false }, // Filtra registros donde offerUID NO exista
+              });
+
+              if (!result) {
+                ScoreClientModel.create({
+                  userId: uidUser,
+                  entityId: uidEntity,
+                  score: score,
+                  comments: comments,
+                });
+                await CompanyModel.updateOne(
+                  { uid: entity.uid },
+                  { $inc: { customerCount: 1 } }, // Incrementa en 1 o lo crea con 1 si no existe
+                  { upsert: true } // Crea el documento si no existe
+                );
+                await this.calculateScore(
+                  entity.uid,
+                  CompanyModel,
+                  TypeScore.CLIENTSCORE
+                );
+              } else {
+                return {
+                  success: false,
+                  code: 407,
+                  error: {
+                    msg: "Ya haz calificado al Usuario",
+                  },
+                };
+              }
+            }
+            break;
+          case "Provider":
+            // entity.score_provider.push(newScore);
+            if (offerID && type) {
+              const result = await ScoreProviderModel.findOne({
+                entityId: uidEntity,
+                userId: uidUser,
+                offerId: offerID,
+              });
+              if (result) {
+                return {
+                  success: false,
+                  code: 407,
+                  error: {
+                    msg: "Ya haz calificado al Usuario",
+                  },
+                };
+              }
+              scoreData = new ScoreProviderModel(newScore);
+              const savedScore = await scoreData.save();
+              if (savedScore) {
+                await CompanyModel.updateOne(
+                  { uid: entity.uid },
+                  { $inc: { sellerCount: 1 } }, // Incrementa en 1 o lo crea con 1 si no existe
+                  { upsert: true } // Crea el documento si no existe
+                );
+                await this.calculateScore(
+                  entity.uid,
+                  UserModel,
+                  TypeScore.PROVIDERSCORE
+                );
+              }
+            } else {
+              const result = await ScoreProviderModel.findOne({
+                entityId: uidEntity,
+                userId: uidUser,
+                offerId: { $exists: false }, // Filtra registros donde offerUID NO exista
+              });
+              if (!result) {
+                ScoreProviderModel.create({
+                  userId: uidUser,
+                  entityId: uidEntity,
+                  score: score,
+                  comments: comments,
+                });
+                await CompanyModel.updateOne(
+                  { uid: entity.uid },
+                  { $inc: { sellerCount: 1 } }, // Incrementa en 1 o lo crea con 1 si no existe
+                  { upsert: true } // Crea el documento si no existe
+                );
+
+                await this.calculateScore(
+                  entity.uid,
+                  CompanyModel,
+                  TypeScore.PROVIDERSCORE
+                );
+              } else {
+                return {
+                  success: false,
+                  code: 407,
+                  error: {
+                    msg: "Ya haz calificado al Usuario",
+                  },
+                };
+              }
+            }
+            break;
+          default:
+            return {
+              success: false,
+              code: 401,
+              error: {
+                msg: "typeScore invalido",
+              },
+            };
+        }
+        // await entity.save();
+
+        if (offerID && type) {
           const OfferProductModel =
             mongoose.connection.collection("offersproducts");
           const OfferServiceModel =
@@ -123,81 +255,18 @@ export class ScoreService {
               );
             }
           }
-
-          return {
-            success: true,
-            code: 200,
-            res: {
-              msg: "Calificación agregada exitosamente",
-            },
-          };
-        } else {
-          let filter = {};
-          let update = {};
-          switch (typeScore) {
-            case "Client":
-              filter = {
-                uid: uidEntity,
-                ["score_client.uid"]: userdata.uid,
-              };
-
-              update = {
-                $set: {
-                  ["score_client.$.score"]: score,
-                  ["score_client.$.comments"]: comments,
-                },
-              };
-              break;
-            case "Provider":
-              filter = {
-                uid: uidEntity,
-                ["score_provider.uid"]: userdata.uid,
-              };
-
-              update = {
-                $set: {
-                  ["score_provider.$.score"]: score,
-                  ["score_provider.$.comments"]: comments,
-                },
-              };
-
-              break;
-            default:
-              return {
-                success: false,
-                code: 401,
-                error: {
-                  msg: "typeScore invalido",
-                },
-              };
-          }
-
-          const updatedEntity = await CompanyModel.findOneAndUpdate(
-            filter,
-            update,
-            { new: true }
-          );
-
-          if (!updatedEntity) {
-            return {
-              success: false,
-              code: 403,
-              error: {
-                msg: "No se pudo actualizar la calificación",
-              },
-            };
-          }
-
-          return {
-            success: true,
-            code: 200,
-            res: {
-              msg: "se ha actualizado la calificación exitosamente",
-            },
-          };
         }
+
+        return {
+          success: true,
+          code: 200,
+          res: {
+            msg: "Calificación agregada exitosamente",
+          },
+        };
       } else {
         let entity = await UserModel.findOne({ uid: uidEntity });
+
         if (!entity) {
           return {
             success: false,
@@ -208,108 +277,197 @@ export class ScoreService {
           };
         }
 
-        const dataUserScore = this.getUserScoreEntity(
-          uidEntity,
-          userdata.uid,
-          typeScore,
-          entityData.data?.[0].typeEntity
-        );
         const newScore = {
-          uid: userdata.uid,
+          userId: userdata.uid,
+          entityId: uidEntity,
           score,
           comments,
+          offerId: offerID,
+          type,
         };
-        if ((await dataUserScore).success === false) {
-          switch (typeScore) {
-            case "Client":
-              entity.score_client.push(newScore);
-              break;
-            case "Provider":
-              entity.score_provider.push(newScore);
-              break;
-            default:
-              return {
-                success: false,
-                code: 401,
-                error: {
-                  msg: "typeScore invalido",
-                },
-              };
-          }
+        let scoreData;
 
-          await entity.save();
-          return {
-            success: true,
-            code: 200,
-            res: {
-              msg: "Puntaje agregado exitosamente",
-            },
-          };
-        } else {
-          let filter = {};
-          let update = {};
-          switch (typeScore) {
-            case "Client":
-              filter = {
-                uid: uidEntity,
-                ["score_client.uid"]: userdata.uid,
-              };
+        switch (typeScore) {
+          case "Client":
+            // entity.score_client.push(newScore);
 
-              update = {
-                $set: {
-                  ["score_client.$.score"]: score,
-                  ["score_client.$.comments"]: comments,
-                },
-              };
-              break;
-            case "Provider":
-              filter = {
-                uid: uidEntity,
-                ["score_provider.uid"]: userdata.uid,
-              };
+            if (offerID && type) {
+              const result = await ScoreClientModel.findOne({
+                entityId: uidEntity,
+                userId: uidUser,
+                offerId: offerID,
+              });
+              if (result) {
+                return {
+                  success: false,
+                  code: 407,
+                  error: {
+                    msg: "Ya haz calificado al Usuario",
+                  },
+                };
+              }
+              scoreData = new ScoreClientModel(newScore);
+              let savedScore = await scoreData.save();
+              if (savedScore) {
+                await UserModel.updateOne(
+                  { uid: entity.uid },
+                  { $inc: { customerCount: 1 } }, // Incrementa en 1 o lo crea con 1 si no existe
+                  { upsert: true } // Crea el documento si no existe
+                );
+                await this.calculateScore(
+                  entity.uid,
+                  UserModel,
+                  TypeScore.CLIENTSCORE
+                );
+              }
+            } else {
+              const result = await ScoreClientModel.findOne({
+                entityId: uidEntity,
+                userId: uidUser,
+                offerId: { $exists: false }, // Filtra registros donde offerUID NO exista
+              });
 
-              update = {
-                $set: {
-                  ["score_provider.$.score"]: score,
-                  ["score_provider.$.comments"]: comments,
-                },
-              };
+              if (!result) {
+                ScoreClientModel.create({
+                  userId: uidUser,
+                  entityId: uidEntity,
+                  score: score,
+                  comments: comments,
+                });
+                await UserModel.updateOne(
+                  { uid: entity.uid },
+                  { $inc: { customerCount: 1 } }, // Incrementa en 1 o lo crea con 1 si no existe
+                  { upsert: true } // Crea el documento si no existe
+                );
+                await this.calculateScore(
+                  entity.uid,
+                  UserModel,
+                  TypeScore.CLIENTSCORE
+                );
+              } else {
+                return {
+                  success: false,
+                  code: 407,
+                  error: {
+                    msg: "Ya haz calificado al Usuario",
+                  },
+                };
+              }
+            }
 
-              break;
-            default:
-              return {
-                success: false,
-                code: 401,
-                error: {
-                  msg: "typeScore invalido",
-                },
-              };
-          }
+            break;
+          case "Provider":
+            // entity.score_provider.push(newScore);
+            if (offerID && type) {
+              const result = await ScoreProviderModel.findOne({
+                entityId: uidEntity,
+                userId: uidUser,
+                offerId: offerID,
+              });
+              if (result) {
+                return {
+                  success: false,
+                  code: 407,
+                  error: {
+                    msg: "Ya haz calificado al Usuario",
+                  },
+                };
+              }
 
-          const updatedEntity = await UserModel.findOneAndUpdate(
-            filter,
-            update,
-            { new: true }
-          );
+              scoreData = new ScoreProviderModel(newScore);
+              let savedScore = await scoreData.save();
 
-          if (!updatedEntity) {
+              if (savedScore) {
+                await UserModel.updateOne(
+                  { uid: entity.uid },
+                  { $inc: { sellerCount: 1 } }, // Incrementa en 1 o lo crea con 1 si no existe
+                  { upsert: true } // Crea el documento si no existe
+                );
+
+                await this.calculateScore(
+                  entity.uid,
+                  UserModel,
+                  TypeScore.PROVIDERSCORE
+                );
+              }
+            } else {
+              const result = await ScoreProviderModel.findOne({
+                entityId: uidEntity,
+                userId: uidUser,
+                offerId: { $exists: false }, // Filtra registros donde offerUID NO exista
+              });
+              if (!result) {
+                ScoreProviderModel.create({
+                  userId: uidUser,
+                  entityId: uidEntity,
+                  score: score,
+                  comments: comments,
+                });
+                await UserModel.updateOne(
+                  { uid: entity.uid },
+                  { $inc: { sellerCount: 1 } }, // Incrementa en 1 o lo crea con 1 si no existe
+                  { upsert: true } // Crea el documento si no existe
+                );
+
+                await this.calculateScore(
+                  entity.uid,
+                  UserModel,
+                  TypeScore.PROVIDERSCORE
+                );
+              } else {
+                return {
+                  success: false,
+                  code: 407,
+                  error: {
+                    msg: "Ya haz calificado al Usuario",
+                  },
+                };
+              }
+            }
+            break;
+          default:
             return {
               success: false,
-              code: 403,
+              code: 401,
               error: {
-                msg: "No se pudo actualizar la calificación",
+                msg: "typeScore invalido",
               },
             };
-          }
-
-          return {
-            success: true,
-            code: 200,
-            res: {
-              msg: "se ha actualizado la calificación exitosamente",
-            },
-          };
         }
+
+        if (offerID && type) {
+          const OfferProductModel =
+            mongoose.connection.collection("offersproducts");
+          const OfferServiceModel =
+            mongoose.connection.collection("offersservices");
+          const OfferLiquidationModel =
+            mongoose.connection.collection("offerliquidations");
+          const resultOffer = await OfferProductModel.updateOne(
+            { uid: offerID }, // Filtro para buscar por ID
+            { $set: { cancelRated: true } } // Campos a actualizar
+          );
+
+          if (resultOffer.matchedCount < 1) {
+            const resultService = await OfferServiceModel.updateOne(
+              { uid: offerID }, // Filtro por ID
+              { $set: { cancelRated: true } } // Campos a actualizar
+            );
+
+            if (resultService.matchedCount < 1) {
+              const resultLiquidation = await OfferServiceModel.updateOne(
+                { uid: offerID }, // Filtro por ID
+                { $set: { cancelRated: true } } // Campos a actualizar
+              );
+            }
+          }
+        }
+        return {
+          success: true,
+          code: 200,
+          res: {
+            msg: "Puntaje agregado exitosamente",
+          },
+        };
       }
     } catch (error) {
       console.error(error);
@@ -322,31 +480,87 @@ export class ScoreService {
       };
     }
   };
+  static calculateScore = async (
+    entityID: string,
+    entityModel: any,
+    typeScore: TypeScore
+  ) => {
+    try {
+      let fieldCount, fieldScore;
+      if (typeScore === TypeScore.CLIENTSCORE) {
+        fieldCount = "customerCount";
+        fieldScore = "customerScore";
+      } else {
+        fieldCount = "sellerCount";
+        fieldScore = "sellerScore";
+      }
+      const entity = await entityModel.aggregate([
+        {
+          $match: { uid: entityID }, // Filtra solo el usuario con ese UID
+        },
+        {
+          $project: {
+            _id: 0, // Excluye el campo _id
+            uid: 1,
+            [fieldCount]: 1,
+            [fieldScore]: 1,
+          },
+        },
+      ]);
 
+      const pipeline = [
+        {
+          $match: { entityId: entityID }, // Filtra solo el usuario con ese UID
+        },
+
+        {
+          $group: {
+            _id: "$uid",
+            totalScore: { $sum: "$score" }, // Accede directo
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            totalScore: 1,
+          },
+        },
+      ];
+
+      let scoresEntity, averageRating;
+      if (typeScore === TypeScore.CLIENTSCORE) {
+        scoresEntity = await ScoreClientModel.aggregate(pipeline);
+        averageRating = scoresEntity[0].totalScore / entity[0].customerCount;
+        await entityModel.updateOne(
+          { uid: entityID }, // Filtro por ID
+          { $set: { [fieldScore]: averageRating } } // Campos a actualizar
+        );
+      } else {
+        scoresEntity = await ScoreProviderModel.aggregate(pipeline);
+        averageRating = scoresEntity[0].totalScore / entity[0].sellerCount;
+        await entityModel.updateOne(
+          { uid: entityID }, // Filtro por ID
+          { $set: { [fieldScore]: averageRating } } // Campos a actualizar
+        );
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
   static getScoreCount = async (uid: string) => {
     let customerCount = 0;
     let sellerCount = 0;
     let customerScore = 0;
     let sellerScore = 0;
     try {
-      const data = await AuthServices.getEntityService(uid);
+      const response: any = await AuthServices.getEntityService(uid);
 
-      const sumScores = (scores: ScoreI[]): number => {
-        return scores.reduce((accumulator, current) => {
-          return accumulator + current.score;
-        }, 0);
-      };
+      customerCount = response.data?.customerCount ?? 0;
+      sellerCount = response.data?.sellerCount ?? 0;
+      customerScore = response.data?.customerScore ?? 0;
+      sellerScore = response.data?.sellerScore ?? 0;
 
-      if (data.data?.score_client && data.data?.score_client.length > 0) {
-        customerCount = data.data?.score_client.length;
-        customerScore = sumScores(data.data?.score_client) / customerCount;
-      }
-      if (data.data?.score_provider && data.data?.score_provider.length) {
-        sellerCount = data.data?.score_provider.length;
-        sellerScore = sumScores(data.data?.score_provider) / sellerCount;
-      }
-
-      if (!data) {
+      if (!response.success) {
         return {
           success: false,
           code: 403,
@@ -367,100 +581,6 @@ export class ScoreService {
       };
     } catch (error) {
       console.log(error);
-      return {
-        success: false,
-        code: 500,
-        error: {
-          msg: "Error interno en el Servidor",
-        },
-      };
-    }
-  };
-
-  static getUserScoreEntity = async (
-    uid: string,
-    uidEntity: string,
-    typeScore: string,
-    typeEntity: string
-  ) => {
-    let pipeline = [];
-    try {
-      if (typeScore === "Client") {
-        pipeline.push(
-          {
-            $match: {
-              // Filtro por el uid principal
-              uid: uid,
-              // Filtro por score_client.uid dentro del array
-              "score_client.uid": uidEntity,
-            },
-          },
-          {
-            $project: {
-              // Seleccionamos los campos que queremos ver
-              document: 1,
-              name: 1,
-              email: 1,
-              score_client: {
-                $filter: {
-                  input: "$score_client",
-                  as: "score",
-                  cond: { $eq: ["$$score.uid", uidEntity] },
-                },
-              },
-            },
-          }
-        );
-      } else {
-        pipeline.push(
-          {
-            $match: {
-              // Filtro por el uid principal
-              uid: uid,
-              // Filtro por score_client.uid dentro del array
-              "score_provider.uid": uidEntity,
-            },
-          },
-          {
-            $project: {
-              // Seleccionamos los campos que queremos ver
-              document: 1,
-              name: 1,
-              email: 1,
-              score_client: {
-                $filter: {
-                  input: "$score_provider",
-                  as: "score",
-                  cond: { $eq: ["$$score.uid", uidEntity] },
-                },
-              },
-            },
-          }
-        );
-      }
-      let result;
-
-      if (typeEntity === "User") {
-        result = await UserModel.aggregate(pipeline);
-      } else {
-        result = await CompanyModel.aggregate(pipeline);
-      }
-
-      if (result.length < 1) {
-        return {
-          success: false,
-          code: 403,
-          error: {
-            msg: "El Usuario aun no te ha calificado",
-          },
-        };
-      }
-      return {
-        success: true,
-        code: 200,
-        data: result,
-      };
-    } catch (error) {
       return {
         success: false,
         code: 500,

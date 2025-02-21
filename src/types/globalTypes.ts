@@ -25,3 +25,8 @@ export enum TypeEntity {
   SUBUSER = "SubUser",
   MASTER = "Master",
 }
+
+export enum TypeScore {
+  CLIENTSCORE = 0,
+  PROVIDERSCORE = 1,
+}

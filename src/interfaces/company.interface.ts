@@ -28,4 +28,8 @@ export interface CompanyI {
   verified: boolean;
   active_account: boolean;
   requiredDocuments: string;
+  customerCount: number;
+  customerScore: number;
+  sellerCount: number;
+  sellerScore: number;
 }

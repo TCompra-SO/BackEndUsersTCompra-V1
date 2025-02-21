@@ -17,4 +17,10 @@ export interface ResourceCountersI {
   numSubUsers: number;
   numSentApprovedCertifications: number;
   numReceivedApprovedCertifications: number;
+  numDeleteProducts: number;
+  numDeleteServices: number;
+  numDeleteLiquidations: number;
+  numDeleteOffersProducts: number;
+  numDeleteOffersServices: number;
+  numDeleteOffersLiquidations: number;
 }

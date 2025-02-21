@@ -128,6 +128,26 @@ const CompanySchema = new Schema<CompanyI>(
       type: String,
       required: false,
     },
+    customerCount: {
+      type: Number,
+      default: 0,
+      required: false,
+    },
+    customerScore: {
+      type: Number,
+      default: 0,
+      required: false,
+    },
+    sellerCount: {
+      type: Number,
+      default: 0,
+      required: false,
+    },
+    sellerScore: {
+      type: Number,
+      default: 0,
+      required: false,
+    },
   },
   {
     versionKey: false,

@@ -226,7 +226,11 @@ export class subUserServices {
                 },
               },
               {
-                $project: { email: "$auth_users.email", _id: 0 }, // Solo selecciona el campo email
+                $project: {
+                  email: "$auth_users.email",
+                  typeID: "$auth_users.typeID",
+                  _id: 0,
+                }, // Solo selecciona el campo email
               },
             ],
             as: "companyData", // Alias para el resultado del lookup
@@ -235,6 +239,7 @@ export class subUserServices {
         {
           $addFields: {
             email: { $arrayElemAt: ["$companyData.email", 0] }, // Extrae el email correcto
+            typeID: { $arrayElemAt: ["$companyData.typeID", 0] },
           },
         },
         {
@@ -258,17 +263,44 @@ export class subUserServices {
             numLiquidations: {
               $ifNull: ["$resourceCountersData.numLiquidations", 0],
             }, // Si numLiquidations es null, poner 0
+            numDeleteProducts: {
+              $ifNull: ["$resourceCountersData.numDeleteProducts", 0], // Si numSellingOrdersClient es null, poner 0
+            },
+            numDeleteServices: {
+              $ifNull: ["$resourceCountersData.numDeleteServices", 0], // Si numSellingOrdersClient es null, poner 0
+            },
+            numDeleteLiquidations: {
+              $ifNull: ["$resourceCountersData.numDeleteLiquidations", 0], // Si numSellingOrdersClient es null, poner 0
+            },
             numPurchaseOrdersProvider: {
               $ifNull: ["$resourceCountersData.numPurchaseOrdersProvider", 0], // Si numPurchaseOrdersProvider es null, poner 0
             },
             numPurchaseOrdersClient: {
               $ifNull: ["$resourceCountersData.numPurchaseOrdersClient", 0], // Si numPurchaseOrdersClient es null, poner 0
             },
-            numSellingOrdersProvider: {
-              $ifNull: ["$resourceCountersData.numSellingOrdersProvider", 0], // Si numSellingOrdersProvider es null, poner 0
+            numSaleOrdersProvider: {
+              $ifNull: ["$resourceCountersData.numSaleOrdersProvider", 0], // Si numSellingOrdersProvider es null, poner 0
             },
-            numSellingOrdersClient: {
-              $ifNull: ["$resourceCountersData.numSellingOrdersClient", 0], // Si numSellingOrdersClient es null, poner 0
+            numSaleOrdersClient: {
+              $ifNull: ["$resourceCountersData.numSaleOrdersClient", 0], // Si numSellingOrdersClient es null, poner 0
+            },
+            numOffersProducts: {
+              $ifNull: ["$resourceCountersData.numOffersProducts", 0], // Si numSellingOrdersClient es null, poner 0
+            },
+            numOffersServices: {
+              $ifNull: ["$resourceCountersData.numOffersServices", 0], // Si numSellingOrdersClient es null, poner 0
+            },
+            numOffersLiquidations: {
+              $ifNull: ["$resourceCountersData.numOffersLiquidations", 0], // Si numSellingOrdersClient es null, poner 0
+            },
+            numDeleteOffersProducts: {
+              $ifNull: ["$resourceCountersData.numDeleteOffersProducts", 0], // Si numSellingOrdersClient es null, poner 0
+            },
+            numDeleteOffersServices: {
+              $ifNull: ["$resourceCountersData.numDeleteOffersServices", 0], // Si numSellingOrdersClient es null, poner 0
+            },
+            numDeleteOffersLiquidations: {
+              $ifNull: ["$resourceCountersData.numDeleteOffersLiquidations", 0], // Si numSellingOrdersClient es null, poner 0
             },
           },
         },

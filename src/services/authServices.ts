@@ -1158,24 +1158,50 @@ export class AuthServices {
       console.error("Error al buscar el subUsuario:", error);
     }
   };
-  static NewPasswordService = async (email: string, password: string) => {
+  static NewPasswordService = async (
+    email: string,
+    password: string,
+    entityID: string
+  ) => {
     try {
-      let user = await User.findOne({ email });
-      let isCompany = false;
+      const userData = await this.getDataBaseUser(entityID);
+
+      let user: any = await User.findOne({ email });
+      let typeEntity = TypeEntity.USER;
 
       if (!user) {
         user = await Company.findOne({ email });
+        typeEntity = TypeEntity.COMPANY;
         if (!user) {
-          return {
-            success: false,
-            code: 404,
-            error: {
-              msg: "Usuario no encontrado",
-            },
-          };
+          user = await CompanyModel.findOne(
+            { uid: userData.data?.[0].uid, "auth_users.email": email }, // Filtra por uid y email dentro de auth_users
+            { auth_users: { $elemMatch: { email: email } }, uid: 1, _id: 0 }
+          ).lean();
+
+          if (user?.auth_users[0]) {
+            typeEntity = TypeEntity.SUBUSER;
+
+            if (userData.data?.[0].auth_users) {
+              return {
+                success: false,
+                code: 404,
+                error: {
+                  msg: "Debes contactar al Administrador de tu Empresa para cambiar tu Contraseña",
+                },
+              };
+            }
+          } else {
+            return {
+              success: false,
+              code: 404,
+              error: {
+                msg: "Usuario no encontrado",
+              },
+            };
+          }
         }
-        isCompany = true;
       }
+      console.log(user);
 
       const salt = await bcrypt.genSalt(10);
       const newPassword = await bcrypt.hash(password, salt);
@@ -1189,10 +1215,16 @@ export class AuthServices {
         $set: { password: newPassword },
       };
 
-      if (isCompany) {
+      if (typeEntity === TypeEntity.COMPANY) {
         await Company.findOneAndUpdate({ email }, updateQuery);
-      } else {
+      } else if (typeEntity === TypeEntity.USER) {
         await User.findOneAndUpdate({ email }, updateQuery);
+      } else {
+        console.log("voy a cambiar");
+        await CompanyModel.updateOne(
+          { uid: entityID, "auth_users.email": email }, // Filtra por email dentro del array
+          { $set: { "auth_users.$.password": newPassword } } // Actualiza solo el password del usuario encontrado
+        );
       }
 
       return {
@@ -1407,53 +1439,76 @@ export class AuthServices {
 
       const pipeline = [
         {
-          $match: { uid }, // Filtra por el uid proporcionado
+          $match: { uid }, // Filtrar por UID
         },
         {
           $lookup: {
-            from: "resourcecounters", // Nombre de la colección relacionada
-            localField: "uid", // Campo de relación en Company
-            foreignField: "uid", // Campo de relación en ResourceCounters
-            as: "resourceCountersData", // Alias para los datos relacionados
+            from: "resourcecounters",
+            localField: "uid",
+            foreignField: "uid",
+            as: "resourceData",
           },
         },
         {
-          $unwind: {
-            // Desenrolla el array de resultados (siempre habrá un único documento por uid)
-            path: "$resourceCountersData",
-            preserveNullAndEmptyArrays: true, // Permite devolver el documento de Company incluso si no hay coincidencias en ResourceCounters
-          },
+          $unwind: { path: "$resourceData", preserveNullAndEmptyArrays: true },
         },
         {
           $addFields: {
-            numProducts: { $ifNull: ["$resourceCountersData.numProducts", 0] }, // Si numProducts es null, poner 0
-            numServices: { $ifNull: ["$resourceCountersData.numServices", 0] }, // Si numServices es null, poner 0
-            numLiquidations: {
-              $ifNull: ["$resourceCountersData.numLiquidations", 0],
-            }, // Si numLiquidations es null, poner 0
+            numProducts: { $ifNull: ["$resourceData.numProducts", 0] },
+            numServices: { $ifNull: ["$resourceData.numServices", 0] },
+            numLiquidations: { $ifNull: ["$resourceData.numLiquidations", 0] },
+            numOffersProducts: {
+              $ifNull: ["$resourceData.numOffersProducts", 0],
+            },
+            numOffersServices: {
+              $ifNull: ["$resourceData.numOffersServices", 0],
+            },
+            numOffersLiquidations: {
+              $ifNull: ["$resourceData.numOffersLiquidations", 0],
+            },
             numPurchaseOrdersProvider: {
-              $ifNull: ["$resourceCountersData.numPurchaseOrdersProvider", 0], // Si numPurchaseOrdersProvider es null, poner 0
+              $ifNull: ["$resourceData.numPurchaseOrdersProvider", 0],
             },
             numPurchaseOrdersClient: {
-              $ifNull: ["$resourceCountersData.numPurchaseOrdersClient", 0], // Si numPurchaseOrdersClient es null, poner 0
+              $ifNull: ["$resourceData.numPurchaseOrdersClient", 0],
             },
             numSellingOrdersProvider: {
-              $ifNull: ["$resourceCountersData.numSellingOrdersProvider", 0], // Si numSellingOrdersProvider es null, poner 0
+              $ifNull: ["$resourceData.numSellingOrdersProvider", 0],
             },
             numSellingOrdersClient: {
-              $ifNull: ["$resourceCountersData.numSellingOrdersClient", 0], // Si numSellingOrdersClient es null, poner 0
+              $ifNull: ["$resourceData.numSellingOrdersClient", 0],
+            },
+            numSubUsers: { $ifNull: ["$resourceData.numSubUsers", 0] },
+            numSentApprovedCertifications: {
+              $ifNull: ["$resourceData.numSentApprovedCertifications", 0],
+            },
+            numReceivedApprovedCertifications: {
+              $ifNull: ["$resourceData.numReceivedApprovedCertifications", 0],
+            },
+            numDeleteProducts: {
+              $ifNull: ["$resourceData.numDeleteProducts", 0],
+            },
+            numDeleteServices: {
+              $ifNull: ["$resourceData.numDeleteServices", 0],
+            },
+            numDeleteLiquidations: {
+              $ifNull: ["$resourceData.numDeleteLiquidations", 0],
+            },
+            numDeleteOffersProducts: {
+              $ifNull: ["$resourceData.numDeleteOffersProducts", 0],
+            },
+            numDeleteOffersServices: {
+              $ifNull: ["$resourceData.numDeleteOffersServices", 0],
+            },
+            numDeleteOffersLiquidations: {
+              $ifNull: ["$resourceData.numDeleteOffersLiquidations", 0],
             },
           },
         },
         {
           $project: {
-            password: 0, // Excluye los campos de Company
-            __v: 0,
-            _id: 0,
-            createdAt: 0,
-            updatedAt: 0,
-            auth_users: 0,
-            resourceCountersData: 0,
+            resourceData: 0, // Elimina el objeto anidado
+            password: 0,
           },
         },
       ];
@@ -1472,85 +1527,14 @@ export class AuthServices {
           };
         }
       }
-
-      let data = new Array();
-      let scores, customerCount, customerScore, sellerCount, sellerScore;
-
-      const sumScores = (scores: ScoreI[]): number => {
-        return scores.reduce((accumulator, current) => {
-          return accumulator + current.score;
-        }, 0);
-      };
-
-      if (entityData[0].score_client && entityData[0].score_client.length > 0) {
-        customerCount = entityData[0].score_client.length;
-        customerScore = sumScores(entityData[0].score_client) / customerCount;
-      }
-      if (entityData[0].score_provider && entityData[0].score_provider.length) {
-        sellerCount = entityData[0].score_provider.length;
-        sellerScore = sumScores(entityData[0].score_provider) / sellerCount;
-      }
-      /*
-      const numProducts = await this.getCountService("products", uid);
-      const numServices = 0;
-      const numLiquidations = 0;
-      const numOffers = await this.getCountService("offersproducts", uid);
-      const numPurchaseOrdersProvider = await this.getCountOrders(
-        "purchaseorderproducts",
-        uid,
-        TypeOrder.PROVIDER
-      );
-      const numPurchaseOrdersClient = await this.getCountOrders(
-        "purchaseorderproducts",
-        uid,
-        TypeOrder.CLIENT
-      );
-      const numSellingOrdersProvider = 0;
-      const numSellingOrdersClient = 0;
-*/
-      data = [
-        {
-          uid: entityData[0].uid,
-          name: entityData[0].name,
-          document: entityData[0].document,
-          email: entityData[0].email,
-          typeEntity: typeEntity,
-          image: entityData[0].avatar,
-          customerCount,
-          customerScore,
-          sellerCount,
-          sellerScore,
-          /*   numProducts,
-          numServices,
-          numLiquidations,
-          numOffers,
-          numPurchaseOrdersProvider,
-          numPurchaseOrdersClient,
-          numSellingOrdersProvider,
-          numSellingOrdersClient,*/
-        },
-      ];
-      EntityData = {
-        ...entityData[0], // Expande el contenido actual
+      entityData = {
+        ...entityData[0],
         typeEntity,
-        customerCount,
-        customerScore,
-        sellerCount,
-        sellerScore,
-        /*     numProducts,
-        numServices,
-        numLiquidations,
-        numOffers,
-        numPurchaseOrdersProvider,
-        numPurchaseOrdersClient,
-        numSellingOrdersProvider,
-        numSellingOrdersClient,*/
       };
-
       return {
         success: true,
         code: 200,
-        data: EntityData,
+        data: entityData,
       };
     } catch (error) {
       return {
@@ -1563,47 +1547,9 @@ export class AuthServices {
     }
   };
 
-  static getCountService = async (service: string, uid: string) => {
-    try {
-      const mongoose = require("mongoose");
-
-      let collectionData;
-      let total;
-
-      collectionData = await mongoose.connection.db.collection(service);
-      total = await collectionData.countDocuments({ userID: uid });
-      return total;
-    } catch (error) {
-      console.log(error);
-    }
-  };
-  static getCountOrders = async (
-    orderType: string,
-    uid: string,
-    typeorder: TypeOrder
-  ) => {
-    try {
-      const mongoose = require("mongoose");
-
-      let collectionData;
-      let total;
-
-      collectionData = await mongoose.connection.db.collection(orderType);
-      if (typeorder === TypeOrder.PROVIDER) {
-        total = await collectionData.countDocuments({ subUserProviderID: uid });
-      } else {
-        total = await collectionData.countDocuments({ subUserClientID: uid });
-      }
-
-      return total;
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
   static getDataBaseUser = async (uid: string) => {
     try {
-      let Entitydata = await this.getEntityService(uid);
+      let Entitydata: any = await this.getEntityService(uid);
       if ((await Entitydata).success === false) {
         Entitydata = await this.getAuthSubUser(uid);
 
@@ -1617,6 +1563,7 @@ export class AuthServices {
           };
         }
       }
+
       const entityData = await Entitydata;
       let data = new Array();
       let scores, customerCount, customerScore, sellerCount, sellerScore;
@@ -1624,10 +1571,11 @@ export class AuthServices {
       switch (entityData.data.typeEntity) {
         case "Company":
           scores = await ScoreService.getScoreCount(entityData.data.uid);
-          customerCount = scores.data?.customerCount;
-          customerScore = scores.data?.customerScore;
-          sellerCount = scores.data?.sellerCount;
-          sellerScore = scores.data?.sellerScore;
+          customerCount = scores.data?.customerCount ?? 0;
+          customerScore = scores.data?.customerScore ?? 0;
+          sellerCount = scores.data?.sellerCount ?? 0;
+          sellerScore = scores.data?.sellerScore ?? 0;
+
           data = [
             {
               uid: entityData.data.uid,
@@ -1648,10 +1596,11 @@ export class AuthServices {
         case "User":
           scores = await ScoreService.getScoreCount(entityData.data.uid);
 
-          customerCount = scores.data?.customerCount;
-          customerScore = scores.data?.customerScore;
-          sellerCount = scores.data?.sellerCount;
-          sellerScore = scores.data?.sellerScore;
+          customerCount = scores.data?.customerCount ?? 0;
+          customerScore = scores.data?.customerScore ?? 0;
+          sellerCount = scores.data?.sellerCount ?? 0;
+          sellerScore = scores.data?.sellerScore ?? 0;
+
           data = [
             {
               uid: entityData.data.uid,
@@ -1675,7 +1624,7 @@ export class AuthServices {
           authUsers.document = dataProfile?.data?.[0].document ?? "";
           authUsers.typeEntity = entityData.data.typeEntity;
 
-          let dataCompany = this.getEntityService(entityData.data.uid);
+          let dataCompany: any = this.getEntityService(entityData.data.uid);
           scores = ScoreService.getScoreCount(entityData.data.uid);
 
           customerCount = (await scores).data?.customerCount;
