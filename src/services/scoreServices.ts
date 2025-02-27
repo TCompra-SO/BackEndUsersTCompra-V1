@@ -255,7 +255,7 @@ export class ScoreService {
             );
             typeService = "Offersservices";
             if (resultService.matchedCount < 1) {
-              const resultLiquidation = await OfferServiceModel.updateOne(
+              const resultLiquidation = await OfferLiquidationModel.updateOne(
                 { uid: offerID }, // Filtro por ID
                 { $set: { cancelRated: true } } // Campos a actualizar
               );
@@ -265,37 +265,41 @@ export class ScoreService {
         }
         let API_POINT;
         let endpoint;
-        dotenv.config();
-        switch (typeService) {
-          case "Offersproducts":
-            API_POINT = process.env.API_PRODUCTS || "";
-            endpoint = "/v1/offers/getDetailOffer/" + offerID;
-            break;
-          case "Offersservices":
-            API_POINT = process.env.API_SERVICES || "";
-            endpoint = "/v1/offers/getDetailOffer/" + offerID;
-            break;
-          case "Offersliquidations":
-            API_POINT = process.env.API_LIQUIDATIONS || "";
-            endpoint = "/v1/offers/getDetailOffer/" + offerID;
-          default:
-            break;
+        let offerData;
+        if (offerID) {
+          dotenv.config();
+          switch (typeService) {
+            case "Offersproducts":
+              API_POINT = process.env.API_PRODUCTS || "";
+              endpoint = "/v1/offers/getDetailOffer/" + offerID;
+              break;
+            case "Offersservices":
+              API_POINT = process.env.API_SERVICES || "";
+              endpoint = "/v1/offers/getDetailOffer/" + offerID;
+              break;
+            case "Offersliquidations":
+              API_POINT = process.env.API_LIQUIDATIONS || "";
+              endpoint = "/v1/offers/getDetailOffer/" + offerID;
+            default:
+              break;
+          }
+
+          offerData = await axios.get(`${API_POINT}${endpoint}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
         }
 
-        const offerData = await axios.get(`${API_POINT}${endpoint}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
         const typeSocket = TypeSocket.UPDATE;
+
         return {
           success: true,
           code: 200,
           res: {
             msg: "Calificación agregada exitosamente",
             typeService: typeService,
-            offerData: offerData.data,
+            offerData: offerData?.data ?? {},
             typeSocket: typeSocket,
           },
         };
@@ -502,28 +506,31 @@ export class ScoreService {
 
         let API_POINT;
         let endpoint;
-        dotenv.config();
-        switch (typeService) {
-          case "Offersproducts":
-            API_POINT = process.env.API_PRODUCTS || "";
-            endpoint = "/v1/offers/getDetailOffer/" + offerID;
-            break;
-          case "Offersservices":
-            API_POINT = process.env.API_SERVICES || "";
-            endpoint = "/v1/offers/getDetailOffer/" + offerID;
-            break;
-          case "Offersliquidations":
-            API_POINT = process.env.API_LIQUIDATIONS || "";
-            endpoint = "/v1/offers/getDetailOffer/" + offerID;
-          default:
-            break;
-        }
+        let offerData;
+        if (offerID) {
+          dotenv.config();
+          switch (typeService) {
+            case "Offersproducts":
+              API_POINT = process.env.API_PRODUCTS || "";
+              endpoint = "/v1/offers/getDetailOffer/" + offerID;
+              break;
+            case "Offersservices":
+              API_POINT = process.env.API_SERVICES || "";
+              endpoint = "/v1/offers/getDetailOffer/" + offerID;
+              break;
+            case "Offersliquidations":
+              API_POINT = process.env.API_LIQUIDATIONS || "";
+              endpoint = "/v1/offers/getDetailOffer/" + offerID;
+            default:
+              break;
+          }
 
-        const offerData = await axios.get(`${API_POINT}${endpoint}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+          offerData = await axios.get(`${API_POINT}${endpoint}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+        }
 
         const typeSocket = TypeSocket.UPDATE;
         return {
@@ -532,7 +539,7 @@ export class ScoreService {
           res: {
             msg: "Calificación agregada exitosamente",
             typeService: typeService,
-            offerData: offerData.data,
+            offerData: offerData?.data ?? {},
             typeSocket: typeSocket,
           },
         };

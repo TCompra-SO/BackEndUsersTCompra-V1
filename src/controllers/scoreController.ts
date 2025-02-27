@@ -25,16 +25,18 @@ const registerScoreController = async (req: RequestExt, res: Response) => {
       res.status(responseUser.code).send(responseUser);
       //ANALIZAR ESTO
 
-      const roomName = `room${
-        responseUser.res?.typeService +
-        responseUser.res?.offerData.data?.[0].user
-      }`;
-      io.to(roomName).emit("updateRoom", {
-        dataPack: responseUser.res?.offerData,
-        typeSocket: responseUser.res?.typeSocket,
-        key: responseUser.res?.offerData.data?.[0].key,
-        userId: responseUser.res?.offerData.data?.[0].subUser,
-      });
+      if (offerId) {
+        const roomName = `room${
+          responseUser.res?.typeService +
+          responseUser.res?.offerData.data?.[0].user
+        }`;
+        io.to(roomName).emit("updateRoom", {
+          dataPack: responseUser.res?.offerData,
+          typeSocket: responseUser.res?.typeSocket,
+          key: responseUser.res?.offerData.data?.[0].key,
+          userId: responseUser.res?.offerData.data?.[0].subUser,
+        });
+      }
     } else {
       res.status(responseUser.code).send(responseUser.error);
     }
