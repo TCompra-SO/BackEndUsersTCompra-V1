@@ -30,3 +30,13 @@ export enum TypeScore {
   CLIENTSCORE = 0,
   PROVIDERSCORE = 1,
 }
+
+export enum OrderType {
+  ASC = 1,
+  DESC = 2,
+}
+
+export enum TypeSocket {
+  CREATE = 0,
+  UPDATE = 1,
+}

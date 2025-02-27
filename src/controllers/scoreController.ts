@@ -1,10 +1,15 @@
 import { Request, Response, response } from "express";
 import { ScoreService } from "../services/scoreServices";
-
-const registerScoreController = async ({ body }: Request, res: Response) => {
+import { io } from "../server";
+import { RequestExt } from "../interfaces/req-ext";
+import { JwtPayload } from "jsonwebtoken";
+const registerScoreController = async (req: RequestExt, res: Response) => {
   const { typeScore, uidEntity, uidUser, score, comments, offerId, type } =
-    body;
+    req.body;
   try {
+    const { user, token } = req; // Extraemos `user` y `body` de la request
+    const { uid: userUID } = user as JwtPayload; // Obtenemos `uid` del usuario autenticado
+
     const responseUser = await ScoreService.registerScore(
       typeScore,
       uidEntity,
@@ -12,10 +17,24 @@ const registerScoreController = async ({ body }: Request, res: Response) => {
       score,
       comments,
       offerId,
-      type
+      type,
+      token
     );
+
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
+      //ANALIZAR ESTO
+
+      const roomName = `room${
+        responseUser.res?.typeService +
+        responseUser.res?.offerData.data?.[0].user
+      }`;
+      io.to(roomName).emit("updateRoom", {
+        dataPack: responseUser.res?.offerData,
+        typeSocket: responseUser.res?.typeSocket,
+        key: responseUser.res?.offerData.data?.[0].key,
+        userId: responseUser.res?.offerData.data?.[0].subUser,
+      });
     } else {
       res.status(responseUser.code).send(responseUser.error);
     }

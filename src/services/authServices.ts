@@ -31,7 +31,7 @@ import mongoose from "mongoose";
 import { ResourceCountersService } from "./resourceCountersServices";
 import { ResourceCountersI } from "../interfaces/resourceCounters";
 import { Response } from "express";
-
+import { setToken } from "../utils/authStore";
 export interface UserDocument extends Document {
   _id: string;
   email: string;
@@ -1008,6 +1008,9 @@ export class AuthServices {
             { "auth_users.Uid": result[0].auth_users.Uid }, // Condición de búsqueda por uid
             { $set: { "auth_users.$.ultimate_session": new Date() } }
           );
+
+          setToken(token);
+
           return {
             success: true,
             code: 200,
@@ -1098,7 +1101,7 @@ export class AuthServices {
             { $set: { ultimate_session: new Date() } }
           );
         }
-
+        setToken(token);
         return {
           success: true,
           code: 200,
@@ -1201,7 +1204,6 @@ export class AuthServices {
           }
         }
       }
-      console.log(user);
 
       const salt = await bcrypt.genSalt(10);
       const newPassword = await bcrypt.hash(password, salt);
@@ -1258,6 +1260,31 @@ export class AuthServices {
       if (!user || user.length === 0) {
         user = await Company.aggregate(userPipeline);
         userType = UserType.Company;
+        if (!user || user.length === 0) {
+          const userPipeline = [
+            { $unwind: "$auth_users" }, // Desestructura el array
+            { $match: { "auth_users.email": email } }, // Filtra por email dentro del array
+            {
+              $project: {
+                _id: 1,
+                email: "$auth_users.email",
+                metadata: 1,
+                uid: 1,
+              },
+            },
+            { $limit: 1 },
+          ];
+          user = await Company.aggregate(userPipeline);
+          if (user.length > 0) {
+            return {
+              success: false,
+              code: 407,
+              error: {
+                msg: "Debes contactar al usuario de la cuenta principal para recuperar tu contraseña",
+              },
+            };
+          }
+        }
       }
 
       if (!user || user.length === 0) {
@@ -1503,6 +1530,11 @@ export class AuthServices {
             numDeleteOffersLiquidations: {
               $ifNull: ["$resourceData.numDeleteOffersLiquidations", 0],
             },
+            // Asegurar que estos campos siempre existan con valor 0 si son null
+            customerCount: { $ifNull: ["$customerCount", 0] },
+            customerScore: { $ifNull: ["$customerScore", 0] },
+            sellerCount: { $ifNull: ["$sellerCount", 0] },
+            sellerScore: { $ifNull: ["$sellerScore", 0] }, // Agregando sellerScore
           },
         },
         {

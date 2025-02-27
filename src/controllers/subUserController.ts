@@ -126,6 +126,31 @@ const getSubUsersByEntity = async (req: Request, res: Response) => {
   }
 };
 
+const searchSubUserController = async (req: Request, res: Response) => {
+  const { entityID, page, pageSize, fieldName, orderType, keyWords } = req.body;
+  try {
+    const responseUser = await subUserServices.searchSubUser(
+      entityID,
+      Number(page),
+      Number(pageSize),
+      keyWords,
+      fieldName,
+      Number(orderType)
+    );
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser);
+    } else {
+      res.status(responseUser.code).send(responseUser.error);
+    }
+  } catch (error) {
+    console.error("Error en searchSubUserController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
 export {
   registerSubUserController,
   getSubUserController,
@@ -133,4 +158,5 @@ export {
   changeStatusController,
   changeRoleController,
   getSubUsersByEntity,
+  searchSubUserController,
 };

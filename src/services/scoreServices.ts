@@ -9,7 +9,11 @@ import mongoose, { Mongoose } from "mongoose";
 import dbConnect from "../database/mongo";
 import ScoreClientModel from "../models/scoreClient";
 import ScoreProviderModel from "../models/scoreProvider";
-import { CollectionType, TypeScore } from "../types/globalTypes";
+import { CollectionType, TypeScore, TypeSocket } from "../types/globalTypes";
+import dotenv from "dotenv";
+import axios from "axios";
+import { getToken } from "../utils/authStore";
+import { JwtPayload } from "jsonwebtoken";
 
 export class ScoreService {
   static registerScore = async (
@@ -19,7 +23,8 @@ export class ScoreService {
     score: number,
     comments: string,
     offerID?: string,
-    type?: CollectionType
+    type?: CollectionType,
+    token?: string
   ) => {
     //CORREGIR EL ESCORE CON LOS NUEVOS MODELO
     try {
@@ -62,6 +67,7 @@ export class ScoreService {
       const userdata = data.data?.[0];
       let entity;
       //falta el COMPY
+
       if (entityData.data?.[0].typeEntity === "Company") {
         entity = await CompanyModel.findOne({ uid: entityData.data?.[0].uid });
 
@@ -97,7 +103,7 @@ export class ScoreService {
               if (result) {
                 return {
                   success: false,
-                  code: 407,
+                  code: 409,
                   error: {
                     msg: "Ya haz calificado al Usuario",
                   },
@@ -145,7 +151,7 @@ export class ScoreService {
               } else {
                 return {
                   success: false,
-                  code: 407,
+                  code: 409,
                   error: {
                     msg: "Ya haz calificado al Usuario",
                   },
@@ -164,7 +170,7 @@ export class ScoreService {
               if (result) {
                 return {
                   success: false,
-                  code: 407,
+                  code: 409,
                   error: {
                     msg: "Ya haz calificado al Usuario",
                   },
@@ -211,7 +217,7 @@ export class ScoreService {
               } else {
                 return {
                   success: false,
-                  code: 407,
+                  code: 409,
                   error: {
                     msg: "Ya haz calificado al Usuario",
                   },
@@ -229,39 +235,68 @@ export class ScoreService {
             };
         }
         // await entity.save();
-
+        let typeService;
         if (offerID && type) {
           const OfferProductModel =
             mongoose.connection.collection("offersproducts");
           const OfferServiceModel =
             mongoose.connection.collection("offersservices");
           const OfferLiquidationModel =
-            mongoose.connection.collection("offerliquidations");
+            mongoose.connection.collection("offersliquidations");
           const resultOffer = await OfferProductModel.updateOne(
             { uid: offerID }, // Filtro para buscar por ID
             { $set: { cancelRated: true } } // Campos a actualizar
           );
-
+          typeService = "Offersproducts";
           if (resultOffer.matchedCount < 1) {
             const resultService = await OfferServiceModel.updateOne(
               { uid: offerID }, // Filtro por ID
               { $set: { cancelRated: true } } // Campos a actualizar
             );
-
+            typeService = "Offersservices";
             if (resultService.matchedCount < 1) {
               const resultLiquidation = await OfferServiceModel.updateOne(
                 { uid: offerID }, // Filtro por ID
                 { $set: { cancelRated: true } } // Campos a actualizar
               );
+              typeService = "Offersliquidations";
             }
           }
         }
+        let API_POINT;
+        let endpoint;
+        dotenv.config();
+        switch (typeService) {
+          case "Offersproducts":
+            API_POINT = process.env.API_PRODUCTS || "";
+            endpoint = "/v1/offers/getDetailOffer/" + offerID;
+            break;
+          case "Offersservices":
+            API_POINT = process.env.API_SERVICES || "";
+            endpoint = "/v1/offers/getDetailOffer/" + offerID;
+            break;
+          case "Offersliquidations":
+            API_POINT = process.env.API_LIQUIDATIONS || "";
+            endpoint = "/v1/offers/getDetailOffer/" + offerID;
+          default:
+            break;
+        }
 
+        const offerData = await axios.get(`${API_POINT}${endpoint}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const typeSocket = TypeSocket.UPDATE;
         return {
           success: true,
           code: 200,
           res: {
             msg: "Calificación agregada exitosamente",
+            typeService: typeService,
+            offerData: offerData.data,
+            typeSocket: typeSocket,
           },
         };
       } else {
@@ -300,7 +335,7 @@ export class ScoreService {
               if (result) {
                 return {
                   success: false,
-                  code: 407,
+                  code: 409,
                   error: {
                     msg: "Ya haz calificado al Usuario",
                   },
@@ -347,7 +382,7 @@ export class ScoreService {
               } else {
                 return {
                   success: false,
-                  code: 407,
+                  code: 409,
                   error: {
                     msg: "Ya haz calificado al Usuario",
                   },
@@ -417,7 +452,7 @@ export class ScoreService {
               } else {
                 return {
                   success: false,
-                  code: 407,
+                  code: 409,
                   error: {
                     msg: "Ya haz calificado al Usuario",
                   },
@@ -434,38 +469,71 @@ export class ScoreService {
               },
             };
         }
-
+        let typeService;
         if (offerID && type) {
           const OfferProductModel =
             mongoose.connection.collection("offersproducts");
+
           const OfferServiceModel =
             mongoose.connection.collection("offersservices");
           const OfferLiquidationModel =
-            mongoose.connection.collection("offerliquidations");
+            mongoose.connection.collection("offersliquidations");
           const resultOffer = await OfferProductModel.updateOne(
             { uid: offerID }, // Filtro para buscar por ID
             { $set: { cancelRated: true } } // Campos a actualizar
           );
+          typeService = "Offersproducts";
 
           if (resultOffer.matchedCount < 1) {
             const resultService = await OfferServiceModel.updateOne(
               { uid: offerID }, // Filtro por ID
               { $set: { cancelRated: true } } // Campos a actualizar
             );
-
+            typeService = "Offersservices";
             if (resultService.matchedCount < 1) {
               const resultLiquidation = await OfferServiceModel.updateOne(
                 { uid: offerID }, // Filtro por ID
                 { $set: { cancelRated: true } } // Campos a actualizar
               );
+              typeService = "Offersliquidations";
             }
           }
         }
+
+        let API_POINT;
+        let endpoint;
+        dotenv.config();
+        switch (typeService) {
+          case "Offersproducts":
+            API_POINT = process.env.API_PRODUCTS || "";
+            endpoint = "/v1/offers/getDetailOffer/" + offerID;
+            break;
+          case "Offersservices":
+            API_POINT = process.env.API_SERVICES || "";
+            endpoint = "/v1/offers/getDetailOffer/" + offerID;
+            break;
+          case "Offersliquidations":
+            API_POINT = process.env.API_LIQUIDATIONS || "";
+            endpoint = "/v1/offers/getDetailOffer/" + offerID;
+          default:
+            break;
+        }
+
+        const offerData = await axios.get(`${API_POINT}${endpoint}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const typeSocket = TypeSocket.UPDATE;
         return {
           success: true,
           code: 200,
           res: {
-            msg: "Puntaje agregado exitosamente",
+            msg: "Calificación agregada exitosamente",
+            typeService: typeService,
+            offerData: offerData.data,
+            typeSocket: typeSocket,
           },
         };
       }

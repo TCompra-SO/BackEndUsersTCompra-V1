@@ -36,6 +36,10 @@ const CertificateRequestSchema: Schema = new Schema<CertificateRequestI>(
           type: String,
           required: true,
         },
+        creationDate: {
+          type: Date,
+          required: true,
+        },
       },
     ],
     state: {

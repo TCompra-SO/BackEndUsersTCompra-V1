@@ -3,13 +3,14 @@ import {
   getScoreCountController,
   registerScoreController,
 } from "../controllers/scoreController";
+import { checkJwt } from "../middleware/session";
 export class ScoreRouter {
   private static instance: ScoreRouter;
   private router: Router;
 
   private constructor() {
     this.router = Router();
-    this.router.post("/registerScore", registerScoreController);
+    this.router.post("/registerScore", checkJwt, registerScoreController);
 
     this.router.get("/getScoreCount/:uid", getScoreCountController);
   }

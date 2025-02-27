@@ -13,6 +13,9 @@ import { CertificateRequestI } from "../interfaces/certificateRequest.interface"
 import CertificateRequestModel from "../models/certificateRequestModel";
 import CompanyModel from "../models/companyModel";
 import { ResourceCountersModel } from "../models/resourceCountersModel";
+import { OrderType } from "../types/globalTypes";
+import { SortOrder } from "mongoose";
+import Fuse from "fuse.js";
 
 dotenv.config();
 
@@ -201,7 +204,6 @@ export class CertificateService {
     resend?: boolean
   ) => {
     try {
-      console.log(certificateIDs);
       const userData = await AuthServices.getDataBaseUser(userID);
 
       //falta corregir esto
@@ -227,8 +229,6 @@ export class CertificateService {
         let state;
         if (cerRequestData?.[0]?.state === CertificationState.PENDING) {
           state = "Tienes una certificación Pendiente con esta empresa";
-          console.log(cerRequestData?.[0].uid);
-          console.log(cerRequestData);
         } else {
           state = "Tu empresa se encuentra Certificada con esta empresa";
         }
@@ -265,6 +265,7 @@ export class CertificateService {
           documentName: certificate.documentName,
           state: CertificationState.PENDING, // El estado del certificado
           url: urlCer, // La URL segura obtenida de Cloudinary
+          creationDate: new Date(),
         };
 
         // Agregar el objeto a resultCerts
@@ -727,6 +728,801 @@ export class CertificateService {
         code: 500,
         error: {
           msg: "Error inesperado al obtener las solicitudes",
+        },
+      };
+    }
+  };
+
+  static searchSentRequestsByEntity = async (
+    companyID: string,
+    page: number,
+    pageSize: number,
+    keyWords: string,
+    orderType: OrderType,
+    fieldName: string
+  ) => {
+    try {
+      page = !page || page < 1 ? 1 : page;
+      pageSize = !pageSize || pageSize < 1 ? 10 : pageSize;
+      let total = 0;
+      if (!keyWords) {
+        keyWords = "";
+      }
+      if (!fieldName) {
+        fieldName = "creationDate";
+      }
+
+      let order: SortOrder = orderType === OrderType.ASC ? 1 : -1;
+      //FALTA CORREGIR
+      const skip = (page - 1) * pageSize; // Cálculo de documentos a omitir
+      /*  const pipeline = [
+        {
+          $match: { sendByentityID: companyID },
+        },
+        {
+          $lookup: {
+            from: "companys", // El nombre de la colección de la tabla 'Company'
+            localField: "receiverEntityID", // Campo de la colección 'RequestModel' (recibe el ID)
+            foreignField: "uid", // Campo de la colección 'Company' (campo de unión)
+            as: "companyDetails", // El nombre del campo que almacenará la información de la tabla 'Company'
+          },
+        },
+        {
+          $unwind: "$companyDetails", // Descompone el arreglo de la respuesta del $lookup para que se pueda acceder a los campos de la empresa
+        },
+        // Filtro semántico basado en keyWords
+        {
+          $addFields: {
+            certificates: {
+              $filter: {
+                input: "$certificates",
+                as: "cert",
+                cond: {
+                  $or: [
+                    {
+                      $regexMatch: {
+                        input: "$$cert.documentName",
+                        regex: keyWords,
+                        options: "i",
+                      },
+                    },
+                    {
+                      $regexMatch: {
+                        input: "$$cert.name",
+                        regex: keyWords,
+                        options: "i",
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+            matchScore: {
+              $add: [
+                {
+                  $cond: [
+                    {
+                      $regexMatch: {
+                        input: "$companyDetails.companyName",
+                        regex: keyWords,
+                        options: "i",
+                      },
+                    },
+                    1,
+                    0,
+                  ],
+                },
+
+                {
+                  $cond: [
+                    { $gt: [{ $size: "$certificates" }, 0] }, // Si hay certificados filtrados, suma 1 al score
+                    1,
+                    0,
+                  ],
+                },
+              ],
+            },
+          },
+        },
+        {
+          $match: {
+            matchScore: { $gt: 0 }, // Solo deja los documentos que tengan al menos una coincidencia
+          },
+        },
+        {
+          $project: {
+            uid: 1,
+            companyId: "$receiverEntityID", // Incluir el campo 'name'
+            companyName: "$companyDetails.name",
+            companyDocument: "$companyDetails.document",
+            creationDate: "$createdAt", // Incluir el campo 'status'
+            note: 1, // Incluir '_id' (se incluye por defecto si no se excluye)
+            state: 1,
+            certificates: 1,
+          },
+        },
+      ];*/
+      const pipeline = [
+        {
+          $match: { sendByentityID: companyID },
+        },
+        {
+          $lookup: {
+            from: "companys", // Nombre de la colección de la tabla 'Company'
+            localField: "receiverEntityID", // Campo de la colección 'RequestModel'
+            foreignField: "uid", // Campo de la colección 'Company'
+            as: "companyDetails", // Nombre del campo que almacenará la información de la tabla 'Company'
+          },
+        },
+        {
+          $unwind: "$companyDetails", // Descompone el arreglo de la respuesta del $lookup
+        },
+        {
+          $match: {
+            $or: [
+              { "companyDetails.name": { $regex: keyWords, $options: "i" } }, // Búsqueda insensible a mayúsculas y minúsculas
+              {
+                "companyDetails.document": { $regex: keyWords, $options: "i" },
+              },
+            ],
+          },
+        },
+        {
+          $project: {
+            uid: 1,
+            companyId: "$receiverEntityID",
+            companyName: "$companyDetails.name",
+            companyDocument: "$companyDetails.document",
+            creationDate: "$createdAt",
+            note: 1,
+            state: 1,
+            certificates: 1,
+          },
+        },
+      ];
+      let certificatesData = await CertificateRequestModel.aggregate([
+        ...pipeline,
+        {
+          $sort: {
+            [fieldName]: order, // Orden descendente (más reciente primero)
+          },
+        },
+        { $skip: skip }, // Omite los documentos según la página
+        { $limit: pageSize }, // Limita el número de documentos por página
+      ]).collation({ locale: "en", strength: 2 });
+
+      let totalDocuments = (await CertificateRequestModel.aggregate(pipeline))
+        .length;
+
+      // Obtener el número total de documentos (sin paginación)
+      const totalData = await CertificateRequestModel.aggregate(pipeline);
+      totalDocuments = totalData.length;
+      /*
+      // Si no hay resultados en MongoDB, usamos Fuse.js para hacer una búsqueda difusa
+      if (keyWords && certificatesData.length === 0) {
+        // Crear un nuevo pipeline sin el filtro de palabras clave ($or)
+        const pipelineWithoutKeyWords = pipeline
+          .map((stage: any, index: number) => {
+            if (stage.$match && stage.$match.$or && index !== 0) {
+              // Si es un $match con $or y NO es el primer match (el que tiene uid)
+              const { $or, ...rest } = stage.$match; // Extrae $or y deja los demás filtros
+              return Object.keys(rest).length > 0 ? { $match: rest } : null; // Mantiene otros filtros si existen
+            }
+            return stage; // Mantiene las demás etapas
+          })
+          .filter((stage) => stage !== null); // Elimina cualquier etapa vacía
+
+        // Ejecutar el pipeline sin el filtro de palabras clave
+        const allResults = await CertificateRequestModel.aggregate(
+          pipelineWithoutKeyWords
+        );
+
+        // Configurar Fuse.js para la búsqueda difusa
+        const fuse = new Fuse(allResults, {
+          keys: ["companyName", "companyDocument"], // Claves por las que buscar
+          threshold: 0.4, // Define qué tan "difusa" es la coincidencia
+        });
+
+        // Buscar usando Fuse.js
+        certificatesData = fuse.search(keyWords).map((result) => result.item);
+
+        // Asegurar que fieldName tenga un valor predeterminado antes de ser usado
+        const sortField = fieldName ?? "creationDate"; // Si fieldName es undefined, usar "publish_date"
+
+        // Ordenar los resultados por el campo dinámico sortField
+        certificatesData.sort((a, b) => {
+          const valueA = a[sortField];
+          const valueB = b[sortField];
+
+          if (typeof valueA === "string" && typeof valueB === "string") {
+            // Usar localeCompare para comparar cadenas ignorando mayúsculas, minúsculas y acentos
+            return (
+              valueA.localeCompare(valueB, undefined, {
+                sensitivity: "base",
+              }) * (orderType === OrderType.ASC ? 1 : -1)
+            );
+          }
+
+          if (valueA > valueB) return orderType === OrderType.ASC ? 1 : -1;
+          if (valueA < valueB) return orderType === OrderType.ASC ? -1 : 1;
+          return 0; // Si son iguales, no cambiar el orden
+        });
+        // Total de resultados encontrados
+        total = certificatesData.length;
+        // Aplicar paginación sobre los resultados ordenados de Fuse.js
+        const start = (page - 1) * pageSize;
+        certificatesData = certificatesData.slice(start, start + pageSize);
+      } else {
+        // Si encontramos resultados en MongoDB, el total es la cantidad de documentos encontrados
+        const resultData = await CertificateModel.aggregate(pipeline);
+        total = resultData.length;
+      }*/
+      // Si no hay resultados en MongoDB, usamos Fuse.js para hacer una búsqueda difusa
+
+      if (keyWords && certificatesData.length === 0) {
+        // Crear un nuevo pipeline sin el filtro de palabras clave ($or)
+        const pipelineWithoutKeyWords = [
+          {
+            $match: { sendByentityID: companyID },
+          },
+          {
+            $lookup: {
+              from: "companys", // El nombre de la colección de la tabla 'Company'
+              localField: "receiverEntityID", // Campo de la colección 'RequestModel' (recibe el ID)
+              foreignField: "uid", // Campo de la colección 'Company' (campo de unión)
+              as: "companyDetails", // El nombre del campo que almacenará la información de la tabla 'Company'
+            },
+          },
+          {
+            $unwind: "$companyDetails", // Descompone el arreglo de la respuesta del $lookup para que se pueda acceder a los campos de la empresa
+          },
+          {
+            $project: {
+              uid: 1,
+              companyId: "$receiverEntityID", // Incluir el campo 'name'
+              companyName: "$companyDetails.name",
+              companyDocument: "$companyDetails.document",
+              creationDate: "$createdAt", // Incluir el campo 'status'
+              note: 1, // Incluir '_id' (se incluye por defecto si no se excluye)
+              state: 1,
+              certificates: 1,
+            },
+          },
+        ];
+
+        // Ejecutar el pipeline sin el filtro de palabras clave
+        const allResults = await CertificateRequestModel.aggregate(
+          pipelineWithoutKeyWords
+        );
+
+        // Configurar Fuse.js para la búsqueda difusa en múltiples campos, incluyendo los certificados
+        const fuse = new Fuse(allResults, {
+          keys: [
+            "companyName",
+            "companyDocument", // Búsqueda en el documento del certificado
+          ],
+          threshold: 0.4, // Define qué tan "difusa" es la coincidencia
+          ignoreLocation: true, // Ignorar la posición del término de búsqueda
+          findAllMatches: true, // Permitir encontrar múltiples coincidencias
+        });
+
+        // Buscar usando Fuse.js
+        certificatesData = fuse.search(keyWords).map((result) => result.item);
+
+        // Asegurar que fieldName tenga un valor predeterminado antes de ser usado
+        const sortField = fieldName ?? "creationDate"; // Si fieldName es undefined, usar "creationDate"
+
+        // Ordenar los resultados por el campo dinámico sortField
+        certificatesData.sort((a, b) => {
+          const valueA = a[sortField];
+          const valueB = b[sortField];
+
+          if (typeof valueA === "string" && typeof valueB === "string") {
+            return (
+              valueA.localeCompare(valueB, undefined, {
+                sensitivity: "base",
+              }) * (orderType === OrderType.ASC ? 1 : -1)
+            );
+          }
+
+          if (valueA > valueB) return orderType === OrderType.ASC ? 1 : -1;
+          if (valueA < valueB) return orderType === OrderType.ASC ? -1 : 1;
+          return 0; // Si son iguales, no cambiar el orden
+        });
+
+        // Total de resultados encontrados
+        total = certificatesData.length;
+
+        // Aplicar paginación sobre los resultados ordenados de Fuse.js
+        const start = (page - 1) * pageSize;
+        certificatesData = certificatesData.slice(start, start + pageSize);
+      } else {
+        // Si encontramos resultados en MongoDB, el total es la cantidad de documentos encontrados
+        const resultData = await CertificateModel.aggregate(pipeline);
+        total = resultData.length;
+      }
+
+      return {
+        success: true,
+        code: 200,
+        data: certificatesData,
+        res: {
+          totalDocuments,
+          totalPages: Math.ceil(totalDocuments / pageSize),
+          currentPage: page,
+          pageSize,
+        },
+      };
+    } catch (error) {
+      console.error("Error inesperado en el servidor:", error);
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error inesperado servidor.",
+        },
+      };
+    }
+  };
+
+  static searchReceivedRequestsByEntity = async (
+    companyID: string,
+    page: number,
+    pageSize: number,
+    keyWords: string,
+    orderType: OrderType,
+    fieldName: string
+  ) => {
+    try {
+      page = !page || page < 1 ? 1 : page;
+      pageSize = !pageSize || pageSize < 1 ? 10 : pageSize;
+      let total = 0;
+      if (!keyWords) {
+        keyWords = "";
+      }
+      if (!fieldName) {
+        fieldName = "creationDate";
+      }
+
+      let order: SortOrder = orderType === OrderType.ASC ? 1 : -1;
+      //FALTA CORREGIR
+      const skip = (page - 1) * pageSize; // Cálculo de documentos a omitir
+      /*  const pipeline = [
+        {
+          $match: { receiverEntityID: companyID },
+        },
+        {
+          $lookup: {
+            from: "companys", // El nombre de la colección de la tabla 'Company'
+            localField: "sendByentityID", // Campo de la colección 'RequestModel' (recibe el ID)
+            foreignField: "uid", // Campo de la colección 'Company' (campo de unión)
+            as: "companyDetails", // El nombre del campo que almacenará la información de la tabla 'Company'
+          },
+        },
+        {
+          $unwind: "$companyDetails", // Descompone el arreglo de la respuesta del $lookup para que se pueda acceder a los campos de la empresa
+        },
+        // Filtro semántico basado en keyWords
+        {
+          $addFields: {
+            certificates: {
+              $filter: {
+                input: "$certificates",
+                as: "cert",
+                cond: {
+                  $or: [
+                    {
+                      $regexMatch: {
+                        input: "$$cert.documentName",
+                        regex: keyWords,
+                        options: "i",
+                      },
+                    },
+                    {
+                      $regexMatch: {
+                        input: "$$cert.name",
+                        regex: keyWords,
+                        options: "i",
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+            matchScore: {
+              $add: [
+                {
+                  $cond: [
+                    {
+                      $regexMatch: {
+                        input: "$companyDetails.companyName",
+                        regex: keyWords,
+                        options: "i",
+                      },
+                    },
+                    1,
+                    0,
+                  ],
+                },
+
+                {
+                  $cond: [
+                    { $gt: [{ $size: "$certificates" }, 0] }, // Si hay certificados filtrados, suma 1 al score
+                    1,
+                    0,
+                  ],
+                },
+              ],
+            },
+          },
+        },
+        {
+          $match: {
+            matchScore: { $gt: 0 }, // Solo deja los documentos que tengan al menos una coincidencia
+          },
+        },
+        {
+          $project: {
+            uid: 1,
+            companyId: "$sendByentityID", // Incluir el campo 'name'
+            companyName: "$companyDetails.name",
+            companyDocument: "$companyDetails.document",
+            creationDate: "$createdAt", // Incluir el campo 'status'
+            note: 1, // Incluir '_id' (se incluye por defecto si no se excluye)
+            state: 1,
+            certificates: 1,
+          },
+        },
+      ];*/
+      const pipeline = [
+        {
+          $match: { receiverEntityID: companyID },
+        },
+        {
+          $lookup: {
+            from: "companys", // Nombre de la colección 'Company'
+            localField: "sendByentityID", // Campo de la colección 'RequestModel'
+            foreignField: "uid", // Campo de la colección 'Company'
+            as: "companyDetails",
+          },
+        },
+        {
+          $unwind: "$companyDetails",
+        },
+        // 🔹 Filtro de búsqueda en companyName y companyDocument
+        {
+          $match: {
+            $or: [
+              { "companyDetails.name": { $regex: keyWords, $options: "i" } },
+              {
+                "companyDetails.document": { $regex: keyWords, $options: "i" },
+              },
+            ],
+          },
+        },
+        {
+          $project: {
+            uid: 1,
+            companyId: "$sendByentityID",
+            companyName: "$companyDetails.name",
+            companyDocument: "$companyDetails.document",
+            creationDate: "$createdAt",
+            note: 1,
+            state: 1,
+            certificates: 1,
+          },
+        },
+      ];
+      let certificatesData = await CertificateRequestModel.aggregate([
+        ...pipeline,
+        {
+          $sort: {
+            [fieldName]: order, // Orden descendente (más reciente primero)
+          },
+        },
+        { $skip: skip }, // Omite los documentos según la página
+        { $limit: pageSize }, // Limita el número de documentos por página
+      ]).collation({ locale: "en", strength: 2 });
+
+      let totalDocuments = (await CertificateRequestModel.aggregate(pipeline))
+        .length;
+
+      // Obtener el número total de documentos (sin paginación)
+      const totalData = await CertificateRequestModel.aggregate(pipeline);
+      totalDocuments = totalData.length;
+
+      // Si no hay resultados en MongoDB, usamos Fuse.js para hacer una búsqueda difusa
+      if (keyWords && certificatesData.length === 0) {
+        // Crear un nuevo pipeline sin el filtro de palabras clave ($or)
+        const pipelineWithoutKeyWords = [
+          {
+            $match: { receiverEntityID: companyID },
+          },
+          {
+            $lookup: {
+              from: "companys", // El nombre de la colección de la tabla 'Company'
+              localField: "sendByentityID", // Campo de la colección 'RequestModel' (recibe el ID)
+              foreignField: "uid", // Campo de la colección 'Company' (campo de unión)
+              as: "companyDetails", // El nombre del campo que almacenará la información de la tabla 'Company'
+            },
+          },
+          {
+            $unwind: "$companyDetails", // Descompone el arreglo de la respuesta del $lookup para que se pueda acceder a los campos de la empresa
+          },
+          {
+            $project: {
+              uid: 1,
+              companyId: "$sendByentityID", // Incluir el campo 'name'
+              companyName: "$companyDetails.name",
+              companyDocument: "$companyDetails.document",
+              creationDate: "$createdAt", // Incluir el campo 'status'
+              note: 1, // Incluir '_id' (se incluye por defecto si no se excluye)
+              state: 1,
+              certificates: 1,
+            },
+          },
+        ];
+
+        // Ejecutar el pipeline sin el filtro de palabras clave
+        const allResults = await CertificateRequestModel.aggregate(
+          pipelineWithoutKeyWords
+        );
+
+        // Configurar Fuse.js para la búsqueda difusa en múltiples campos, incluyendo los certificados
+        const fuse = new Fuse(allResults, {
+          keys: [
+            "companyName",
+            "companyDocument", // Búsqueda en el documento del certificado
+          ],
+          threshold: 0.4, // Define qué tan "difusa" es la coincidencia
+          ignoreLocation: true, // Ignorar la posición del término de búsqueda
+          findAllMatches: true, // Permitir encontrar múltiples coincidencias
+        });
+
+        // Buscar usando Fuse.js
+        certificatesData = fuse.search(keyWords).map((result) => result.item);
+
+        // Asegurar que fieldName tenga un valor predeterminado antes de ser usado
+        const sortField = fieldName ?? "creationDate"; // Si fieldName es undefined, usar "creationDate"
+
+        // Ordenar los resultados por el campo dinámico sortField
+        certificatesData.sort((a, b) => {
+          const valueA = a[sortField];
+          const valueB = b[sortField];
+
+          if (typeof valueA === "string" && typeof valueB === "string") {
+            return (
+              valueA.localeCompare(valueB, undefined, {
+                sensitivity: "base",
+              }) * (orderType === OrderType.ASC ? 1 : -1)
+            );
+          }
+
+          if (valueA > valueB) return orderType === OrderType.ASC ? 1 : -1;
+          if (valueA < valueB) return orderType === OrderType.ASC ? -1 : 1;
+          return 0; // Si son iguales, no cambiar el orden
+        });
+
+        // Total de resultados encontrados
+        total = certificatesData.length;
+
+        // Aplicar paginación sobre los resultados ordenados de Fuse.js
+        const start = (page - 1) * pageSize;
+        certificatesData = certificatesData.slice(start, start + pageSize);
+      } else {
+        // Si encontramos resultados en MongoDB, el total es la cantidad de documentos encontrados
+        const resultData = await CertificateModel.aggregate(pipeline);
+        total = resultData.length;
+      }
+
+      return {
+        success: true,
+        code: 200,
+        data: certificatesData,
+        res: {
+          totalDocuments,
+          totalPages: Math.ceil(totalDocuments / pageSize),
+          currentPage: page,
+          pageSize,
+        },
+      };
+    } catch (error) {
+      console.error("Error inesperado en el servidor:", error);
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error inesperado servidor.",
+        },
+      };
+    }
+  };
+
+  static getCertificateRequest = async (uid: string) => {
+    try {
+      const pipeline = [
+        {
+          $match: { uid: uid },
+        },
+        {
+          $lookup: {
+            from: "companys", // El nombre de la colección de la tabla 'Company'
+            localField: "sendByentityID", // Campo de la colección 'RequestModel' (recibe el ID)
+            foreignField: "uid", // Campo de la colección 'Company' (campo de unión)
+            as: "companyDetails", // El nombre del campo que almacenará la información de la tabla 'Company'
+          },
+        },
+        {
+          $unwind: "$companyDetails", // Descompone el arreglo de la respuesta del $lookup para que se pueda acceder a los campos de la empresa
+        },
+        {
+          $project: {
+            uid: 1,
+            companyId: "$sendByentityID", // Incluir el campo 'name'
+            companyName: "$companyDetails.name",
+            companyDocument: "$companyDetails.document",
+            creationDate: "$createdAt", // Incluir el campo 'status'
+            note: 1, // Incluir '_id' (se incluye por defecto si no se excluye)
+            state: 1,
+            certificates: 1,
+          },
+        },
+      ];
+
+      // Ejecutar el pipeline sin el filtro de palabras clave
+      const certificateRequestData = await CertificateRequestModel.aggregate(
+        pipeline
+      );
+      return {
+        success: true,
+        code: 200,
+        data: certificateRequestData,
+      };
+    } catch (error) {
+      console.error("Error inesperado en el servidor:", error);
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error inesperado servidor.",
+        },
+      };
+    }
+  };
+
+  static searchCertificates = async (
+    companyID: string,
+    page: number,
+    pageSize: number,
+    keyWords: string,
+    orderType: OrderType,
+    fieldName: string
+  ) => {
+    try {
+      page = !page || page < 1 ? 1 : page;
+      pageSize = !pageSize || pageSize < 1 ? 10 : pageSize;
+      let total = 0;
+      if (!keyWords) {
+        keyWords = "";
+      }
+      if (!fieldName) {
+        fieldName = "creationDate";
+      }
+
+      let order: SortOrder = orderType === OrderType.ASC ? 1 : -1;
+      //FALTA CORREGIR
+      const skip = (page - 1) * pageSize; // Cálculo de documentos a omitir
+      const pipeline = [
+        { $match: { companyID: companyID } },
+
+        {
+          $match: {
+            $or: [
+              { name: { $regex: keyWords, $options: "i" } },
+              { documentName: { $regex: keyWords, $options: "i" } },
+            ],
+          },
+        },
+
+        {
+          $project: {
+            _id: 0,
+          },
+        },
+      ];
+      let certificatesData = await CertificateModel.aggregate([
+        ...pipeline,
+        {
+          $sort: {
+            [fieldName]: order, // Orden descendente (más reciente primero)
+          },
+        },
+        { $skip: skip }, // Omite los documentos según la página
+        { $limit: pageSize }, // Limita el número de documentos por página
+      ]).collation({ locale: "en", strength: 2 });
+
+      // Obtener el número total de documentos (sin paginación)
+      const totalData = await CertificateModel.aggregate(pipeline);
+      const totalDocuments = totalData.length;
+
+      // Si no hay resultados en MongoDB, usamos Fuse.js para hacer una búsqueda difusa
+      if (keyWords && certificatesData.length === 0) {
+        // Crear un nuevo pipeline sin el filtro de palabras clave ($or)
+        const pipelineWithoutKeyWords = pipeline
+          .map((stage: any, index: number) => {
+            if (stage.$match && stage.$match.$or && index !== 0) {
+              // Si es un $match con $or y NO es el primer match (el que tiene uid)
+              const { $or, ...rest } = stage.$match; // Extrae $or y deja los demás filtros
+              return Object.keys(rest).length > 0 ? { $match: rest } : null; // Mantiene otros filtros si existen
+            }
+            return stage; // Mantiene las demás etapas
+          })
+          .filter((stage) => stage !== null); // Elimina cualquier etapa vacía
+
+        // Ejecutar el pipeline sin el filtro de palabras clave
+        const allResults = await CertificateModel.aggregate(
+          pipelineWithoutKeyWords
+        );
+
+        // Configurar Fuse.js para la búsqueda difusa
+        const fuse = new Fuse(allResults, {
+          keys: ["name", "documentName"], // Claves por las que buscar
+          threshold: 0.4, // Define qué tan "difusa" es la coincidencia
+        });
+
+        // Buscar usando Fuse.js
+        certificatesData = fuse.search(keyWords).map((result) => result.item);
+
+        // Asegurar que fieldName tenga un valor predeterminado antes de ser usado
+        const sortField = fieldName ?? "creationDate"; // Si fieldName es undefined, usar "publish_date"
+
+        // Ordenar los resultados por el campo dinámico sortField
+        certificatesData.sort((a, b) => {
+          const valueA = a[sortField];
+          const valueB = b[sortField];
+
+          if (typeof valueA === "string" && typeof valueB === "string") {
+            // Usar localeCompare para comparar cadenas ignorando mayúsculas, minúsculas y acentos
+            return (
+              valueA.localeCompare(valueB, undefined, {
+                sensitivity: "base",
+              }) * (orderType === OrderType.ASC ? 1 : -1)
+            );
+          }
+
+          if (valueA > valueB) return orderType === OrderType.ASC ? 1 : -1;
+          if (valueA < valueB) return orderType === OrderType.ASC ? -1 : 1;
+          return 0; // Si son iguales, no cambiar el orden
+        });
+        // Total de resultados encontrados
+        total = certificatesData.length;
+        // Aplicar paginación sobre los resultados ordenados de Fuse.js
+        const start = (page - 1) * pageSize;
+        certificatesData = certificatesData.slice(start, start + pageSize);
+      } else {
+        // Si encontramos resultados en MongoDB, el total es la cantidad de documentos encontrados
+        const resultData = await CertificateModel.aggregate(pipeline);
+        total = resultData.length;
+      }
+
+      return {
+        success: true,
+        code: 200,
+        data: certificatesData,
+        res: {
+          totalDocuments,
+          totalPages: Math.ceil(totalDocuments / pageSize),
+          currentPage: page,
+          pageSize,
+        },
+      };
+    } catch (error) {
+      console.error("Error inesperado al obtener el certificado:", error);
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error inesperado al obtener el certificado.",
         },
       };
     }

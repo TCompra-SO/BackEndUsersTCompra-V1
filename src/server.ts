@@ -41,6 +41,13 @@ const startApp = async () => {
   app.listen(port, () => {
     console.log(`Server running in port ${port}`);
   });
+  return io;
 };
 
-startApp();
+const init = async () => {
+  await startApp();
+};
+
+init();
+
+export { io };

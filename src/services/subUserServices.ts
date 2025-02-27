@@ -10,13 +10,20 @@ import { ErrorMessages } from "../utils/ErrorMessages";
 import { getNow } from "../utils/DateTools";
 import { ProfileI } from "../interfaces/profile.interface";
 import { Console, error } from "console";
+import { SortOrder } from "mongoose";
 import CompanyModel from "../models/companyModel";
-import { CollectionType, TypeEntity, TypeOrder } from "../types/globalTypes";
+import {
+  CollectionType,
+  OrderType,
+  TypeEntity,
+  TypeOrder,
+} from "../types/globalTypes";
 import dbConnect from "../database/mongo";
 import { pipeline } from "stream";
 import { ResourceCountersI } from "../interfaces/resourceCounters";
 import { ResourceCountersService } from "./resourceCountersServices";
 import { ResourceCountersModel } from "../models/resourceCountersModel";
+import Fuse from "fuse.js";
 export class subUserServices {
   static SchemaRegister = Joi.object({
     dni: Joi.string().min(8).max(12).required(),
@@ -229,6 +236,7 @@ export class subUserServices {
                 $project: {
                   email: "$auth_users.email",
                   typeID: "$auth_users.typeID",
+                  active_account: "$auth_users.active_account",
                   _id: 0,
                 }, // Solo selecciona el campo email
               },
@@ -240,6 +248,9 @@ export class subUserServices {
           $addFields: {
             email: { $arrayElemAt: ["$companyData.email", 0] }, // Extrae el email correcto
             typeID: { $arrayElemAt: ["$companyData.typeID", 0] },
+            active_account: {
+              $arrayElemAt: ["$companyData.active_account", 0],
+            },
           },
         },
         {
@@ -315,53 +326,6 @@ export class subUserServices {
       const profile = await Profile.aggregate(pipeline);
 
       if (profile.length > 0) {
-        /*  const dataSubUser = await AuthServices.getAuthSubUser(uid);
-        const authUsers = (dataSubUser.data as any).auth_users;
-
-        const mongoose = require("mongoose");
-
-        let collection = await mongoose.connection.db.collection("products");
-
-        const numProducts = await collection.countDocuments({
-          userID: uid,
-        });
-
-        collection = await mongoose.connection.db.collection("offersproducts");
-        const numOffers = await collection.countDocuments({
-          userID: uid,
-        });
-
-        collection = await mongoose.connection.db.collection(
-          "purchaseorderproducts"
-        );
-
-        const numPurchaseOrdersProvider = await collection.countDocuments({
-          subUserProviderID: uid,
-        });
-
-        const numPurchaseOrdersClient = await collection.countDocuments({
-          subUserClientID: uid,
-        });
-
-        const numServices = 0;
-        const numLiquidations = 0;
-        const numSellingOrdersProvider = 0;
-        const numSellingOrdersClient = 0;
-        console.log(profile);
-        const userData = {
-           ...profile.toObject(),
-          email: authUsers?.email,
-          typeID: authUsers?.typeID,
-          numProducts: numProducts,
-          numServices: numServices,
-          numLiquidations: numLiquidations,
-          numOffers: numOffers,
-          numPurchaseOrdersProvider: numPurchaseOrdersProvider,
-          numPurchaseOrdersClient: numPurchaseOrdersClient,
-          numSellingOrdersProvider: numSellingOrdersProvider,
-          numSellingOrdersClient: numSellingOrdersClient,
-        };*/
-
         return {
           success: true,
           code: 200,
@@ -612,6 +576,246 @@ export class subUserServices {
       };
     }
   };
+
+  static searchSubUser = async (
+    entityID: string,
+    page?: number,
+    pageSize?: number,
+    keyWords?: string,
+    fieldName?: string,
+    orderType?: OrderType
+  ) => {
+    page = !page || page < 1 ? 1 : page;
+    pageSize = !pageSize || pageSize < 1 ? 10 : pageSize;
+    let total = 0;
+    try {
+      if (!keyWords) {
+        keyWords = "";
+      }
+      if (!fieldName) {
+        fieldName = "createdAt";
+      }
+
+      let order: SortOrder = orderType === OrderType.ASC ? 1 : -1;
+      //FALTA CORREGIR
+      const skip = (page - 1) * pageSize; // Cálculo de documentos a omitir
+      const pipeline = [
+        { $match: { uid: entityID } },
+        { $unwind: "$auth_users" },
+        {
+          $lookup: {
+            from: "profiles",
+            localField: "auth_users.Uid",
+            foreignField: "uid",
+            as: "profileData",
+          },
+        },
+        {
+          $unwind: { path: "$profileData", preserveNullAndEmptyArrays: true },
+        },
+        {
+          $addFields: {
+            "auth_users.name": { $ifNull: ["$profileData.name", ""] },
+            "auth_users.document": { $ifNull: ["$profileData.document", ""] },
+            "auth_users.createdAt": {
+              $ifNull: ["$profileData.createdAt", null],
+            },
+          },
+        },
+        {
+          $lookup: {
+            from: "resourcecounters",
+            localField: "auth_users.Uid",
+            foreignField: "uid",
+            as: "resourceCounterData",
+          },
+        },
+        {
+          $unwind: {
+            path: "$resourceCounterData",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $addFields: {
+            "auth_users.numProducts": {
+              $ifNull: ["$resourceCounterData.numProducts", 0],
+            },
+            "auth_users.numServices": {
+              $ifNull: ["$resourceCounterData.numServices", 0],
+            },
+            "auth_users.numLiquidations": {
+              $ifNull: ["$resourceCounterData.numLiquidations", 0],
+            },
+            "auth_users.numOffersProducts": {
+              $ifNull: ["$resourceCounterData.numOffersProducts", 0],
+            },
+            "auth_users.numOffersServices": {
+              $ifNull: ["$resourceCounterData.numOffersServices", 0],
+            },
+            "auth_users.numOffersLiquidations": {
+              $ifNull: ["$resourceCounterData.numOffersLiquidations", 0],
+            },
+            "auth_users.numDeleteProducts": {
+              $ifNull: ["$resourceCounterData.numDeleteProducts", 0],
+            },
+            "auth_users.numDeleteServices": {
+              $ifNull: ["$resourceCounterData.numDeleteServices", 0],
+            },
+            "auth_users.numDeleteLiquidations": {
+              $ifNull: ["$resourceCounterData.numDeleteLiquidations", 0],
+            },
+            "auth_users.numSaleOrdersProvider": {
+              $ifNull: ["$resourceCounterData.numSaleOrdersProvider", 0],
+            },
+            "auth_users.numSaleOrdersClient": {
+              $ifNull: ["$resourceCounterData.numSaleOrdersClient", 0],
+            },
+            "auth_users.numPurchaseOrdersProvider": {
+              $ifNull: ["$resourceCounterData.numPurchaseOrdersProvider", 0],
+            },
+            "auth_users.numPurchaseOrdersClient": {
+              $ifNull: ["$resourceCounterData.numPurchaseOrdersClient", 0],
+            },
+            "auth_users.typeEntity": {
+              $ifNull: ["$resourceCounterData.typeEntity", "SubUser"],
+            },
+          },
+        },
+        {
+          $match: {
+            $or: [
+              { "auth_users.name": { $regex: keyWords, $options: "i" } },
+              { "auth_users.email": { $regex: keyWords, $options: "i" } },
+            ],
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            name: "$auth_users.name",
+            document: "$auth_users.document",
+            typeEntity: "$auth_users.typeEntity",
+            userID: "$auth_users.Uid",
+            typeID: "$auth_users.typeID",
+            email: "$auth_users.email",
+            active_account: "$auth_users.active_account",
+            createdAt: "$auth_users.createdAt",
+            numProducts: "$auth_users.numProducts",
+            numServices: "$auth_users.numServices",
+            numLiquidations: "$auth_users.numLiquidations",
+            numOffersProducts: "$auth_users.numOffersProducts",
+            numOffersServices: "$auth_users.numOffersServices",
+            numOffersLiquidations: "$auth_users.numOffersLiquidations",
+            numDeleteProducts: "$auth_users.numDeleteProducts",
+            numDeleteServices: "$auth_users.numDeleteServices",
+            numDeleteLiquidations: "$auth_users.numDeleteLiquidations",
+            numSaleOrdersProvider: "$auth_users.numSaleOrdersProvider",
+            numSaleOrdersClient: "$auth_users.numSaleOrdersClient",
+            numPurchaseOrdersProvider: "$auth_users.numPurchaseOrdersProvider",
+            numPurchaseOrdersClient: "$auth_users.numPurchaseOrdersClient",
+          },
+        },
+      ];
+
+      let subUserData = await CompanyModel.aggregate([
+        ...pipeline,
+        {
+          $sort: {
+            [fieldName]: order, // Orden descendente (más reciente primero)
+          },
+        },
+        { $skip: skip }, // Omite los documentos según la página
+        { $limit: pageSize }, // Limita el número de documentos por página
+      ]).collation({ locale: "en", strength: 2 });
+
+      // Obtener el número total de documentos (sin paginación)
+      const totalData = await CompanyModel.aggregate(pipeline);
+      const totalDocuments = totalData.length;
+
+      // Si no hay resultados en MongoDB, usamos Fuse.js para hacer una búsqueda difusa
+      if (keyWords && subUserData.length === 0) {
+        // Crear un nuevo pipeline sin el filtro de palabras clave ($or)
+        const pipelineWithoutKeyWords = pipeline
+          .map((stage: any, index: number) => {
+            if (stage.$match && stage.$match.$or && index !== 0) {
+              // Si es un $match con $or y NO es el primer match (el que tiene uid)
+              const { $or, ...rest } = stage.$match; // Extrae $or y deja los demás filtros
+              return Object.keys(rest).length > 0 ? { $match: rest } : null; // Mantiene otros filtros si existen
+            }
+            return stage; // Mantiene las demás etapas
+          })
+          .filter((stage) => stage !== null); // Elimina cualquier etapa vacía
+
+        // Ejecutar el pipeline sin el filtro de palabras clave
+        const allResults = await CompanyModel.aggregate(
+          pipelineWithoutKeyWords
+        );
+
+        // Configurar Fuse.js para la búsqueda difusa
+        const fuse = new Fuse(allResults, {
+          keys: ["name", "email"], // Claves por las que buscar
+          threshold: 0.4, // Define qué tan "difusa" es la coincidencia
+        });
+
+        // Buscar usando Fuse.js
+        subUserData = fuse.search(keyWords).map((result) => result.item);
+
+        // Asegurar que fieldName tenga un valor predeterminado antes de ser usado
+        const sortField = fieldName ?? "createdAt"; // Si fieldName es undefined, usar "publish_date"
+
+        // Ordenar los resultados por el campo dinámico sortField
+        subUserData.sort((a, b) => {
+          const valueA = a[sortField];
+          const valueB = b[sortField];
+
+          if (typeof valueA === "string" && typeof valueB === "string") {
+            // Usar localeCompare para comparar cadenas ignorando mayúsculas, minúsculas y acentos
+            return (
+              valueA.localeCompare(valueB, undefined, {
+                sensitivity: "base",
+              }) * (orderType === OrderType.ASC ? 1 : -1)
+            );
+          }
+
+          if (valueA > valueB) return orderType === OrderType.ASC ? 1 : -1;
+          if (valueA < valueB) return orderType === OrderType.ASC ? -1 : 1;
+          return 0; // Si son iguales, no cambiar el orden
+        });
+        // Total de resultados encontrados
+        total = subUserData.length;
+        // Aplicar paginación sobre los resultados ordenados de Fuse.js
+        const start = (page - 1) * pageSize;
+        subUserData = subUserData.slice(start, start + pageSize);
+      } else {
+        // Si encontramos resultados en MongoDB, el total es la cantidad de documentos encontrados
+        const resultData = await CompanyModel.aggregate(pipeline);
+        total = resultData.length;
+      }
+
+      return {
+        success: true,
+        code: 200,
+        data: subUserData,
+        res: {
+          totalDocuments,
+          totalPages: Math.ceil(totalDocuments / pageSize),
+          currentPage: page,
+          pageSize,
+        },
+      };
+    } catch (error) {
+      console.error(error);
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error interno en el Servidor",
+        },
+      };
+    }
+  };
+
   static getDataSubUser = async (
     uid: string,
     page: number,
@@ -658,20 +862,36 @@ export class subUserServices {
           "auth_users.numProducts": {
             $ifNull: ["$resourceCounterData.numProducts", 0],
           },
-          "auth_users.numOffers": {
-            $ifNull: ["$resourceCounterData.numOffers", 0],
-          },
           "auth_users.numServices": {
             $ifNull: ["$resourceCounterData.numServices", 0],
           },
           "auth_users.numLiquidations": {
             $ifNull: ["$resourceCounterData.numLiquidations", 0],
           },
-          "auth_users.numSellingOrdersProvider": {
-            $ifNull: ["$resourceCounterData.numSellingOrdersProvider", 0],
+          "auth_users.numOffersProducts": {
+            $ifNull: ["$resourceCounterData.numOffersProducts", 0],
           },
-          "auth_users.numSellingOrdersClient": {
-            $ifNull: ["$resourceCounterData.numSellingOrdersClient", 0],
+          "auth_users.numOffersServices": {
+            $ifNull: ["$resourceCounterData.numOffersServices", 0],
+          },
+          "auth_users.numOffersLiquidations": {
+            $ifNull: ["$resourceCounterData.numOffersLiquidations", 0],
+          },
+          "auth_users.numDeleteProducts": {
+            $ifNull: ["$resourceCounterData.numDeleteProducts", 0],
+          },
+          "auth_users.numDeleteServices": {
+            $ifNull: ["$resourceCounterData.numDeleteServices", 0],
+          },
+          "auth_users.numDeleteLiquidations": {
+            $ifNull: ["$resourceCounterData.numDeleteLiquidations", 0],
+          },
+
+          "auth_users.numSaleOrdersProvider": {
+            $ifNull: ["$resourceCounterData.numSaleOrdersProvider", 0],
+          },
+          "auth_users.numSaleOrdersClient": {
+            $ifNull: ["$resourceCounterData.numSaleOrdersClient", 0],
           },
           "auth_users.numPurchaseOrdersProvider": {
             $ifNull: ["$resourceCounterData.numPurchaseOrdersProvider", 0],
@@ -695,11 +915,16 @@ export class subUserServices {
           email: "$auth_users.email",
           createdAt: "$auth_users.createdAt",
           numProducts: "$auth_users.numProducts",
-          numOffers: "$auth_users.numOffers",
           numServices: "$auth_users.numServices",
           numLiquidations: "$auth_users.numLiquidations",
-          numSellingOrdersProvider: "$auth_users.numSellingOrdersProvider",
-          numSellingOrdersClient: "$auth_users.numSellingOrdersClient",
+          numOffersProducts: "$auth_users.numOffersProducts",
+          numOffersServices: "$auth_users.numOffersServices",
+          numOffersLiquidations: "$auth_users.numOffersLiquidations",
+          numDeleteProducts: "$auth_users.numDeleteProducts",
+          numDeleteServices: "$auth_users.numDeleteServices",
+          numDeleteLiquidations: "$auth_users.numDeleteLiquidations",
+          numSaleOrdersProvider: "$auth_users.numSaleOrdersProvider",
+          numSaleOrdersClient: "$auth_users.numSaleOrdersClient",
           numPurchaseOrdersProvider: "$auth_users.numPurchaseOrdersProvider",
           numPurchaseOrdersClient: "$auth_users.numPurchaseOrdersClient",
         },
@@ -709,7 +934,7 @@ export class subUserServices {
       ...pipeline,
       {
         $sort: {
-          publish_date: -1, // Orden descendente (más reciente primero)
+          createdAt: -1, // Orden descendente (más reciente primero)
         },
       },
       { $skip: skip }, // Omite los documentos según la página

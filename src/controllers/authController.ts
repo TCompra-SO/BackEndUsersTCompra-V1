@@ -295,7 +295,7 @@ const NewPasswordController = async (req: RequestExt, res: Response) => {
       userID
     );
     if (!responseUser.success) {
-      return res.status(responseUser.code).send(responseUser.error);
+      return res.status(responseUser.code).send(responseUser);
     }
     return res.status(responseUser.code).send(responseUser.res);
   } catch (error: any) {
@@ -311,7 +311,7 @@ const SendCodeRecoveryController = async (req: Request, res: Response) => {
     const { email } = req.body;
     const responseUser = await AuthServices.SendCodeRecovery(email);
     if (!responseUser.success) {
-      return res.status(responseUser.code).send(responseUser.error);
+      return res.status(responseUser.code).send(responseUser);
     }
     return res.status(responseUser.code).send(responseUser.res);
   } catch (error: any) {
