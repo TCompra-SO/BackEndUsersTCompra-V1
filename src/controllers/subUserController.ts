@@ -1,5 +1,6 @@
 import { Request, Response, response } from "express";
 import { subUserServices } from "../services/subUserServices";
+import { boolean } from "joi";
 
 const registerSubUserController = async ({ body }: Request, res: Response) => {
   const { uid, dni, address, cityID, phone, email, typeID } = body;
@@ -127,15 +128,26 @@ const getSubUsersByEntity = async (req: Request, res: Response) => {
 };
 
 const searchSubUserController = async (req: Request, res: Response) => {
-  const { entityID, page, pageSize, fieldName, orderType, keyWords } = req.body;
+  const {
+    userId,
+    page,
+    pageSize,
+    fieldName,
+    orderType,
+    keyWords,
+    filterColumn,
+    filterData,
+  } = req.body;
   try {
     const responseUser = await subUserServices.searchSubUser(
-      entityID,
+      userId,
       Number(page),
       Number(pageSize),
       keyWords,
       fieldName,
-      Number(orderType)
+      Number(orderType),
+      filterColumn,
+      filterData
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);

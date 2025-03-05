@@ -583,7 +583,9 @@ export class subUserServices {
     pageSize?: number,
     keyWords?: string,
     fieldName?: string,
-    orderType?: OrderType
+    orderType?: OrderType,
+    filterColumn?: string,
+    filterData?: any[]
   ) => {
     page = !page || page < 1 ? 1 : page;
     pageSize = !pageSize || pageSize < 1 ? 10 : pageSize;
@@ -595,6 +597,8 @@ export class subUserServices {
       if (!fieldName) {
         fieldName = "createdAt";
       }
+
+      filterColumn = "auth_users." + filterColumn;
 
       let order: SortOrder = orderType === OrderType.ASC ? 1 : -1;
       //FALTA CORREGIR
@@ -684,9 +688,17 @@ export class subUserServices {
         },
         {
           $match: {
-            $or: [
-              { "auth_users.name": { $regex: keyWords, $options: "i" } },
-              { "auth_users.email": { $regex: keyWords, $options: "i" } },
+            $and: [
+              {
+                $or: [
+                  { "auth_users.name": { $regex: keyWords, $options: "i" } },
+                  { "auth_users.email": { $regex: keyWords, $options: "i" } },
+                ],
+              },
+              ...(filterColumn && filterData && filterData.length > 0
+                ? [{ [filterColumn]: { $in: filterData } }]
+                : []),
+              //  { "auth_users.active_account": { $in: [false] } },
             ],
           },
         },
@@ -738,9 +750,9 @@ export class subUserServices {
         // Crear un nuevo pipeline sin el filtro de palabras clave ($or)
         const pipelineWithoutKeyWords = pipeline
           .map((stage: any, index: number) => {
-            if (stage.$match && stage.$match.$or && index !== 0) {
+            if (stage.$match && stage.$match.$and && index !== 0) {
               // Si es un $match con $or y NO es el primer match (el que tiene uid)
-              const { $or, ...rest } = stage.$match; // Extrae $or y deja los demás filtros
+              const { $and, ...rest } = stage.$match; // Extrae $or y deja los demás filtros
               return Object.keys(rest).length > 0 ? { $match: rest } : null; // Mantiene otros filtros si existen
             }
             return stage; // Mantiene las demás etapas

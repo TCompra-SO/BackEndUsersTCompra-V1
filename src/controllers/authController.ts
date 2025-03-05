@@ -2,6 +2,12 @@ import { Request, Response, response } from "express";
 import { AuthServices } from "../services/authServices";
 import { RequestExt } from "../interfaces/req-ext";
 import { JwtPayload } from "jsonwebtoken";
+import {
+  generateRefreshAccessToken,
+  generateToken,
+  verifyRefreshAccessToken,
+  verifyToken,
+} from "../utils/jwt.handle";
 
 const getNameController = async (req: Request, res: Response) => {
   // Obtener el parámetro de la consulta
@@ -274,11 +280,55 @@ const LoginController = async (req: Request, res: Response) => {
     if (!responseUser.success) {
       return res.status(responseUser.code).send(responseUser.error);
     }
-    return res.status(responseUser.code).send(responseUser.res);
+
+    const dataUser = responseUser.res?.dataUser;
+    let accessToken, refreshToken;
+    if (dataUser) {
+      accessToken = await generateToken(dataUser[0].uid); // Token de acceso
+      refreshToken = await generateRefreshAccessToken(dataUser[0].uid); // Token de refresco
+    }
+
+    return res.status(responseUser.code).send({
+      msg: "Sesión iniciada correctamente",
+      accessToken,
+      refreshToken,
+      dataUser,
+    });
   } catch (error: any) {
     return res.status(500).send({
       success: false,
       msg: "Error interno del servidor.",
+    });
+  }
+};
+
+const RefreshTokenController = async (req: Request, res: Response) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res
+        .status(401)
+        .send({ success: false, msg: "No hay refresh token" });
+    }
+
+    const decoded: any = await verifyRefreshAccessToken(refreshToken);
+    if (!decoded) {
+      return res
+        .status(401)
+        .send({ success: false, msg: "Refresh token inválido" });
+    }
+
+    const newAccessToken = await generateToken(decoded.id); // Genera un nuevo token de acceso
+
+    return res.status(200).send({
+      success: true,
+      accessToken: newAccessToken,
+    });
+  } catch (error) {
+    return res.status(500).send({
+      success: false,
+      msg: "Error al refrescar el token",
     });
   }
 };
@@ -375,4 +425,5 @@ export {
   getAuthSubUserController,
   getBaseDataUserController,
   SearchCompanyController,
+  RefreshTokenController,
 };

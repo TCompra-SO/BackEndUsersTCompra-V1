@@ -74,7 +74,7 @@ const checkJwt = async (req: RequestExt, res: Response, next: NextFunction) => {
       });
     }
 
-    const isUser = (await verifyToken(jwt)) as { id: string }; // Decodificar token
+    const isUser = (await verifyToken(jwt)) as { uid: string }; // Decodificar token
 
     if (!isUser) {
       return res.status(401).send({

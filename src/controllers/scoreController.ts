@@ -3,12 +3,13 @@ import { ScoreService } from "../services/scoreServices";
 import { io } from "../server";
 import { RequestExt } from "../interfaces/req-ext";
 import { JwtPayload } from "jsonwebtoken";
+import { getToken } from "../utils/authStore";
 const registerScoreController = async (req: RequestExt, res: Response) => {
   const { typeScore, uidEntity, uidUser, score, comments, offerId, type } =
     req.body;
   try {
-    const { user, token } = req; // Extraemos `user` y `body` de la request
-    const { uid: userUID } = user as JwtPayload; // Obtenemos `uid` del usuario autenticado
+    const { user } = req; // Extraemos `user` y `body` de la request
+    //const { uid: userUID } = user as JwtPayload; // Obtenemos `uid` del usuario autenticado
 
     const responseUser = await ScoreService.registerScore(
       typeScore,
@@ -17,8 +18,7 @@ const registerScoreController = async (req: RequestExt, res: Response) => {
       score,
       comments,
       offerId,
-      type,
-      token
+      type
     );
 
     if (responseUser.success) {

@@ -27,6 +27,7 @@ export class ScoreService {
     token?: string
   ) => {
     //CORREGIR EL ESCORE CON LOS NUEVOS MODELO
+
     try {
       const data = await AuthServices.getDataBaseUser(uidUser);
       if (data.success === false) {
@@ -115,12 +116,12 @@ export class ScoreService {
               if (savedScore) {
                 await CompanyModel.updateOne(
                   { uid: entity.uid },
-                  { $inc: { customerCount: 1 } }, // Incrementa en 1 o lo crea con 1 si no existe
+                  { $inc: { customerCount: 1, customerScore: score } }, // Incrementa en 1 o lo crea con 1 si no existe
                   { upsert: true } // Crea el documento si no existe
                 );
                 await this.calculateScore(
                   entity.uid,
-                  UserModel,
+                  CompanyModel,
                   TypeScore.CLIENTSCORE
                 );
               }
@@ -140,7 +141,7 @@ export class ScoreService {
                 });
                 await CompanyModel.updateOne(
                   { uid: entity.uid },
-                  { $inc: { customerCount: 1 } }, // Incrementa en 1 o lo crea con 1 si no existe
+                  { $inc: { customerCount: 1, customerScore: score } }, // Incrementa en 1 o lo crea con 1 si no existe
                   { upsert: true } // Crea el documento si no existe
                 );
                 await this.calculateScore(
@@ -181,12 +182,12 @@ export class ScoreService {
               if (savedScore) {
                 await CompanyModel.updateOne(
                   { uid: entity.uid },
-                  { $inc: { sellerCount: 1 } }, // Incrementa en 1 o lo crea con 1 si no existe
+                  { $inc: { sellerCount: 1, sellerScore: score } }, // Incrementa en 1 o lo crea con 1 si no existe
                   { upsert: true } // Crea el documento si no existe
                 );
                 await this.calculateScore(
                   entity.uid,
-                  UserModel,
+                  CompanyModel,
                   TypeScore.PROVIDERSCORE
                 );
               }
@@ -205,7 +206,7 @@ export class ScoreService {
                 });
                 await CompanyModel.updateOne(
                   { uid: entity.uid },
-                  { $inc: { sellerCount: 1 } }, // Incrementa en 1 o lo crea con 1 si no existe
+                  { $inc: { sellerCount: 1, sellerScore: score } }, // Incrementa en 1 o lo crea con 1 si no existe
                   { upsert: true } // Crea el documento si no existe
                 );
 
@@ -247,19 +248,19 @@ export class ScoreService {
             { uid: offerID }, // Filtro para buscar por ID
             { $set: { cancelRated: true } } // Campos a actualizar
           );
-          typeService = "Offersproducts";
+          typeService = "OffersProduct";
           if (resultOffer.matchedCount < 1) {
             const resultService = await OfferServiceModel.updateOne(
               { uid: offerID }, // Filtro por ID
               { $set: { cancelRated: true } } // Campos a actualizar
             );
-            typeService = "Offersservices";
+            typeService = "OffersService";
             if (resultService.matchedCount < 1) {
               const resultLiquidation = await OfferLiquidationModel.updateOne(
                 { uid: offerID }, // Filtro por ID
                 { $set: { cancelRated: true } } // Campos a actualizar
               );
-              typeService = "Offersliquidations";
+              typeService = "OffersLiquidation";
             }
           }
         }
@@ -269,26 +270,40 @@ export class ScoreService {
         if (offerID) {
           dotenv.config();
           switch (typeService) {
-            case "Offersproducts":
+            case "OffersProduct":
               API_POINT = process.env.API_PRODUCTS || "";
               endpoint = "/v1/offers/getDetailOffer/" + offerID;
               break;
-            case "Offersservices":
+            case "OffersService":
               API_POINT = process.env.API_SERVICES || "";
               endpoint = "/v1/offers/getDetailOffer/" + offerID;
               break;
-            case "Offersliquidations":
+            case "OffersLiquidation":
               API_POINT = process.env.API_LIQUIDATIONS || "";
               endpoint = "/v1/offers/getDetailOffer/" + offerID;
             default:
               break;
           }
 
-          offerData = await axios.get(`${API_POINT}${endpoint}`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
+          try {
+            offerData = await axios.get(`${API_POINT}${endpoint}`, {
+              headers: {
+                Authorization: `Bearer ${getToken()}`,
+              },
+            });
+          } catch (error) {
+            if (axios.isAxiosError(error)) {
+              return {
+                success: false,
+                code: 401,
+                error: {
+                  msg: error.response?.data.msg,
+                },
+              };
+            } else {
+              console.error("Error desconocido:", error);
+            }
+          }
         }
 
         const typeSocket = TypeSocket.UPDATE;
@@ -350,7 +365,7 @@ export class ScoreService {
               if (savedScore) {
                 await UserModel.updateOne(
                   { uid: entity.uid },
-                  { $inc: { customerCount: 1 } }, // Incrementa en 1 o lo crea con 1 si no existe
+                  { $inc: { customerCount: 1, customerScore: score } }, // Incrementa en 1 o lo crea con 1 si no existe
                   { upsert: true } // Crea el documento si no existe
                 );
                 await this.calculateScore(
@@ -375,7 +390,7 @@ export class ScoreService {
                 });
                 await UserModel.updateOne(
                   { uid: entity.uid },
-                  { $inc: { customerCount: 1 } }, // Incrementa en 1 o lo crea con 1 si no existe
+                  { $inc: { customerCount: 1, customerScore: score } }, // Incrementa en 1 o lo crea con 1 si no existe
                   { upsert: true } // Crea el documento si no existe
                 );
                 await this.calculateScore(
@@ -419,7 +434,7 @@ export class ScoreService {
               if (savedScore) {
                 await UserModel.updateOne(
                   { uid: entity.uid },
-                  { $inc: { sellerCount: 1 } }, // Incrementa en 1 o lo crea con 1 si no existe
+                  { $inc: { sellerCount: 1, sellerScore: score } }, // Incrementa en 1 o lo crea con 1 si no existe
                   { upsert: true } // Crea el documento si no existe
                 );
 
@@ -444,7 +459,7 @@ export class ScoreService {
                 });
                 await UserModel.updateOne(
                   { uid: entity.uid },
-                  { $inc: { sellerCount: 1 } }, // Incrementa en 1 o lo crea con 1 si no existe
+                  { $inc: { sellerCount: 1, sellerScore: score } }, // Incrementa en 1 o lo crea con 1 si no existe
                   { upsert: true } // Crea el documento si no existe
                 );
 
@@ -486,20 +501,20 @@ export class ScoreService {
             { uid: offerID }, // Filtro para buscar por ID
             { $set: { cancelRated: true } } // Campos a actualizar
           );
-          typeService = "Offersproducts";
+          typeService = "OffersProduct";
 
           if (resultOffer.matchedCount < 1) {
             const resultService = await OfferServiceModel.updateOne(
               { uid: offerID }, // Filtro por ID
               { $set: { cancelRated: true } } // Campos a actualizar
             );
-            typeService = "Offersservices";
+            typeService = "OffersService";
             if (resultService.matchedCount < 1) {
               const resultLiquidation = await OfferServiceModel.updateOne(
                 { uid: offerID }, // Filtro por ID
                 { $set: { cancelRated: true } } // Campos a actualizar
               );
-              typeService = "Offersliquidations";
+              typeService = "OffersLiquidation";
             }
           }
         }
@@ -510,26 +525,40 @@ export class ScoreService {
         if (offerID) {
           dotenv.config();
           switch (typeService) {
-            case "Offersproducts":
+            case "OffersProduct":
               API_POINT = process.env.API_PRODUCTS || "";
               endpoint = "/v1/offers/getDetailOffer/" + offerID;
               break;
-            case "Offersservices":
+            case "OffersService":
               API_POINT = process.env.API_SERVICES || "";
               endpoint = "/v1/offers/getDetailOffer/" + offerID;
               break;
-            case "Offersliquidations":
+            case "OffersLiquidation":
               API_POINT = process.env.API_LIQUIDATIONS || "";
               endpoint = "/v1/offers/getDetailOffer/" + offerID;
             default:
               break;
           }
 
-          offerData = await axios.get(`${API_POINT}${endpoint}`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
+          try {
+            offerData = await axios.get(`${API_POINT}${endpoint}`, {
+              headers: {
+                Authorization: `Bearer ${getToken()}`,
+              },
+            });
+          } catch (error) {
+            if (axios.isAxiosError(error)) {
+              return {
+                success: false,
+                code: 401,
+                error: {
+                  msg: error.response?.data.msg,
+                },
+              };
+            } else {
+              console.error("Error desconocido:", error);
+            }
+          }
         }
 
         const typeSocket = TypeSocket.UPDATE;
@@ -604,15 +633,19 @@ export class ScoreService {
 
       let scoresEntity, averageRating;
       if (typeScore === TypeScore.CLIENTSCORE) {
-        scoresEntity = await ScoreClientModel.aggregate(pipeline);
-        averageRating = scoresEntity[0].totalScore / entity[0].customerCount;
+        //  scoresEntity = await ScoreClientModel.aggregate(pipeline);
+
+        //  averageRating = scoresEntity[0].totalScore / entity[0].customerCount;
+        averageRating = entity[0].customerScore / entity[0].customerCount;
+
         await entityModel.updateOne(
           { uid: entityID }, // Filtro por ID
           { $set: { [fieldScore]: averageRating } } // Campos a actualizar
         );
       } else {
-        scoresEntity = await ScoreProviderModel.aggregate(pipeline);
-        averageRating = scoresEntity[0].totalScore / entity[0].sellerCount;
+        // scoresEntity = await ScoreProviderModel.aggregate(pipeline);
+        // averageRating = scoresEntity[0].totalScore / entity[0].sellerCount;
+        averageRating = entity[0].sellerScore / entity[0].sellerCount;
         await entityModel.updateOne(
           { uid: entityID }, // Filtro por ID
           { $set: { [fieldScore]: averageRating } } // Campos a actualizar

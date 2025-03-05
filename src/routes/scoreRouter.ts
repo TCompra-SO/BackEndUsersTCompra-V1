@@ -10,7 +10,7 @@ export class ScoreRouter {
 
   private constructor() {
     this.router = Router();
-    this.router.post("/registerScore", checkJwt, registerScoreController);
+    this.router.post("/registerScore", registerScoreController);
 
     this.router.get("/getScoreCount/:uid", getScoreCountController);
   }

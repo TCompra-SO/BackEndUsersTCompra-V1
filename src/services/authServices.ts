@@ -32,6 +32,9 @@ import { ResourceCountersService } from "./resourceCountersServices";
 import { ResourceCountersI } from "../interfaces/resourceCounters";
 import { Response } from "express";
 import { setToken } from "../utils/authStore";
+
+const JWT_SECRET = process.env.JWT_SECRET as string;
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET as string;
 export interface UserDocument extends Document {
   _id: string;
   email: string;
@@ -987,10 +990,18 @@ export class AuthServices {
               CompanyID: result[0].uid,
               type: entity,
               id: result[0].auth_users._id,
-              exp: this.ExpirationDate(12),
+              //  exp: this.ExpirationDate(12),
             },
-            process.env.JWT_SECRET as string
+            JWT_SECRET,
+            { expiresIn: "2h" }
           );
+
+          const refreshToken = jwt.sign(
+            { uid: user[0].uid },
+            JWT_REFRESH_SECRET,
+            { expiresIn: "7d" }
+          );
+
           // AQUI CONTINUAMOS ///////////////////////////////////////////
           const dataUser = [
             {
@@ -1017,6 +1028,7 @@ export class AuthServices {
             res: {
               msg: "Correcto",
               token,
+              refreshToken,
               dataUser,
             },
           };
@@ -1076,10 +1088,18 @@ export class AuthServices {
             email: user[0].email,
             type: entity,
             id: user[0]._id,
-            exp: this.ExpirationDate(12),
+            //    exp: this.ExpirationDate(12),
           },
-          process.env.JWT_SECRET as string
+          JWT_SECRET,
+          { expiresIn: "2h" }
         );
+
+        const refreshToken = jwt.sign(
+          { uid: user[0].uid },
+          JWT_REFRESH_SECRET,
+          { expiresIn: "7d" }
+        );
+
         const dataUser = [
           {
             uid: user[0].uid,
@@ -1108,11 +1128,13 @@ export class AuthServices {
           res: {
             msg: "Sesión iniciada correctamente",
             token,
+            refreshToken,
             dataUser,
           },
         };
       }
     } catch (error) {
+      console.error(error);
       return {
         success: false,
         code: 500,
@@ -1259,8 +1281,10 @@ export class AuthServices {
       let userType = UserType.User;
       if (!user || user.length === 0) {
         user = await Company.aggregate(userPipeline);
+
         userType = UserType.Company;
         if (!user || user.length === 0) {
+          console.log("entre");
           const userPipeline = [
             { $unwind: "$auth_users" }, // Desestructura el array
             { $match: { "auth_users.email": email } }, // Filtra por email dentro del array
@@ -1275,10 +1299,11 @@ export class AuthServices {
             { $limit: 1 },
           ];
           user = await Company.aggregate(userPipeline);
+
           if (user.length > 0) {
             return {
               success: false,
-              code: 407,
+              code: 409,
               error: {
                 msg: "Debes contactar al usuario de la cuenta principal para recuperar tu contraseña",
               },

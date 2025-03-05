@@ -130,10 +130,10 @@ export const searchCertificatesController = async (
   req: Request,
   res: Response
 ) => {
-  const { entityID, page, pageSize, fieldName, orderType, keyWords } = req.body;
+  const { userId, page, pageSize, fieldName, orderType, keyWords } = req.body;
   try {
     const responseUser = await CertificateService.searchCertificates(
-      entityID,
+      userId,
       Number(page),
       Number(pageSize),
       keyWords,
@@ -158,10 +158,10 @@ export const searchSentRequestCertificationController = async (
   req: Request,
   res: Response
 ) => {
-  const { entityID, page, pageSize, fieldName, orderType, keyWords } = req.body;
+  const { userId, page, pageSize, fieldName, orderType, keyWords } = req.body;
   try {
     const responseUser = await CertificateService.searchSentRequestsByEntity(
-      entityID,
+      userId,
       Number(page),
       Number(pageSize),
       keyWords,
@@ -186,11 +186,11 @@ export const searchReceivedRequestCertificationController = async (
   req: Request,
   res: Response
 ) => {
-  const { entityID, page, pageSize, fieldName, orderType, keyWords } = req.body;
+  const { userId, page, pageSize, fieldName, orderType, keyWords } = req.body;
   try {
     const responseUser =
       await CertificateService.searchReceivedRequestsByEntity(
-        entityID,
+        userId,
         Number(page),
         Number(pageSize),
         keyWords,

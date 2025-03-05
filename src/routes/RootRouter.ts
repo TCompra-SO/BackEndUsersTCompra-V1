@@ -20,11 +20,7 @@ export class RootRouter {
     this.router.use("/v1/subUser/", SubUserRouter.getRouter());
     this.router.use("/v1/score/", ScoreRouter.getRouter());
     this.router.use("/v1/image/", ImageRouter.getRouter());
-    this.router.use(
-      "/v1/certificate/",
-      checkJwt,
-      CertificateRouter.getRouter()
-    );
+    this.router.use("/v1/certificate/", CertificateRouter.getRouter());
     this.router.use("/v1/userMaster/", UserMasterRouter.getRouter());
     this.router.use("/v1/reports/", ReportsRouter.getRouter());
   }
