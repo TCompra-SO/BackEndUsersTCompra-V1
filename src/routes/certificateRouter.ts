@@ -20,6 +20,7 @@ import {
 } from "../controllers/certificateController";
 import multer from "multer";
 import { getSentRequestsByEntityController } from "../controllers/certificateController";
+import { saveNotificationMiddleware } from "../middleware/notification";
 
 export class CertificateRouter {
   private static instance: CertificateRouter;
@@ -29,12 +30,20 @@ export class CertificateRouter {
     this.router = Router();
     // Rutas de la API
     this.router.post("/uploadCertificate", upload, uploadCertificateController);
-    this.router.post("/sendCertification", sendCertificationController);
+    this.router.post(
+      "/sendCertification",
+      saveNotificationMiddleware,
+      sendCertificationController
+    );
     this.router.post(
       "/updateSentCertificateState",
       updateSentCertificateStatusController
     );
-    this.router.post("/updateCertifyState", updateCertifyStateController);
+    this.router.post(
+      "/updateCertifyState",
+      saveNotificationMiddleware,
+      updateCertifyStateController
+    );
 
     this.router.post("/resendCertify", resendCertifyController);
 
