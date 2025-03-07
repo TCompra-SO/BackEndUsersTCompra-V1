@@ -30,6 +30,7 @@ const registerScoreController = async (req: RequestExt, res: Response) => {
           responseUser.res?.typeService +
           responseUser.res?.offerData.data?.[0].user
         }`;
+
         io.to(roomName).emit("updateRoom", {
           dataPack: responseUser.res?.offerData,
           typeSocket: responseUser.res?.typeSocket,

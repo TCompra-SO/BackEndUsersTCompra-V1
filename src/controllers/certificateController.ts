@@ -266,7 +266,7 @@ export const sendCertificationController = async (
       certificateIDs
     );
     if (responseUser.success) {
-      res.status(responseUser.code).send(responseUser.res);
+      res.status(responseUser.code).send(responseUser);
     } else {
       res.status(responseUser.code).send(responseUser.error);
     }

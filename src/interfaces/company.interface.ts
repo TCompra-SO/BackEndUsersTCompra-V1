@@ -32,4 +32,5 @@ export interface CompanyI {
   customerScore: number;
   sellerCount: number;
   sellerScore: number;
+  refreshToken?: string;
 }

@@ -27,11 +27,12 @@ import { ScoreService } from "./scoreServices";
 import { ScoreI } from "./../interfaces/score.interface";
 import { TypeEntity, TypeOrder } from "../types/globalTypes";
 import CompanyModel from "../models/companyModel";
-import mongoose from "mongoose";
+import mongoose, { Model } from "mongoose";
 import { ResourceCountersService } from "./resourceCountersServices";
 import { ResourceCountersI } from "../interfaces/resourceCounters";
 import { Response } from "express";
 import { setToken } from "../utils/authStore";
+import UserModel from "../models/userModel";
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET as string;
@@ -600,13 +601,37 @@ export class AuthServices {
         userType = UserType.Company;
 
         if (!user || user.length == 0) {
-          return {
-            success: false,
-            code: 404,
-            error: {
-              msg: "Usuario no encontrado",
+          user = await Company.aggregate([
+            { $unwind: "$auth_users" }, // Desestructura el array
+            { $match: { "auth_users.email": email } }, // Filtra por email dentro del array
+            {
+              $project: {
+                _id: 1,
+                email: "$auth_users.email",
+                metadata: 1,
+                uid: 1,
+              },
             },
-          };
+            { $limit: 1 },
+          ]);
+
+          if (!user || user.length == 0) {
+            return {
+              success: false,
+              code: 404,
+              error: {
+                msg: "Usuario no encontrado",
+              },
+            };
+          } else {
+            return {
+              success: false,
+              code: 400,
+              error: {
+                msg: "Debes contactar al Usuario Principal",
+              },
+            };
+          }
         }
       }
 
@@ -952,7 +977,7 @@ export class AuthServices {
                 msg: "Usuario no encontrado",
               },
             };
-          } //////////////////////////////////////// ESTO ESTA PENDIENTE ////////////////////////////////////////////
+          }
         }
       }
       if (entity === "SubUser" && result && result.length > 0) {
@@ -997,7 +1022,7 @@ export class AuthServices {
           );
 
           const refreshToken = jwt.sign(
-            { uid: user[0].uid },
+            { uid: result[0].auth_users.Uid },
             JWT_REFRESH_SECRET,
             { expiresIn: "7d" }
           );
@@ -1017,11 +1042,16 @@ export class AuthServices {
 
           await Company.updateOne(
             { "auth_users.Uid": result[0].auth_users.Uid }, // Condición de búsqueda por uid
-            { $set: { "auth_users.$.ultimate_session": new Date() } }
+            {
+              $set: {
+                "auth_users.$.ultimate_session": new Date(),
+                "auth_users.$.refreshToken": refreshToken,
+              },
+            }
           );
 
           setToken(token);
-
+          setToken(refreshToken);
           return {
             success: true,
             code: 200,
@@ -1052,6 +1082,7 @@ export class AuthServices {
             error: {
               msg: "El usuario no ha completado su perfil",
               uid: user[0].uid,
+              name: user[0].name,
               entity: entity,
             },
           };
@@ -1064,6 +1095,7 @@ export class AuthServices {
             error: {
               msg: "Usuario no verificado",
               uid: user[0].uid,
+              name: user[0].name,
               entity: entity,
             },
           };
@@ -1076,6 +1108,7 @@ export class AuthServices {
             error: {
               msg: "La cuenta se encuentra inactiva",
               uid: user[0].uid,
+              name: user[0].name,
               entity: entity,
             },
           };
@@ -1113,15 +1146,27 @@ export class AuthServices {
         if (entity === "Company") {
           await Company.updateOne(
             { uid: user[0].uid }, // Condición de búsqueda por uid
-            { $set: { ultimate_session: new Date() } }
+            {
+              $set: {
+                ultimate_session: new Date(),
+                refreshToken: refreshToken,
+              },
+            }
           );
         } else {
           await User.updateOne(
             { uid: user[0].uid }, // Condición de búsqueda por uid
-            { $set: { ultimate_session: new Date() } }
+            {
+              $set: {
+                ultimate_session: new Date(),
+                refreshToken: refreshToken,
+              },
+            }
           );
         }
         setToken(token);
+        setToken(refreshToken);
+
         return {
           success: true,
           code: 200,
@@ -1144,6 +1189,91 @@ export class AuthServices {
       };
     }
   };
+
+  static async LogoutService(userID: string, refreshToken: string) {
+    try {
+      if (!refreshToken) {
+        return {
+          success: false,
+          code: 400,
+          msg: "No refresh token provided",
+        };
+      }
+      let typeUser, tokenExists, entityModel: Model<any>;
+      const userData = await this.getDataBaseUser(userID);
+
+      if (userData.data?.[0].auth_users.typeEntity === TypeEntity.SUBUSER) {
+        typeUser = TypeEntity.SUBUSER;
+      } else {
+        typeUser = userData.data?.[0].typeEntity;
+      }
+      // Determinar el modelo y verificar la existencia del token
+
+      switch (typeUser) {
+        case TypeEntity.COMPANY:
+          entityModel = CompanyModel;
+          break;
+        case TypeEntity.USER:
+          entityModel = UserModel;
+          break;
+        case TypeEntity.SUBUSER:
+          entityModel = CompanyModel; // SubUsuarios están dentro de empresas
+          break;
+        default:
+          return {
+            success: false,
+            code: 400,
+            msg: "Tipo de usuario no reconocido",
+          };
+      }
+
+      // Buscar el refreshToken en la entidad correcta
+      if (typeUser === TypeEntity.SUBUSER) {
+        tokenExists = await entityModel.findOne({
+          "auth_users.refreshToken": refreshToken,
+        });
+        console.log(tokenExists);
+      } else {
+        tokenExists = await entityModel.findOne({ refreshToken: refreshToken });
+      }
+
+      if (!tokenExists) {
+        return {
+          success: false,
+          code: 401,
+          msg: "Refresh token inválido",
+        };
+      }
+
+      if (typeUser === TypeEntity.SUBUSER) {
+        await CompanyModel.updateOne(
+          { "auth_users.refreshToken": refreshToken },
+          { $unset: { "auth_users.$.refreshToken": "" } } // Solo borra el refreshToken
+        );
+      } else {
+        await entityModel.updateOne(
+          { refreshToken: refreshToken },
+          { $unset: { refreshToken: "" } } // Solo borra el refreshToken
+        );
+      }
+
+      return {
+        success: true,
+        code: 200,
+        res: {
+          msg: "Sesión cerrada correctamente",
+        },
+      };
+    } catch (error) {
+      console.error("Error en logoutService:", error);
+      return {
+        success: false,
+        code: 500,
+        msg: "Error en el servidor",
+      };
+    }
+  }
+
   private static searchSubUser = async (email: string) => {
     const pipeline = [
       {
@@ -1284,7 +1414,6 @@ export class AuthServices {
 
         userType = UserType.Company;
         if (!user || user.length === 0) {
-          console.log("entre");
           const userPipeline = [
             { $unwind: "$auth_users" }, // Desestructura el array
             { $match: { "auth_users.email": email } }, // Filtra por email dentro del array
@@ -1303,7 +1432,7 @@ export class AuthServices {
           if (user.length > 0) {
             return {
               success: false,
-              code: 409,
+              code: 410,
               error: {
                 msg: "Debes contactar al usuario de la cuenta principal para recuperar tu contraseña",
               },

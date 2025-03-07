@@ -8,6 +8,7 @@ import {
   verifyRefreshAccessToken,
   verifyToken,
 } from "../utils/jwt.handle";
+import { getToken } from "../utils/authStore";
 
 const getNameController = async (req: Request, res: Response) => {
   // Obtener el parámetro de la consulta
@@ -279,26 +280,29 @@ const LoginController = async (req: Request, res: Response) => {
 
     if (!responseUser.success) {
       return res.status(responseUser.code).send(responseUser.error);
+    } else {
+      return res.status(responseUser.code).send(responseUser);
     }
-
-    const dataUser = responseUser.res?.dataUser;
-    let accessToken, refreshToken;
-    if (dataUser) {
-      accessToken = await generateToken(dataUser[0].uid); // Token de acceso
-      refreshToken = await generateRefreshAccessToken(dataUser[0].uid); // Token de refresco
-    }
-
-    return res.status(responseUser.code).send({
-      msg: "Sesión iniciada correctamente",
-      accessToken,
-      refreshToken,
-      dataUser,
-    });
   } catch (error: any) {
     return res.status(500).send({
       success: false,
       msg: "Error interno del servidor.",
     });
+  }
+};
+
+const LogoutController = async (req: Request, res: Response) => {
+  try {
+    const { userId, refreshToken } = req.body;
+
+    // Llamamos al servicio de logout
+    const response = await AuthServices.LogoutService(userId, refreshToken);
+
+    return res.status(response.code).json(response);
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, msg: "Error en el servidor" });
   }
 };
 
@@ -416,6 +420,7 @@ export {
   SendCodeController,
   ValidateCodeController,
   LoginController,
+  LogoutController,
   NewPasswordController,
   SendCodeRecoveryController,
   RecoveryPasswordController,

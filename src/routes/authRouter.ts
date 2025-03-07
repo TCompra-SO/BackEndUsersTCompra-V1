@@ -17,6 +17,7 @@ import {
   getBaseDataUserController,
   SearchCompanyController,
   RefreshTokenController,
+  LogoutController,
 } from "../controllers/authController";
 import { checkJwt } from "../middleware/session";
 
@@ -30,6 +31,7 @@ export class AuthRouter {
     this.router.post("/profileCompany", UpdateprofileCompanyController);
     this.router.post("/profileUser", UpdateprofileUserController);
     this.router.post("/login", LoginController);
+    this.router.post("/logout", LogoutController);
 
     this.router.post("/updateCompany", UpdateCompanyController);
     this.router.post("/updateUser", UpdateUserController);

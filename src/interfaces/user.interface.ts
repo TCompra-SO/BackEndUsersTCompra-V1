@@ -23,4 +23,5 @@ export interface UserI {
   customerScore: number;
   sellerCount: number;
   sellerScore: number;
+  refreshToken: string;
 }

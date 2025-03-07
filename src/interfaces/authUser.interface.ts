@@ -5,4 +5,5 @@ export interface AuthUserI {
   typeID: number;
   ultimate_session: Date;
   active_account: boolean; // Tipo literal
+  refreshToken?: string;
 }
