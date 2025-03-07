@@ -109,6 +109,10 @@ const userSchema = new Schema<UserI>(
       default: 0,
       required: false,
     },
+    refreshToken: {
+      type: String,
+      required: false,
+    },
   },
   {
     versionKey: false,

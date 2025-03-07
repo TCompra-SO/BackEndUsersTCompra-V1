@@ -19,6 +19,7 @@ const AuthUserSchema = new Schema({
   typeID: { type: Number, required: true },
   ultimate_session: { type: Date, default: Date.now, required: false },
   active_account: { type: Boolean, required: false },
+  refreshToken: { type: String, required: false },
 });
 
 const ScoreSchema = new Schema({
@@ -146,6 +147,10 @@ const CompanySchema = new Schema<CompanyI>(
     sellerScore: {
       type: Number,
       default: 0,
+      required: false,
+    },
+    refreshToken: {
+      type: String,
       required: false,
     },
   },

@@ -286,12 +286,12 @@ export class CertificateService {
         receiverEntityID: companyID,
         sendByentityID: userID,
       };
-      await this.createCertificateRequest(newRequestData);
-
+      const result = await this.createCertificateRequest(newRequestData);
       return {
         success: true,
         code: 200,
         res: {
+          uid: result.data?.uid,
           msg: "Solicitud enviada con éxito",
         },
       };

@@ -1,50 +1,44 @@
 import { sign, verify } from "jsonwebtoken";
-import { getToken } from "./authStore";
 
 const JWT_SECRET = process.env.JWT_SECRET || "token.01010101";
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "refresh.01010101";
 
-// Generar tokens de acceso y actualización
-const generateToken = async (id: string) => {
-  const accessToken = sign({ uid: id }, JWT_SECRET, {
-    expiresIn: "2h",
-  }); // Usar `uid` en lugar de `id`
-  const refreshToken = sign({ uid: id }, JWT_REFRESH_SECRET, {
-    expiresIn: "7d",
-  }); // Usar `uid` en lugar de `id`
+const generateToken = async (uid: string) => {
+  const accessToken = sign({ uid }, JWT_SECRET, { expiresIn: "2h" });
+  const refreshToken = sign({ uid }, JWT_REFRESH_SECRET, { expiresIn: "7d" });
 
   return { accessToken, refreshToken };
 };
 
-// Verificar token de acceso
-const verifyToken = (token: string) => {
+const verifyToken = async (token: string) => {
   try {
-    return verify(token, JWT_SECRET) as { uid: string }; // Asegurar que el payload tenga `uid`
+    return verify(token, JWT_SECRET) as { uid: string };
   } catch (error) {
+    console.error("Error al verificar access token:", error);
     return null;
   }
 };
 
-// Generar un nuevo token de acceso usando el refresh token
-const generateRefreshAccessToken = (refreshToken: string) => {
+const generateRefreshAccessToken = async (refreshToken: string) => {
   try {
-    const decoded = verify(refreshToken, JWT_REFRESH_SECRET) as { uid: string }; // Asegurar que el payload tenga `uid`
+    const decoded = verify(refreshToken, JWT_REFRESH_SECRET) as { uid: string };
     const newAccessToken = sign({ uid: decoded.uid }, JWT_SECRET, {
       expiresIn: "2h",
     });
 
     return { success: true, accessToken: newAccessToken };
   } catch (error) {
+    console.error("Error al generar nuevo access token:", error);
     return { success: false, msg: "Refresh Token inválido" };
   }
 };
 
-// Verificar refresh token
 const verifyRefreshAccessToken = async (token: string) => {
   try {
-    return verify(token, JWT_REFRESH_SECRET) as { uid: string }; // Asegurar que el payload tenga `uid`
+    return verify(token, JWT_REFRESH_SECRET) as { uid: string };
   } catch (error) {
-    return null;
+    console.error("Error al verificar refresh token:", error);
+    return { success: false, msg: "Refresh Token inválido" };
   }
 };
 
