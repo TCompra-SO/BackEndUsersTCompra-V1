@@ -99,14 +99,16 @@ export const getCertificatesController = async (
   res: Response
 ) => {
   const { companyID, page, pageSize } = req.params;
+  try {
+    const { uid } = req.user as JwtPayload;
+    if (uid !== companyID) {
+      return res.status(400).send({
+        success: false,
+        msg: "Usuario incorrecto.",
+      });
+    }
+  } catch (error) {}
 
-  const { uid } = req.user as JwtPayload;
-  if (uid !== companyID) {
-    return res.status(400).send({
-      success: false,
-      msg: "Usuario incorrecto.",
-    });
-  }
   try {
     const responseUser = await CertificateService.getCertificates(
       companyID,
