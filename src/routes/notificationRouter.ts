@@ -1,5 +1,8 @@
 import { Router } from "express";
-import { sendNotificationController } from "../controllers/notificationController";
+import {
+  getNotificationsController,
+  sendNotificationController,
+} from "../controllers/notificationController";
 import { saveNotificationMiddleware } from "../middleware/notification";
 
 export class NotificationRouter {
@@ -13,6 +16,10 @@ export class NotificationRouter {
       "/send",
       saveNotificationMiddleware,
       sendNotificationController
+    );
+    this.router.get(
+      "/getNotifications/:receiverId/:page/:pageSize",
+      getNotificationsController
     );
   }
 
