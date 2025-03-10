@@ -40,3 +40,11 @@ export enum TypeSocket {
   CREATE = 0,
   UPDATE = 1,
 }
+
+export enum NotificationAction {
+  VIEW_REQUIREMENT = 25,
+  VIEW_CERTIFICATION = 40,
+  VIEW_HISTORY = 15,
+  VIEW_OFFER = 26,
+  DOWNLOAD_PURCHASE_ORDER = 12,
+}

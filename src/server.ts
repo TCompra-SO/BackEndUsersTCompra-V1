@@ -66,7 +66,7 @@ const startApp = async () => {
     });
   });
 
-  app.listen(port, () => {
+  server.listen(port, () => {
     console.log(`Server running in port ${port}`);
   });
   return io;
