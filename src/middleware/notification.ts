@@ -20,7 +20,7 @@ export const saveNotificationMiddleware = (
       req.body
     ) {
       notificationSaved = true;
-      const notification: NotificationI = req.body;
+      const notification: NotificationI = req.body.notification;
 
       // Certificación enviada por 1ra vez
       if (
@@ -29,8 +29,14 @@ export const saveNotificationMiddleware = (
       ) {
         notification.targetId = body.res?.uid;
       }
-
-      if (notification.receiverId && notification.targetId)
+      console.log(
+        "========",
+        notification,
+        notification.receiverId,
+        notification.targetId
+      );
+      if (notification.receiverId && notification.targetId) {
+        console.log(notification, body);
         NotificationModel.create(notification)
           .then((res) => {
             io.to(`notification${notification.receiverId}`).emit("updateRoom", {
@@ -41,6 +47,7 @@ export const saveNotificationMiddleware = (
             });
           })
           .catch((error) => console.error("Error saving notification:", error));
+      }
     }
 
     return originalSend(body);
