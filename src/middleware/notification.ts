@@ -17,43 +17,30 @@ export const saveNotificationMiddleware = (
       !notificationSaved &&
       res.statusCode >= 200 &&
       res.statusCode < 300 &&
-      req.body.notification
+      req.body
     ) {
       notificationSaved = true;
-      const notification: NotificationI = req.body.notification;
+      const notification: NotificationI = req.body;
 
       // Certificación enviada por 1ra vez
       if (
         notification.action == NotificationAction.VIEW_CERTIFICATION &&
         !notification.targetId
       ) {
-        notification.targetId = "";
-      }
-      // Descargar orden de oferta seleccionada
-      else if (
-        notification.action == NotificationAction.DOWNLOAD_PURCHASE_ORDER &&
-        !notification.targetId
-      ) {
-        notification.targetId = "";
-      }
-      // Cancelar oferta seleccionada
-      else if (
-        notification.action == NotificationAction.VIEW_REQUIREMENT &&
-        !notification.receiverId
-      ) {
-        notification.receiverId = "";
+        notification.targetId = body.res?.uid;
       }
 
-      NotificationModel.create(notification)
-        .then((res) => {
-          io.to(`notification${notification.receiverId}`).emit("updateRoom", {
-            dataPack: { data: [res.toObject()] },
-            typeSocket: TypeSocket.CREATE,
-            key: res.uid,
-            userId: res.senderId,
-          });
-        })
-        .catch((error) => console.error("Error saving notification:", error));
+      if (notification.receiverId && notification.targetId)
+        NotificationModel.create(notification)
+          .then((res) => {
+            io.to(`notification${notification.receiverId}`).emit("updateRoom", {
+              dataPack: { data: [res.toObject()] },
+              typeSocket: TypeSocket.CREATE,
+              key: res.uid,
+              userId: res.senderId,
+            });
+          })
+          .catch((error) => console.error("Error saving notification:", error));
     }
 
     return originalSend(body);

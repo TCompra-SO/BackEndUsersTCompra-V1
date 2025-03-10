@@ -45,7 +45,11 @@ export class CertificateRouter {
       updateCertifyStateController
     );
 
-    this.router.post("/resendCertify", resendCertifyController);
+    this.router.post(
+      "/resendCertify",
+      saveNotificationMiddleware,
+      resendCertifyController
+    );
 
     this.router.post(
       "/updateRequiredDocuments",
