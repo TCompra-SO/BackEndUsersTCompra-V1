@@ -27,6 +27,7 @@ const NotificationSchema: Schema = new Schema<NotificationI>({
     type: Date,
     required: true,
     default: Date.now,
+    index: { expires: "30d" },
   },
   title: {
     type: String,
