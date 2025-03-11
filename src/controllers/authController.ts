@@ -3,12 +3,13 @@ import { AuthServices } from "../services/authServices";
 import { RequestExt } from "../interfaces/req-ext";
 import { JwtPayload } from "jsonwebtoken";
 import {
+  decodeToken,
   generateRefreshAccessToken,
   generateToken,
   verifyRefreshAccessToken,
   verifyToken,
 } from "../utils/jwt.handle";
-import { getToken } from "../utils/authStore";
+import { io } from "../server"; // Importamos el objeto `io` de Socket.IO
 
 const getNameController = async (req: Request, res: Response) => {
   // Obtener el parámetro de la consulta
@@ -281,6 +282,15 @@ const LoginController = async (req: Request, res: Response) => {
     if (!responseUser.success) {
       return res.status(responseUser.code).send(responseUser.error);
     } else {
+      const roomName = "roomLogin" + responseUser.res?.dataUser[0].uid;
+      const accesToken = responseUser.res?.accessToken || "";
+      console.log(roomName);
+      const expiresIn = decodeToken(accesToken) || 3600;
+      console.log(expiresIn);
+      io.to(roomName).emit("updateToken", {
+        expiresIn,
+        accessToken: responseUser.res?.accessToken,
+      });
       return res.status(responseUser.code).send(responseUser);
     }
   } catch (error: any) {

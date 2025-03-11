@@ -4,12 +4,15 @@ import { io } from "../server";
 import { RequestExt } from "../interfaces/req-ext";
 import { JwtPayload } from "jsonwebtoken";
 import { getToken } from "../utils/authStore";
+import { AuthServices } from "../services/authServices";
 const registerScoreController = async (req: RequestExt, res: Response) => {
   const { typeScore, uidEntity, uidUser, score, comments, offerId, type } =
     req.body;
   try {
     const { user } = req; // Extraemos `user` y `body` de la request
     //const { uid: userUID } = user as JwtPayload; // Obtenemos `uid` del usuario autenticado
+    const token = (await AuthServices.getDataBaseUser(uidUser)).data?.[0]
+      .accessToken;
 
     const responseUser = await ScoreService.registerScore(
       typeScore,
@@ -18,7 +21,8 @@ const registerScoreController = async (req: RequestExt, res: Response) => {
       score,
       comments,
       offerId,
-      type
+      type,
+      token
     );
 
     if (responseUser.success) {

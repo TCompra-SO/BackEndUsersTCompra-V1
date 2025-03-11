@@ -113,6 +113,14 @@ const userSchema = new Schema<UserI>(
       type: String,
       required: false,
     },
+    accessToken: {
+      type: String,
+      required: false,
+    },
+    online: {
+      type: Boolean,
+      required: false,
+    },
   },
   {
     versionKey: false,

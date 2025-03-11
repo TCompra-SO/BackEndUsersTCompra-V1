@@ -6,7 +6,7 @@ import User from "../models/userModel";
 import Company from "../models/companyModel";
 import Fuse from "fuse.js";
 import { encrypt, verified } from "../utils/bcrypt.handle";
-import { generateToken } from "../utils/jwt.handle";
+import { generateToken, verifyRefreshAccessToken } from "../utils/jwt.handle";
 import { ErrorMessages } from "../utils/ErrorMessages";
 import axios, { AxiosRequestConfig } from "axios";
 import { MetadataI } from "../interfaces/utils.interface";
@@ -1007,7 +1007,7 @@ export class AuthServices {
             result[0].auth_users.Uid
           );
 
-          const token = jwt.sign(
+          const accessToken = jwt.sign(
             {
               uid: result[0].auth_users.Uid,
               name: profileUser.data?.[0].name,
@@ -1046,18 +1046,20 @@ export class AuthServices {
               $set: {
                 "auth_users.$.ultimate_session": new Date(),
                 "auth_users.$.refreshToken": refreshToken,
+                "auth_users.$.accessToken": accessToken,
+                "auth_users.$.online": true,
               },
             }
           );
 
-          setToken(token);
+          setToken(accessToken);
           setToken(refreshToken);
           return {
             success: true,
             code: 200,
             res: {
               msg: "Correcto",
-              token,
+              accessToken,
               refreshToken,
               dataUser,
             },
@@ -1114,7 +1116,7 @@ export class AuthServices {
           };
         }
 
-        const token = jwt.sign(
+        const accesstoken = jwt.sign(
           {
             uid: user[0].uid,
             name: user[0].name,
@@ -1150,6 +1152,8 @@ export class AuthServices {
               $set: {
                 ultimate_session: new Date(),
                 refreshToken: refreshToken,
+                accessToken: accesstoken,
+                online: true,
               },
             }
           );
@@ -1160,11 +1164,13 @@ export class AuthServices {
               $set: {
                 ultimate_session: new Date(),
                 refreshToken: refreshToken,
+                accessToken: accesstoken,
+                online: true,
               },
             }
           );
         }
-        setToken(token);
+        setToken(accesstoken);
         setToken(refreshToken);
 
         return {
@@ -1172,7 +1178,7 @@ export class AuthServices {
           code: 200,
           res: {
             msg: "Sesión iniciada correctamente",
-            token,
+            accessToken: accesstoken,
             refreshToken,
             dataUser,
           },
@@ -1232,7 +1238,6 @@ export class AuthServices {
         tokenExists = await entityModel.findOne({
           "auth_users.refreshToken": refreshToken,
         });
-        console.log(tokenExists);
       } else {
         tokenExists = await entityModel.findOne({ refreshToken: refreshToken });
       }
@@ -1248,12 +1253,18 @@ export class AuthServices {
       if (typeUser === TypeEntity.SUBUSER) {
         await CompanyModel.updateOne(
           { "auth_users.refreshToken": refreshToken },
-          { $unset: { "auth_users.$.refreshToken": "" } } // Solo borra el refreshToken
+          {
+            $unset: {
+              "auth_users.$.refreshToken": "",
+              "auth_users.$.accessToken": "",
+              "auth_users.$.online": false,
+            },
+          } // Solo borra el refreshToken
         );
       } else {
         await entityModel.updateOne(
           { refreshToken: refreshToken },
-          { $unset: { refreshToken: "" } } // Solo borra el refreshToken
+          { $unset: { refreshToken: "", accessToken: "", online: false } }
         );
       }
 
@@ -1771,6 +1782,7 @@ export class AuthServices {
               typeEntity: entityData.data.typeEntity,
               image: entityData.data.avatar,
               tenure: entityData.data.age,
+              accessToken: entityData.data.accessToken,
               customerCount,
               customerScore,
               sellerCount,
@@ -1795,6 +1807,7 @@ export class AuthServices {
               email: entityData.data.email,
               typeEntity: entityData.data.typeEntity,
               image: entityData.data.avatar,
+              accessToken: entityData.data.accessToken,
               customerCount,
               customerScore,
               sellerCount,
@@ -1890,6 +1903,7 @@ export class AuthServices {
           "auth_users.ultimate_session": 1,
           "auth_users.active_account": 1,
           "auth_users.Uid": 1,
+          "auth_users.accessToken": 1,
         },
       },
     ];

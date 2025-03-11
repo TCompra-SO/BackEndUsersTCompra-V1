@@ -1,10 +1,11 @@
 import { sign, verify } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET || "token.01010101";
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "refresh.01010101";
 
 const generateToken = async (uid: string) => {
-  const accessToken = sign({ uid }, JWT_SECRET, { expiresIn: "2m" });
+  const accessToken = sign({ uid }, JWT_SECRET, { expiresIn: "2h" });
   const refreshToken = sign({ uid }, JWT_REFRESH_SECRET, { expiresIn: "7d" });
 
   return { accessToken, refreshToken };
@@ -42,9 +43,19 @@ const verifyRefreshAccessToken = async (token: string) => {
   }
 };
 
+const decodeToken = (token: string) => {
+  const decoded: any = jwt.decode(token);
+  if (decoded && decoded.exp) {
+    const expiresIn = decoded.exp - Math.floor(Date.now() / 1000); // Segundos restantes
+    return expiresIn;
+  }
+  return null;
+};
+
 export {
   generateToken,
   verifyToken,
   generateRefreshAccessToken,
   verifyRefreshAccessToken,
+  decodeToken,
 };

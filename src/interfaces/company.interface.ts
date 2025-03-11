@@ -33,4 +33,6 @@ export interface CompanyI {
   sellerCount: number;
   sellerScore: number;
   refreshToken?: string;
+  accessToken?: string;
+  online?: boolean;
 }

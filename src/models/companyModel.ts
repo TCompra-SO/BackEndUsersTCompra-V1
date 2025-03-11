@@ -20,6 +20,8 @@ const AuthUserSchema = new Schema({
   ultimate_session: { type: Date, default: Date.now, required: false },
   active_account: { type: Boolean, required: false },
   refreshToken: { type: String, required: false },
+  accessToken: { type: String, required: false },
+  online: { type: Boolean, required: false },
 });
 
 const ScoreSchema = new Schema({
@@ -151,6 +153,14 @@ const CompanySchema = new Schema<CompanyI>(
     },
     refreshToken: {
       type: String,
+      required: false,
+    },
+    accessToken: {
+      type: String,
+      required: false,
+    },
+    online: {
+      type: Boolean,
       required: false,
     },
   },

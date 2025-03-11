@@ -273,7 +273,7 @@ export class ScoreService {
           try {
             offerData = await axios.get(`${API_POINT}${endpoint}`, {
               headers: {
-                Authorization: `Bearer ${getToken()}`,
+                Authorization: `Bearer ${token}`,
               },
             });
           } catch (error) {
@@ -512,7 +512,7 @@ export class ScoreService {
           try {
             offerData = await axios.get(`${API_POINT}${endpoint}`, {
               headers: {
-                Authorization: `Bearer ${getToken()}`,
+                Authorization: `Bearer ${token}`,
               },
             });
           } catch (error) {
