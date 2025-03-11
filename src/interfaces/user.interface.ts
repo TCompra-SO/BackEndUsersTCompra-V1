@@ -23,5 +23,7 @@ export interface UserI {
   customerScore: number;
   sellerCount: number;
   sellerScore: number;
-  refreshToken: string;
+  refreshToken?: string;
+  accessToken?: string;
+  online?: boolean;
 }

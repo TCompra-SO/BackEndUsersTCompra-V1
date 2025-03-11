@@ -39,27 +39,6 @@ const startApp = async () => {
       socket.emit("joinedRoom", `Te has unido a la sala ${room}`);
     });
 
-    socket.on("authenticate", (accessToken: string) => {
-      console.log("escuchando");
-      console.log(accessToken);
-      try {
-        const decoded = jwt.verify(accessToken, JWT_SECRET) as TokenPayload;
-        console.log(`Usuario autenticado: ${decoded.uid}`);
-
-        const timeRemaining = decoded.exp * 1000 - Date.now();
-
-        if (timeRemaining < 5 * 60 * 1000) {
-          setTimeout(() => {
-            socket.emit("token_expiring", {
-              msg: "AccessToken está por expirar",
-            });
-          }, timeRemaining - 30000); // Avisar 30 segundos antes de expirar
-        }
-      } catch (error) {
-        socket.emit("token_invalid", { msg: "AccessToken inválido" });
-      }
-    });
-
     // Cuando un usuario se desconecta
     socket.on("disconnect", () => {
       console.log("Usuario desconectado", socket.id);

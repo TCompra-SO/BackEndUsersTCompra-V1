@@ -6,4 +6,6 @@ export interface AuthUserI {
   ultimate_session: Date;
   active_account: boolean; // Tipo literal
   refreshToken?: string;
+  accessToken?: string;
+  online?: boolean;
 }
