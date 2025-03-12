@@ -1,6 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 import ShortUniqueId from "short-unique-id";
 import { NotificationI } from "../interfaces/notification.interface";
+import { NotificationType } from "../types/globalTypes";
 
 const uid = new ShortUniqueId({ length: 20 });
 
@@ -27,7 +28,6 @@ const NotificationSchema: Schema = new Schema<NotificationI>({
     type: Date,
     required: true,
     default: Date.now,
-    index: { expires: "30d" },
   },
   title: {
     type: String,
@@ -43,15 +43,28 @@ const NotificationSchema: Schema = new Schema<NotificationI>({
   },
   receiverId: {
     type: String,
-    required: true,
+    required: false,
   },
   targetId: {
     type: String,
-    required: true,
+    required: false,
   },
   targetType: {
     type: Number,
     required: true,
+  },
+  type: {
+    type: Number,
+    enum: Object.values(NotificationType),
+    required: true,
+  },
+  expiresAt: {
+    type: Date,
+    index: { expires: 0 },
+  },
+  categoryId: {
+    type: Number,
+    required: false,
   },
 });
 

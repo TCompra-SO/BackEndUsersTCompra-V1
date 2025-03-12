@@ -47,4 +47,16 @@ export enum NotificationAction {
   VIEW_HISTORY = 15,
   VIEW_OFFER = 26,
   DOWNLOAD_PURCHASE_ORDER = 12,
+  VIEW_CAT_LAST_REQUIREMENTS = 41,
+}
+
+export enum RequirementType {
+  GOOD = 1,
+  SERVICE = 2,
+  SALE = 3,
+}
+
+export enum NotificationType {
+  DIRECT = 0,
+  BROADCAST = 1,
 }
