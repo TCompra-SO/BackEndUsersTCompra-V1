@@ -1,5 +1,10 @@
-import { NotificationI } from "../interfaces/notification.interface";
+import {
+  BaseNotificationI,
+  NotificationI,
+} from "../interfaces/notification.interface";
+import CompanyModel from "../models/companyModel";
 import NotificationModel from "../models/notificationModel";
+import UserModel from "../models/userModel";
 import {
   NotificationAction,
   NotificationType,
@@ -7,6 +12,7 @@ import {
 } from "../types/globalTypes";
 import { categories } from "../utils/Categories";
 import {
+  broadcastNotificationExpiresIn,
   notificationSystemSenderId,
   notificationSystemSenderName,
 } from "../utils/Globals";
@@ -17,9 +23,25 @@ export const getNotifications = async (
   pageSize: number
 ) => {
   try {
-    const resultData = await NotificationModel.find({ receiverId })
-      .select("-request")
-      .sort({ creationDate: -1 })
+    let userCategories =
+      (await UserModel.findOne(
+        { uid: receiverId },
+        { categories: 1, _id: 0 }
+      )) ??
+      (await CompanyModel.findOne(
+        { uid: receiverId },
+        { categories: 1, _id: 0 }
+      ));
+    const query: any = { $or: [{ receiverId }] }; // Incluir notificaciones directas siempre
+    if (userCategories?.categories?.length) {
+      // Incluir notificaciones broadcast
+      query.$or.push({
+        type: NotificationType.BROADCAST,
+        categoryId: { $in: userCategories.categories },
+      });
+    }
+    const resultData = await NotificationModel.find(query)
+      .sort({ timestamp: -1 })
       .skip((page - 1) * pageSize)
       .limit(pageSize);
     return {
@@ -66,8 +88,7 @@ export const getNotificationFromLastRequirementsPublished = (
         type == RequirementType.SALE ? "publicadas" : "publicados";
 
       const notifications = groups.map((group) => {
-        const notification: NotificationI = {
-          uid: "",
+        const notification: BaseNotificationI = {
           senderId: notificationSystemSenderId,
           senderName: notificationSystemSenderName,
           timestamp: new Date(),
@@ -80,7 +101,10 @@ export const getNotificationFromLastRequirementsPublished = (
           action: NotificationAction.VIEW_CAT_LAST_REQUIREMENTS,
           targetType: type,
           type: NotificationType.BROADCAST,
-          expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hora
+          expiresAt: new Date(
+            Date.now() + broadcastNotificationExpiresIn * 60 * 1000
+          ),
+          categoryId: group._id,
         };
         return notification;
       });

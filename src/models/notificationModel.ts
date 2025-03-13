@@ -55,7 +55,7 @@ const NotificationSchema: Schema = new Schema<NotificationI>({
   },
   type: {
     type: Number,
-    enum: Object.values(NotificationType),
+    enum: [NotificationType.DIRECT, NotificationType.BROADCAST],
     required: true,
   },
   expiresAt: {

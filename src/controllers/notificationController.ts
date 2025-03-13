@@ -1,10 +1,8 @@
 import { Request, Response } from "express";
-import NotificationModel from "../models/notificationModel";
 import {
   getNotificationFromLastRequirementsPublished,
   getNotifications,
 } from "../services/notificationServices";
-import { RequirementType } from "../types/globalTypes";
 
 export const sendNotificationController = async (
   req: Request,

@@ -1,12 +1,16 @@
 import { Request, Response, NextFunction } from "express";
 import NotificationModel from "../models/notificationModel";
-import { NotificationI } from "../interfaces/notification.interface";
+import {
+  BaseNotificationI,
+  NotificationI,
+} from "../interfaces/notification.interface";
 import {
   NotificationAction,
   NotificationType,
   TypeSocket,
 } from "../types/globalTypes";
 import { io } from "../server";
+import { directNotificationExpiresIn } from "../utils/Globals";
 
 export const saveNotificationMiddleware = (
   req: Request,
@@ -42,9 +46,8 @@ export const saveNotificationMiddleware = (
           notification.type == NotificationType.DIRECT
         ) {
           notification.expiresAt = new Date(
-            Date.now() + 30 * 24 * 60 * 60 * 1000
-          ); // 30 días
-          console.log(notification, body);
+            Date.now() + directNotificationExpiresIn * 24 * 60 * 60 * 1000
+          );
           NotificationModel.create(notification)
             .then((res) => {
               io.to(`notification${notification.receiverId}`).emit(
@@ -86,13 +89,12 @@ export const saveNotificationsAndBroadcastMiddleware = (
         !notificationSaved &&
         res.statusCode >= 200 &&
         res.statusCode < 300 &&
-        req.body?.data
+        body?.data
       ) {
         notificationSaved = true;
-        const notifications: NotificationI[] = req.body.data;
+        const notifications: BaseNotificationI[] = body.data;
 
         notifications.forEach((notification) => {
-          console.log(notification);
           NotificationModel.create(notification)
             // .then((res) => {
             //   io.to(`notification`).emit("updateRoom", {

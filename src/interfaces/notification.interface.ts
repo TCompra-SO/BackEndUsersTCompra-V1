@@ -1,7 +1,6 @@
 import { NotificationType } from "../types/globalTypes";
 
-export interface NotificationI {
-  uid: string;
+export interface BaseNotificationI {
   senderImage?: string;
   senderId: string;
   senderName: string;
@@ -15,4 +14,8 @@ export interface NotificationI {
   targetType: number;
   type: NotificationType;
   expiresAt: Date;
+}
+
+export interface NotificationI extends BaseNotificationI {
+  uid: string;
 }
