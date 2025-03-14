@@ -18,6 +18,7 @@ import {
   SearchCompanyController,
   RefreshTokenController,
   LogoutController,
+  refreshAccessToken,
 } from "../controllers/authController";
 import { checkJwt } from "../middleware/session";
 
@@ -42,6 +43,7 @@ export class AuthRouter {
     this.router.post("/sendCodeRecovery", SendCodeRecoveryController);
     this.router.post("/recoveryPassword", RecoveryPasswordController);
     this.router.post("/refreshToken", RefreshTokenController);
+    this.router.post("/refreshAccessToken", refreshAccessToken);
 
     this.router.get("/getName/:document", getNameController);
     this.router.get("/getUser/:uid", getUserController);

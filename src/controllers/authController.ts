@@ -347,6 +347,33 @@ const RefreshTokenController = async (req: Request, res: Response) => {
   }
 };
 
+const refreshAccessToken = async (req: Request, res: Response) => {
+  try {
+    const { accessToken, refreshToken } = req.body;
+
+    if (!accessToken) {
+      return res
+        .status(400)
+        .json({ success: false, msg: "No hay refresh token" });
+    }
+
+    const result = await generateRefreshAccessToken(accessToken, refreshToken);
+
+    if (!result.success) {
+      return res
+        .status(401)
+        .json({ success: false, msg: "Refresh token inválido o expirado" });
+    }
+
+    return res.json({ success: true, accessToken: result.accessToken });
+  } catch (error) {
+    console.error("Error en refreshAccessToken:", error);
+    return res
+      .status(500)
+      .json({ success: false, msg: "Error interno del servidor" });
+  }
+};
+
 const NewPasswordController = async (req: RequestExt, res: Response) => {
   try {
     const { email, password } = req.body;
@@ -441,4 +468,5 @@ export {
   getBaseDataUserController,
   SearchCompanyController,
   RefreshTokenController,
+  refreshAccessToken,
 };

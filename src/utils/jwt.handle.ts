@@ -1,5 +1,10 @@
 import { sign, verify } from "jsonwebtoken";
 import jwt from "jsonwebtoken";
+import { AuthServices } from "../services/authServices";
+import CompanyModel from "../models/companyModel";
+import { pipeline } from "stream";
+import { TypeEntity } from "../types/globalTypes";
+import UserModel from "../models/userModel";
 
 const JWT_SECRET = process.env.JWT_SECRET || "token.01010101";
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "refresh.01010101";
@@ -20,13 +25,39 @@ const verifyToken = async (token: string) => {
   }
 };
 
-const generateRefreshAccessToken = async (refreshToken: string) => {
+const generateRefreshAccessToken = async (
+  accessToken: string,
+  refreshToken: string
+) => {
   try {
-    const decoded = verify(refreshToken, JWT_REFRESH_SECRET) as { uid: string };
+    console.log(refreshToken);
+    const decoded = verify(accessToken, JWT_SECRET) as { uid: string };
+    console.log(decoded);
     const newAccessToken = sign({ uid: decoded.uid }, JWT_SECRET, {
       expiresIn: "2h",
     });
-
+    // console.log(decoded1.uid);
+    console.log(decoded.uid);
+    const userData = await AuthServices.getDataBaseUser(decoded.uid);
+    console.log(userData);
+    const typeEntity = userData.data?.[0].typeEntity;
+    console.log(typeEntity);
+    if (userData.data?.[0].auth_users) {
+      await CompanyModel.updateOne(
+        { "auth_users.Uid": userData.data[0].auth_users.Uid }, // Filtrar por Uid dentro del array
+        { $set: { "auth_users.$.accessToken": newAccessToken } } // Actualizar accessToken
+      );
+    } else if (typeEntity === TypeEntity.COMPANY) {
+      await CompanyModel.updateOne(
+        { uid: decoded.uid }, // Filtrar por uid
+        { $set: { accessToken: newAccessToken } } // Actualizar accessToken
+      );
+    } else {
+      await UserModel.updateOne(
+        { uid: decoded.uid }, // Filtrar por uid
+        { $set: { accessToken: newAccessToken } } // Actualizar accessToken
+      );
+    }
     return { success: true, accessToken: newAccessToken };
   } catch (error) {
     console.error("Error al generar nuevo access token:", error);

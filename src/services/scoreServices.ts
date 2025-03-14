@@ -23,11 +23,13 @@ export class ScoreService {
     score: number,
     comments: string,
     offerID?: string,
+    requerimentID?: string,
     type?: CollectionType,
     token?: string
   ) => {
     //CORREGIR EL ESCORE CON LOS NUEVOS MODELO
 
+    console.log(requerimentID);
     try {
       const data = await AuthServices.getDataBaseUser(uidUser);
       if (data.success === false) {
@@ -161,6 +163,7 @@ export class ScoreService {
                 userId: uidUser,
                 offerId: offerID,
               });
+              console.log(result);
               if (result) {
                 return {
                   success: false,
@@ -181,11 +184,15 @@ export class ScoreService {
                 );
               }
             } else {
+              //aqui esta el error corregirlo culminate postman liquidations
+
               const result = await ScoreProviderModel.findOne({
                 entityId: uidEntity,
                 userId: uidUser,
                 offerId: { $exists: false }, // Filtra registros donde offerUID NO exista
               });
+
+              console.log(result);
               if (!result) {
                 ScoreProviderModel.create({
                   userId: uidUser,
@@ -479,7 +486,7 @@ export class ScoreService {
             );
             typeService = "OfferService";
             if (resultService.matchedCount < 1) {
-              const resultLiquidation = await OfferServiceModel.updateOne(
+              const resultLiquidation = await OfferLiquidationModel.updateOne(
                 { uid: offerID }, // Filtro por ID
                 { $set: { cancelRated: true } } // Campos a actualizar
               );
