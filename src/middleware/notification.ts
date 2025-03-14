@@ -96,14 +96,14 @@ export const saveNotificationsAndBroadcastMiddleware = (
 
         notifications.forEach((notification) => {
           NotificationModel.create(notification)
-            // .then((res) => {
-            //   io.to(`notification`).emit("updateRoom", {
-            //     dataPack: { data: [res.toObject()] },
-            //     typeSocket: TypeSocket.CREATE,
-            //     key: res.uid,
-            //     userId: res.senderId,
-            //   });
-            // })
+            .then((res) => {
+              io.to(`TCNotifications`).emit("updateRoom", {
+                dataPack: { data: [res.toObject()] },
+                typeSocket: TypeSocket.CREATE,
+                key: res.senderId,
+                userId: res.receiverId,
+              });
+            })
             .catch((error) =>
               console.error("Error al guardar notificación broadcast:", error)
             );
