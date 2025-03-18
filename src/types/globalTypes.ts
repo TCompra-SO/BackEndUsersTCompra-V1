@@ -39,6 +39,7 @@ export enum OrderType {
 export enum TypeSocket {
   CREATE = 0,
   UPDATE = 1,
+  DELETE = 2,
 }
 
 export enum NotificationAction {
@@ -59,4 +60,10 @@ export enum RequirementType {
 export enum NotificationType {
   DIRECT = 0,
   BROADCAST = 1,
+}
+
+export enum CertificateRooms {
+  DOCUMENT = "docCert",
+  SENT = "sentCert",
+  RECEIVED = "receivedCert",
 }

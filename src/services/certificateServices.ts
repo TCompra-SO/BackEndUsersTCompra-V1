@@ -100,12 +100,13 @@ export class CertificateService {
             used: false,
           });
 
-          await newCertificate.save();
+          const record = await newCertificate.save();
 
           results.push({
             filePath,
             success: true,
             url: publicUrl,
+            data: record.toObject(),
           });
         } catch (error) {
           console.error(`Error al procesar el archivo ${filePath}:`, error);
@@ -113,6 +114,7 @@ export class CertificateService {
             filePath,
             success: false,
             error: `Error al procesar el archivo ${filePath}`,
+            data: null,
           });
         }
       }

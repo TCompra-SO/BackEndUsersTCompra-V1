@@ -6,11 +6,24 @@ import { CertificateService } from "../services/certificateServices";
 import { RequestExt } from "../interfaces/req-ext";
 
 import { JwtPayload } from "jsonwebtoken";
+import { io } from "../server";
+import { CertificateRooms, TypeSocket } from "../types/globalTypes";
+
+const uploadDir = path.join(__dirname, "../uploads");
+
+// Verificar si existe la carpeta
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 // Configuración para almacenar archivos en una carpeta temporal
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, "../uploads"));
+    // Manejar posible race condition
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     cb(null, `${Date.now()}-${file.originalname}`);
@@ -85,6 +98,18 @@ export const uploadCertificateController = async (
 
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
+      //  Enviar señal por todos los certificados
+      if (responseUser.results && responseUser.results.length)
+        io.to(`${CertificateRooms.DOCUMENT}${companyID}`).emit("updateRoom", {
+          dataPack: {
+            data: responseUser.results
+              .filter((res) => res.success && res.data)
+              .map((res) => res.data),
+          },
+          typeSocket: TypeSocket.CREATE,
+          key: 0,
+          userId: companyID,
+        });
     } else {
       res.status(responseUser.code).send(responseUser.error);
     }
@@ -393,6 +418,15 @@ export const deleteCertificateController = async (
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser.res);
+      io.to(`${CertificateRooms.DOCUMENT}${responseUser.data?.companyID}`).emit(
+        "updateRoom",
+        {
+          dataPack: [responseUser],
+          typeSocket: TypeSocket.DELETE,
+          key: responseUser.data?.uid,
+          userId: responseUser.data?.companyID,
+        }
+      );
     } else {
       res.status(responseUser.code).send(responseUser.error);
     }
