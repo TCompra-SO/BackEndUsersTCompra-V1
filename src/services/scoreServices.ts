@@ -23,13 +23,12 @@ export class ScoreService {
     score: number,
     comments: string,
     offerID?: string,
-    requerimentID?: string,
+    requerimentId?: string,
     type?: CollectionType,
     token?: string
   ) => {
     //CORREGIR EL ESCORE CON LOS NUEVOS MODELO
 
-    console.log(requerimentID);
     try {
       const data = await AuthServices.getDataBaseUser(uidUser);
       if (data.success === false) {
@@ -157,6 +156,7 @@ export class ScoreService {
             break;
           case "Provider":
             // entity.score_provider.push(newScore);
+            console.log(offerID);
             if (offerID && type) {
               const result = await ScoreProviderModel.findOne({
                 entityId: uidEntity,
@@ -212,7 +212,7 @@ export class ScoreService {
                   success: false,
                   code: 409,
                   error: {
-                    msg: "Ya haz calificado al Usuario",
+                    msg: "Ya haz calificado al Usuario n",
                   },
                 };
               }
@@ -601,7 +601,7 @@ export class ScoreService {
         newScore =
           (entity[0][fieldScore] * entity[0][fieldCount] + score) / newCount;
       }
-      console.log(newScore);
+
       // Actualizar la entidad o crearla si no existe
       await entityModel.updateOne(
         { uid: entityID },

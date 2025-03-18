@@ -39,6 +39,7 @@ const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET as string;
 export interface UserDocument extends Document {
   _id: string;
   email: string;
+  document: string;
   password: string;
   uid: string;
   name: string;
@@ -945,6 +946,7 @@ export class AuthServices {
           $project: {
             _id: 0,
             email: 1,
+            document: 1,
             password: 1,
             uid: 1,
             name: 1,
@@ -1028,12 +1030,14 @@ export class AuthServices {
           );
 
           // AQUI CONTINUAMOS ///////////////////////////////////////////
+
           const dataUser = [
             {
               CompanyID: result[0].uid,
               uid: result[0].auth_users.Uid,
               name: profileUser.data?.[0].name,
               email: result[0].auth_users.email,
+              document: profileUser.data?.[0].document,
               type: entity,
               typeID: result[0].auth_users.typeID,
               planID: result[0].planID,
@@ -1140,6 +1144,7 @@ export class AuthServices {
             uid: user[0].uid,
             name: user[0].name,
             email: user[0].email,
+            document: user[0].document,
             type: entity,
             typeID: user[0].typeID,
             planID: user[0].planID,
@@ -1783,6 +1788,7 @@ export class AuthServices {
               image: entityData.data.avatar,
               tenure: entityData.data.age,
               accessToken: entityData.data.accessToken,
+              refreshToken: entityData.data.refreshToken,
               customerCount,
               customerScore,
               sellerCount,
@@ -1808,6 +1814,7 @@ export class AuthServices {
               typeEntity: entityData.data.typeEntity,
               image: entityData.data.avatar,
               accessToken: entityData.data.accessToken,
+              refreshToken: entityData.data.refreshToken,
               customerCount,
               customerScore,
               sellerCount,
@@ -1904,6 +1911,7 @@ export class AuthServices {
           "auth_users.active_account": 1,
           "auth_users.Uid": 1,
           "auth_users.accessToken": 1,
+          "auth_users.refreshToken": 1,
         },
       },
     ];

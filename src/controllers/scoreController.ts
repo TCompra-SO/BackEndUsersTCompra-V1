@@ -19,6 +19,8 @@ const registerScoreController = async (req: RequestExt, res: Response) => {
   try {
     const { user } = req; // Extraemos `user` y `body` de la request
     //const { uid: userUID } = user as JwtPayload; // Obtenemos `uid` del usuario autenticado
+    console.log("Entre");
+    console.log(uidUser);
     const token = (await AuthServices.getDataBaseUser(uidUser)).data?.[0]
       .accessToken;
 
@@ -39,10 +41,7 @@ const registerScoreController = async (req: RequestExt, res: Response) => {
       //ANALIZAR ESTO
 
       if (offerId) {
-        const roomName = `room${
-          responseUser.res?.typeService +
-          responseUser.res?.offerData.data?.[0].user
-        }`;
+        const roomName = `roomScore${responseUser.res?.offerData.data?.[0].user}`;
 
         io.to(roomName).emit("updateRoom", {
           dataPack: responseUser.res?.offerData,

@@ -30,16 +30,27 @@ const generateRefreshAccessToken = async (
   refreshToken: string
 ) => {
   try {
-    console.log(refreshToken);
     const decoded = verify(accessToken, JWT_SECRET) as { uid: string };
-    console.log(decoded);
+    // console.log(decoded1.uid);
+
+    const userData = await AuthServices.getDataBaseUser(decoded.uid);
+
+    if (refreshToken !== userData.data?.[0].auth_users.regreshToken) {
+      return {
+        success: false,
+        code: 400,
+        error: {
+          msg: "El Refresh Token es invalido",
+        },
+      };
+    }
+    const decodedRefreshToken = verify(refreshToken, JWT_REFRESH_SECRET) as {
+      uid: string;
+    };
     const newAccessToken = sign({ uid: decoded.uid }, JWT_SECRET, {
       expiresIn: "2h",
     });
-    // console.log(decoded1.uid);
-    console.log(decoded.uid);
-    const userData = await AuthServices.getDataBaseUser(decoded.uid);
-    console.log(userData);
+
     const typeEntity = userData.data?.[0].typeEntity;
     console.log(typeEntity);
     if (userData.data?.[0].auth_users) {

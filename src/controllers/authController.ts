@@ -350,8 +350,8 @@ const RefreshTokenController = async (req: Request, res: Response) => {
 const refreshAccessToken = async (req: Request, res: Response) => {
   try {
     const { accessToken, refreshToken } = req.body;
-
-    if (!accessToken) {
+    console.log(accessToken);
+    if (!accessToken || !refreshToken) {
       return res
         .status(400)
         .json({ success: false, msg: "No hay refresh token" });
