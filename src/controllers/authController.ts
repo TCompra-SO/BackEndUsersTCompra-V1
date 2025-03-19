@@ -287,11 +287,13 @@ const LoginController = async (req: Request, res: Response) => {
       console.log(roomName);
       const expiresIn = decodeToken(accesToken) || 3600;
       console.log(expiresIn);
-      io.to(roomName).emit("updateToken", {
-        expiresIn,
-        accessToken: responseUser.res?.accessToken,
-      });
-      return res.status(responseUser.code).send(responseUser);
+      // io.to(roomName).emit("updateToken", {
+      //   expiresIn,
+      //   accessToken: responseUser.res?.accessToken,
+      // });
+      return res
+        .status(responseUser.code)
+        .send({ ...responseUser, res: { ...responseUser.res, expiresIn } });
     }
   } catch (error: any) {
     return res.status(500).send({
@@ -364,8 +366,14 @@ const refreshAccessToken = async (req: Request, res: Response) => {
         .status(401)
         .json({ success: false, msg: "Refresh token inválido o expirado" });
     }
-
-    return res.json({ success: true, accessToken: result.accessToken });
+    const expiresIn = result.accessToken
+      ? decodeToken(result.accessToken)
+      : 3600;
+    return res.json({
+      success: true,
+      accessToken: result.accessToken,
+      expiresIn,
+    });
   } catch (error) {
     console.error("Error en refreshAccessToken:", error);
     return res
