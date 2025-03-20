@@ -298,7 +298,7 @@ export const sendCertificationController = async (
         io.to(
           `${CertificateRooms.RECEIVED}${responseUser.res.data.receiverEntityID}`
         ).emit("updateRoom", {
-          dataPack: [responseUser.res.data],
+          dataPack: { data: [responseUser.res.data] },
           typeSocket: TypeSocket.CREATE,
           key: responseUser.res.uid,
           userId: responseUser.res.data.receiverEntityID,
@@ -306,7 +306,7 @@ export const sendCertificationController = async (
         io.to(
           `${CertificateRooms.SENT}${responseUser.res.data.sendByentityID}`
         ).emit("updateRoom", {
-          dataPack: [responseUser.res.data],
+          dataPack: { data: [responseUser.res.data] },
           typeSocket: TypeSocket.CREATE,
           key: responseUser.res.uid,
           userId: responseUser.res.data.sendByentityID,
@@ -367,7 +367,7 @@ export const updateCertifyStateController = async (
         io.to(
           `${CertificateRooms.RECEIVED}${responseUser.res.data.receiverEntityID}`
         ).emit("updateRoom", {
-          dataPack: [responseUser.res.data],
+          dataPack: { data: [responseUser.res.data] },
           typeSocket: TypeSocket.UPDATE,
           key: responseUser.res.data.uid,
           userId: responseUser.res.data.receiverEntityID,
@@ -375,7 +375,7 @@ export const updateCertifyStateController = async (
         io.to(
           `${CertificateRooms.SENT}${responseUser.res.data.sendByentityID}`
         ).emit("updateRoom", {
-          dataPack: [responseUser.res.data],
+          dataPack: { data: [responseUser.res.data] },
           typeSocket: TypeSocket.UPDATE,
           key: responseUser.res.data.uid,
           userId: responseUser.res.data.sendByentityID,
@@ -457,7 +457,7 @@ export const deleteCertificateController = async (
       io.to(`${CertificateRooms.DOCUMENT}${responseUser.data?.companyID}`).emit(
         "updateRoom",
         {
-          dataPack: [responseUser],
+          dataPack: { data: [responseUser.data] },
           typeSocket: TypeSocket.DELETE,
           key: responseUser.data?.uid,
           userId: responseUser.data?.companyID,

@@ -1,6 +1,9 @@
 import { Request, Response, response } from "express";
 import { subUserServices } from "../services/subUserServices";
 import { boolean } from "joi";
+import { subUserRoomName } from "../utils/Globals";
+import { io } from "../server";
+import { TypeSocket } from "../types/globalTypes";
 
 const registerSubUserController = async ({ body }: Request, res: Response) => {
   const { uid, dni, address, cityID, phone, email, typeID } = body;
@@ -75,6 +78,15 @@ const changeStatusController = async ({ body }: Request, res: Response) => {
     const responseUser = await subUserServices.changeStatus(uid, status);
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
+      if (responseUser.res?.uid)
+        io.to(`${subUserRoomName}${responseUser.res.uid}`).emit("updateRoom", {
+          dataPack: {
+            data: [{ field: "state", value: status }],
+          },
+          typeSocket: TypeSocket.UPDATE_FIELD,
+          key: uid,
+          userId: responseUser.res.uid,
+        });
     } else {
       res.status(responseUser.code).send(responseUser.error);
     }

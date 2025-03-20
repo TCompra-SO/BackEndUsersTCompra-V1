@@ -468,6 +468,7 @@ export class subUserServices {
         code: 200,
         res: {
           msg: "Estado del subusuario actualizado correctamente",
+          uid: updatedCompany.uid,
         },
       };
     } catch (error) {

@@ -40,6 +40,7 @@ export enum TypeSocket {
   CREATE = 0,
   UPDATE = 1,
   DELETE = 2,
+  UPDATE_FIELD = 4,
 }
 
 export enum NotificationAction {
