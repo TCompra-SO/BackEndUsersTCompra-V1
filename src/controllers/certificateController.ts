@@ -294,6 +294,24 @@ export const sendCertificationController = async (
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
+      if (responseUser.res?.data) {
+        io.to(
+          `${CertificateRooms.RECEIVED}${responseUser.res.data.receiverEntityID}`
+        ).emit("updateRoom", {
+          dataPack: [responseUser.res.data],
+          typeSocket: TypeSocket.CREATE,
+          key: responseUser.res.uid,
+          userId: responseUser.res.data.receiverEntityID,
+        });
+        io.to(
+          `${CertificateRooms.SENT}${responseUser.res.data.sendByentityID}`
+        ).emit("updateRoom", {
+          dataPack: [responseUser.res.data],
+          typeSocket: TypeSocket.CREATE,
+          key: responseUser.res.uid,
+          userId: responseUser.res.data.sendByentityID,
+        });
+      }
     } else {
       res.status(responseUser.code).send(responseUser.error);
     }
@@ -345,6 +363,24 @@ export const updateCertifyStateController = async (
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser.res);
+      if (responseUser.res?.data) {
+        io.to(
+          `${CertificateRooms.RECEIVED}${responseUser.res.data.receiverEntityID}`
+        ).emit("updateRoom", {
+          dataPack: [responseUser.res.data],
+          typeSocket: TypeSocket.UPDATE,
+          key: responseUser.res.data.uid,
+          userId: responseUser.res.data.receiverEntityID,
+        });
+        io.to(
+          `${CertificateRooms.SENT}${responseUser.res.data.sendByentityID}`
+        ).emit("updateRoom", {
+          dataPack: [responseUser.res.data],
+          typeSocket: TypeSocket.UPDATE,
+          key: responseUser.res.data.uid,
+          userId: responseUser.res.data.sendByentityID,
+        });
+      }
     } else {
       res.status(responseUser.code).send(responseUser.error);
     }
@@ -449,6 +485,24 @@ export const resendCertifyController = async (req: Request, res: Response) => {
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser.res);
+      if (responseUser.res?.data) {
+        io.to(
+          `${CertificateRooms.RECEIVED}${responseUser.res.data.receiverEntityID}`
+        ).emit("updateRoom", {
+          dataPack: [responseUser.res.data],
+          typeSocket: TypeSocket.UPDATE,
+          key: responseUser.res.data.uid,
+          userId: responseUser.res.data.receiverEntityID,
+        });
+        io.to(
+          `${CertificateRooms.SENT}${responseUser.res.data.sendByentityID}`
+        ).emit("updateRoom", {
+          dataPack: [responseUser.res?.data],
+          typeSocket: TypeSocket.UPDATE,
+          key: responseUser.res.data.uid,
+          userId: responseUser.res.data.sendByentityID,
+        });
+      }
     } else {
       res.status(responseUser.code).send(responseUser.error);
     }
