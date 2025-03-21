@@ -19,6 +19,19 @@ const registerSubUserController = async ({ body }: Request, res: Response) => {
     );
     if (responseUser && responseUser.success) {
       res.status(responseUser.code).send(responseUser);
+
+      if (responseUser.res?.uid) {
+        const subUser = await subUserServices.getProfileSubUser(
+          responseUser.res.uid
+        );
+        if (subUser.success)
+          io.to(`${subUserRoomName}${uid}`).emit("updateRoom", {
+            dataPack: subUser,
+            typeSocket: TypeSocket.CREATE,
+            key: responseUser.res.uid,
+            userId: uid,
+          });
+      }
     } else if (responseUser) {
       res.status(responseUser.code).send(responseUser.error);
     } else {

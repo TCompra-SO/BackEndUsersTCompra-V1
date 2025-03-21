@@ -162,6 +162,7 @@ export class subUserServices {
                   success: true,
                   code: 200,
                   message: "Subusuario agregado exitosamente.",
+                  res: { uid: subUserUID },
                 };
               } else {
                 return {
@@ -709,7 +710,7 @@ export class subUserServices {
             name: "$auth_users.name",
             document: "$auth_users.document",
             typeEntity: "$auth_users.typeEntity",
-            userID: "$auth_users.Uid",
+            uid: "$auth_users.Uid",
             typeID: "$auth_users.typeID",
             email: "$auth_users.email",
             active_account: "$auth_users.active_account",
