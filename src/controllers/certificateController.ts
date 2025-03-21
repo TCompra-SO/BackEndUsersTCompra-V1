@@ -96,13 +96,15 @@ export const uploadCertificateController = async (
       });
     }
 
-    if (responseUser.success) {
-      res.status(responseUser.code).send(responseUser);
+    if (responseUser.success && responseUser.results) {
+      const { results, ...rest } = responseUser;
+      res.status(responseUser.code).send(rest);
+
       //  Enviar señal por todos los certificados
-      if (responseUser.results && responseUser.results.length)
+      if (results && results.length)
         io.to(`${CertificateRooms.DOCUMENT}${companyID}`).emit("updateRoom", {
           dataPack: {
-            data: responseUser.results
+            data: results
               .filter((res) => res.success && res.data)
               .map((res) => res.data),
           },
@@ -294,23 +296,27 @@ export const sendCertificationController = async (
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
-      if (responseUser.res?.data) {
-        io.to(
-          `${CertificateRooms.RECEIVED}${responseUser.res.data.receiverEntityID}`
-        ).emit("updateRoom", {
-          dataPack: { data: [responseUser.res.data] },
-          typeSocket: TypeSocket.CREATE,
-          key: responseUser.res.uid,
-          userId: responseUser.res.data.receiverEntityID,
-        });
-        io.to(
-          `${CertificateRooms.SENT}${responseUser.res.data.sendByentityID}`
-        ).emit("updateRoom", {
-          dataPack: { data: [responseUser.res.data] },
-          typeSocket: TypeSocket.CREATE,
-          key: responseUser.res.uid,
-          userId: responseUser.res.data.sendByentityID,
-        });
+      if (responseUser.res?.uid) {
+        const certificateRequest =
+          await CertificateService.getCertificateRequest(responseUser.res?.uid);
+        if (
+          certificateRequest.success &&
+          certificateRequest.data &&
+          certificateRequest.data.length
+        ) {
+          io.to(`${CertificateRooms.RECEIVED}${companyID}`).emit("updateRoom", {
+            dataPack: certificateRequest,
+            typeSocket: TypeSocket.CREATE,
+            key: responseUser.res.uid,
+            userId: companyID,
+          });
+          io.to(`${CertificateRooms.SENT}${userID}`).emit("updateRoom", {
+            dataPack: certificateRequest,
+            typeSocket: TypeSocket.CREATE,
+            key: responseUser.res.uid,
+            userId: userID,
+          });
+        }
       }
     } else {
       res.status(responseUser.code).send(responseUser.error);
@@ -361,25 +367,36 @@ export const updateCertifyStateController = async (
       state,
       note
     );
-    if (responseUser.success) {
-      res.status(responseUser.code).send(responseUser.res);
-      if (responseUser.res?.data) {
-        io.to(
-          `${CertificateRooms.RECEIVED}${responseUser.res.data.receiverEntityID}`
-        ).emit("updateRoom", {
-          dataPack: { data: [responseUser.res.data] },
-          typeSocket: TypeSocket.UPDATE,
-          key: responseUser.res.data.uid,
-          userId: responseUser.res.data.receiverEntityID,
-        });
-        io.to(
-          `${CertificateRooms.SENT}${responseUser.res.data.sendByentityID}`
-        ).emit("updateRoom", {
-          dataPack: { data: [responseUser.res.data] },
-          typeSocket: TypeSocket.UPDATE,
-          key: responseUser.res.data.uid,
-          userId: responseUser.res.data.sendByentityID,
-        });
+    if (responseUser.success && responseUser.res) {
+      const { data, ...rest } = responseUser.res;
+      res.status(responseUser.code).send(rest);
+
+      const certificateRequest = await CertificateService.getCertificateRequest(
+        certificateID
+      );
+      if (
+        certificateRequest.success &&
+        certificateRequest.data &&
+        certificateRequest.data.length
+      ) {
+        io.to(`${CertificateRooms.RECEIVED}${data.receiverEntityID}`).emit(
+          "updateRoom",
+          {
+            dataPack: certificateRequest,
+            typeSocket: TypeSocket.UPDATE,
+            key: data.uid,
+            userId: data.receiverEntityID,
+          }
+        );
+        io.to(`${CertificateRooms.SENT}${data.sendByentityID}`).emit(
+          "updateRoom",
+          {
+            dataPack: certificateRequest,
+            typeSocket: TypeSocket.UPDATE,
+            key: data.uid,
+            userId: data.sendByentityID,
+          }
+        );
       }
     } else {
       res.status(responseUser.code).send(responseUser.error);
@@ -454,15 +471,15 @@ export const deleteCertificateController = async (
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser.res);
-      io.to(`${CertificateRooms.DOCUMENT}${responseUser.data?.companyID}`).emit(
-        "updateRoom",
-        {
+      if (responseUser.data)
+        io.to(
+          `${CertificateRooms.DOCUMENT}${responseUser.data.companyID}`
+        ).emit("updateRoom", {
           dataPack: { data: [responseUser.data] },
           typeSocket: TypeSocket.DELETE,
-          key: responseUser.data?.uid,
-          userId: responseUser.data?.companyID,
-        }
-      );
+          key: responseUser.data.uid,
+          userId: responseUser.data.companyID,
+        });
     } else {
       res.status(responseUser.code).send(responseUser.error);
     }
@@ -477,31 +494,42 @@ export const deleteCertificateController = async (
 
 export const resendCertifyController = async (req: Request, res: Response) => {
   const { certificateRequestID, certificateIDs } = req.body;
-  console.log(certificateIDs);
   try {
     const responseUser = await CertificateService.resendCertify(
       certificateRequestID,
       certificateIDs
     );
-    if (responseUser.success) {
-      res.status(responseUser.code).send(responseUser.res);
-      if (responseUser.res?.data) {
-        io.to(
-          `${CertificateRooms.RECEIVED}${responseUser.res.data.receiverEntityID}`
-        ).emit("updateRoom", {
-          dataPack: [responseUser.res.data],
-          typeSocket: TypeSocket.UPDATE,
-          key: responseUser.res.data.uid,
-          userId: responseUser.res.data.receiverEntityID,
-        });
-        io.to(
-          `${CertificateRooms.SENT}${responseUser.res.data.sendByentityID}`
-        ).emit("updateRoom", {
-          dataPack: [responseUser.res?.data],
-          typeSocket: TypeSocket.UPDATE,
-          key: responseUser.res.data.uid,
-          userId: responseUser.res.data.sendByentityID,
-        });
+    if (responseUser.success && responseUser.res) {
+      const { data, ...rest } = responseUser.res;
+      res.status(responseUser.code).send(rest);
+
+      if (data) {
+        const certificateRequest =
+          await CertificateService.getCertificateRequest(certificateRequestID);
+        if (
+          certificateRequest.success &&
+          certificateRequest.data &&
+          certificateRequest.data.length
+        ) {
+          io.to(`${CertificateRooms.RECEIVED}${data.receiverEntityID}`).emit(
+            "updateRoom",
+            {
+              dataPack: certificateRequest,
+              typeSocket: TypeSocket.UPDATE,
+              key: data.uid,
+              userId: data.receiverEntityID,
+            }
+          );
+          io.to(`${CertificateRooms.SENT}${data.sendByentityID}`).emit(
+            "updateRoom",
+            {
+              dataPack: certificateRequest,
+              typeSocket: TypeSocket.UPDATE,
+              key: data.uid,
+              userId: data.sendByentityID,
+            }
+          );
+        }
       }
     } else {
       res.status(responseUser.code).send(responseUser.error);

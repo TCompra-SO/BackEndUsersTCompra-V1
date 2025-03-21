@@ -296,7 +296,6 @@ export class CertificateService {
         res: {
           uid: result.data?.uid,
           msg: "Solicitud enviada con éxito",
-          data: result.data,
         },
       };
       // else return result
