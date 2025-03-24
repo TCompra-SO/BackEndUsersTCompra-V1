@@ -94,7 +94,7 @@ const changeStatusController = async ({ body }: Request, res: Response) => {
       if (responseUser.res?.uid)
         io.to(`${subUserRoomName}${responseUser.res.uid}`).emit("updateRoom", {
           dataPack: {
-            data: [{ field: "state", value: status }],
+            data: [{ field: "active_account", value: status }],
           },
           typeSocket: TypeSocket.UPDATE_FIELD,
           key: uid,
@@ -118,6 +118,18 @@ const changeRoleController = async ({ body }: Request, res: Response) => {
     const responseUser = await subUserServices.changeRole(uid, typeID);
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
+      if (responseUser.res?.companyUid)
+        io.to(`${subUserRoomName}${responseUser.res.companyUid}`).emit(
+          "updateRoom",
+          {
+            dataPack: {
+              data: [{ field: "typeID", value: typeID }],
+            },
+            typeSocket: TypeSocket.UPDATE_FIELD,
+            key: uid,
+            userId: responseUser.res.companyUid,
+          }
+        );
     } else {
       res.status(responseUser.code).send(responseUser.error);
     }
