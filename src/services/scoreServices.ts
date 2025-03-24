@@ -2,7 +2,7 @@ import { configDotenv } from "dotenv";
 import CompanyModel from "../models/companyModel";
 import UserModel from "../models/userModel";
 import { AuthServices } from "./authServices";
-import { error } from "console";
+import { Console, error } from "console";
 import { ScoreI } from "../interfaces/score.interface";
 import { array } from "joi";
 import mongoose, { Mongoose } from "mongoose";
@@ -96,12 +96,14 @@ export class ScoreService {
         switch (typeScore) {
           case "Client":
             // entity.score_client.push(newScore);
+
             if (offerID && type) {
               const result = await ScoreClientModel.findOne({
                 entityId: uidEntity,
-                userId: uidUser,
+                userId: userdata.uid,
                 offerId: offerID,
               });
+
               if (result) {
                 return {
                   success: false,
@@ -113,7 +115,9 @@ export class ScoreService {
               }
 
               scoreData = new ScoreClientModel(newScore);
+
               let savedScore = await scoreData.save();
+              console.log("Estamos");
               if (savedScore) {
                 await this.calculateScore(
                   entity.uid,
@@ -125,13 +129,13 @@ export class ScoreService {
             } else {
               const result = await ScoreClientModel.findOne({
                 entityId: uidEntity,
-                userId: uidUser,
+                userId: userdata.uid,
                 offerId: { $exists: false }, // Filtra registros donde offerUID NO exista
               });
 
               if (!result) {
                 ScoreClientModel.create({
-                  userId: uidUser,
+                  userId: userdata.uid,
                   entityId: uidEntity,
                   score: score,
                   comments: comments,
@@ -156,14 +160,14 @@ export class ScoreService {
             break;
           case "Provider":
             // entity.score_provider.push(newScore);
-            console.log(offerID);
+
             if (offerID && type) {
               const result = await ScoreProviderModel.findOne({
                 entityId: uidEntity,
-                userId: uidUser,
+                userId: userdata.uid,
                 offerId: offerID,
               });
-              console.log(result);
+
               if (result) {
                 return {
                   success: false,
@@ -188,14 +192,13 @@ export class ScoreService {
 
               const result = await ScoreProviderModel.findOne({
                 entityId: uidEntity,
-                userId: uidUser,
+                userId: userdata.uid,
                 offerId: { $exists: false }, // Filtra registros donde offerUID NO exista
               });
 
-              console.log(result);
               if (!result) {
                 ScoreProviderModel.create({
-                  userId: uidUser,
+                  userId: userdata.uid,
                   entityId: uidEntity,
                   score: score,
                   comments: comments,
@@ -212,7 +215,7 @@ export class ScoreService {
                   success: false,
                   code: 409,
                   error: {
-                    msg: "Ya haz calificado al Usuario n",
+                    msg: "Ya haz calificado al Usuario",
                   },
                 };
               }
@@ -229,6 +232,7 @@ export class ScoreService {
         }
         // await entity.save();
         let typeService;
+
         if (offerID && type) {
           const OfferProductModel =
             mongoose.connection.collection("offersproducts");
@@ -256,6 +260,7 @@ export class ScoreService {
             }
           }
         }
+
         let API_POINT;
         let endpoint;
         let offerData;
@@ -281,6 +286,7 @@ export class ScoreService {
             offerData = await axios.get(`${API_POINT}${endpoint}`, {
               headers: {
                 Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
               },
             });
           } catch (error) {
@@ -340,7 +346,7 @@ export class ScoreService {
             if (offerID && type) {
               const result = await ScoreClientModel.findOne({
                 entityId: uidEntity,
-                userId: uidUser,
+                userId: userdata.uid,
                 offerId: offerID,
               });
               if (result) {
@@ -365,13 +371,13 @@ export class ScoreService {
             } else {
               const result = await ScoreClientModel.findOne({
                 entityId: uidEntity,
-                userId: uidUser,
+                userId: userdata.uid,
                 offerId: { $exists: false }, // Filtra registros donde offerUID NO exista
               });
 
               if (!result) {
                 ScoreClientModel.create({
-                  userId: uidUser,
+                  userId: userdata.uid,
                   entityId: uidEntity,
                   score: score,
                   comments: comments,
@@ -400,7 +406,7 @@ export class ScoreService {
             if (offerID && type) {
               const result = await ScoreProviderModel.findOne({
                 entityId: uidEntity,
-                userId: uidUser,
+                userId: userdata.uid,
                 offerId: offerID,
               });
               if (result) {
@@ -427,12 +433,12 @@ export class ScoreService {
             } else {
               const result = await ScoreProviderModel.findOne({
                 entityId: uidEntity,
-                userId: uidUser,
+                userId: userdata.uid,
                 offerId: { $exists: false }, // Filtra registros donde offerUID NO exista
               });
               if (!result) {
                 ScoreProviderModel.create({
-                  userId: uidUser,
+                  userId: userdata.uid,
                   entityId: uidEntity,
                   score: score,
                   comments: comments,
@@ -520,6 +526,7 @@ export class ScoreService {
             offerData = await axios.get(`${API_POINT}${endpoint}`, {
               headers: {
                 Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
               },
             });
           } catch (error) {
@@ -603,7 +610,7 @@ export class ScoreService {
       }
 
       // Actualizar la entidad o crearla si no existe
-      await entityModel.updateOne(
+      const res = await entityModel.updateOne(
         { uid: entityID },
         {
           $set: { [fieldScore]: newScore, [fieldCount]: newCount },

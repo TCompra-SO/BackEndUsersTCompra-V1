@@ -19,10 +19,15 @@ const registerScoreController = async (req: RequestExt, res: Response) => {
   try {
     const { user } = req; // Extraemos `user` y `body` de la request
     //const { uid: userUID } = user as JwtPayload; // Obtenemos `uid` del usuario autenticado
-    console.log("Entre");
-    console.log(uidUser);
-    const token = (await AuthServices.getDataBaseUser(uidUser)).data?.[0]
-      .accessToken;
+
+    const datatoken = await AuthServices.getDataBaseUser(uidUser);
+    //const dataus = await AuthServices.getDataBaseUser(uidUser);
+    let token;
+    if (datatoken.data?.[0].auth_users) {
+      token = datatoken.data?.[0].auth_users.accessToken;
+    } else {
+      token = datatoken.data?.[0].accessToken;
+    }
 
     const responseUser = await ScoreService.registerScore(
       typeScore,
@@ -51,7 +56,7 @@ const registerScoreController = async (req: RequestExt, res: Response) => {
         });
       }
     } else {
-      res.status(responseUser.code).send(responseUser.error);
+      res.status(responseUser.code).send(responseUser);
     }
   } catch (error) {
     console.error("Error en registerScoreController", error);
