@@ -131,6 +131,7 @@ export class AuthServices {
     try {
       if (dni) {
         const apiUrl = `https://api.apis.net.pe/v2/reniec/dni?numero=${dni}`;
+
         const response = await axios.get(apiUrl, config);
 
         // Verifica si los datos existen y están correctos
@@ -1864,6 +1865,7 @@ export class AuthServices {
             },
           };
       }
+
       return {
         success: true,
         code: 200,
