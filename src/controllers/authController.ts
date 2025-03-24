@@ -282,15 +282,9 @@ const LoginController = async (req: Request, res: Response) => {
     if (!responseUser.success) {
       return res.status(responseUser.code).send(responseUser.error);
     } else {
-      const roomName = "roomLogin" + responseUser.res?.dataUser[0].uid;
+      // const roomName = "roomLogin" + responseUser.res?.dataUser[0].uid;
       const accesToken = responseUser.res?.accessToken || "";
-      console.log(roomName);
       const expiresIn = decodeToken(accesToken) || 3600;
-      console.log(expiresIn);
-      // io.to(roomName).emit("updateToken", {
-      //   expiresIn,
-      //   accessToken: responseUser.res?.accessToken,
-      // });
       return res
         .status(responseUser.code)
         .send({ ...responseUser, res: { ...responseUser.res, expiresIn } });

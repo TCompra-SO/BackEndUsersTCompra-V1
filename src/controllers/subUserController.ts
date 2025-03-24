@@ -1,7 +1,7 @@
 import { Request, Response, response } from "express";
 import { subUserServices } from "../services/subUserServices";
 import { boolean } from "joi";
-import { subUserRoomName } from "../utils/Globals";
+import { subUserRoomName, userRoomName } from "../utils/Globals";
 import { io } from "../server";
 import { TypeSocket } from "../types/globalTypes";
 
@@ -100,6 +100,8 @@ const changeStatusController = async ({ body }: Request, res: Response) => {
           key: uid,
           userId: responseUser.res.uid,
         });
+      // Para cerrar sesión en frontend
+      if (!status) io.to(`${userRoomName}${uid}`).emit("suspend");
     } else {
       res.status(responseUser.code).send(responseUser.error);
     }
