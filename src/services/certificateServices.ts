@@ -100,12 +100,13 @@ export class CertificateService {
             used: false,
           });
 
-          await newCertificate.save();
+          const record = await newCertificate.save();
 
           results.push({
             filePath,
             success: true,
             url: publicUrl,
+            data: record.toObject(),
           });
         } catch (error) {
           console.error(`Error al procesar el archivo ${filePath}:`, error);
@@ -113,6 +114,7 @@ export class CertificateService {
             filePath,
             success: false,
             error: `Error al procesar el archivo ${filePath}`,
+            data: null,
           });
         }
       }
@@ -287,6 +289,7 @@ export class CertificateService {
         sendByentityID: userID,
       };
       const result = await this.createCertificateRequest(newRequestData);
+      // if (result.success)
       return {
         success: true,
         code: 200,
@@ -295,6 +298,7 @@ export class CertificateService {
           msg: "Solicitud enviada con éxito",
         },
       };
+      // else return result
     } catch (error) {
       console.error("Error inesperado al obtener los certificados:", error);
       return {
@@ -513,12 +517,13 @@ export class CertificateService {
         uid: certificateRequestID,
       });
 
-      const updateState = await CertificateRequestModel.updateOne(
+      const updateState = await CertificateRequestModel.findOneAndUpdate(
         { uid: certificateRequestID },
-        { $set: { state: state, note: note } }
+        { $set: { state: state, note: note } },
+        { new: true }
       );
 
-      if (updateState.modifiedCount > 0) {
+      if (updateState) {
         if (
           certificationData?.state !== CertificationState.CERTIFIED &&
           state === CertificationState.CERTIFIED
@@ -564,6 +569,7 @@ export class CertificateService {
           code: 200,
           res: {
             msg: "El estado ha sido actualizado",
+            data: updateState,
           },
         };
       } else {
@@ -1641,17 +1647,18 @@ export class CertificateService {
 
           // Guardar solo la URL subida
         }
-        const updatedRequest = CertificateRequestModel.updateOne(
+        const updatedRequest = await CertificateRequestModel.findOneAndUpdate(
           { uid: certificateRequesID }, // Filtrar por el 'uid' del documento
           {
             $set: {
               state: CertificationState.RESENT, // Nuevo estado
               certificates: resultCerts, // Nuevo array de certificados
             },
-          }
+          },
+          { new: true }
         );
 
-        if ((await updatedRequest).modifiedCount === 0) {
+        if (!updatedRequest) {
           return {
             success: false,
             code: 404,
@@ -1660,15 +1667,24 @@ export class CertificateService {
             },
           };
         }
-      }
 
-      return {
-        success: true,
-        code: 200,
-        res: {
-          msg: "la solicitud de reenvio se ha realizado con éxito",
-        },
-      };
+        return {
+          success: true,
+          code: 200,
+          res: {
+            msg: "la solicitud de reenvio se ha realizado con éxito",
+            data: updatedRequest,
+          },
+        };
+      } else {
+        return {
+          success: false,
+          code: 404,
+          error: {
+            msg: "No se realizó ninguna actualización",
+          },
+        };
+      }
     } catch (error) {
       console.log(error);
       return {

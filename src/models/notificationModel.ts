@@ -49,6 +49,10 @@ const NotificationSchema: Schema = new Schema<NotificationI>({
     type: String,
     required: false,
   },
+  extraTargetType: {
+    type: Number,
+    required: false,
+  },
   targetType: {
     type: Number,
     required: true,
