@@ -7,6 +7,7 @@ import {
   changeRoleController,
   getSubUsersByEntity,
   searchSubUserController,
+  sendCounterUpdateController,
 } from "../controllers/subUserController";
 import { checkJwt } from "../middleware/session";
 
@@ -26,6 +27,7 @@ export class SubUserRouter {
       "/getSubUsersByEntity/:uid/:page/:limit",
       getSubUsersByEntity
     );
+    this.router.post("/sendCounterUpdate", sendCounterUpdateController);
   }
 
   static getRouter(): Router {

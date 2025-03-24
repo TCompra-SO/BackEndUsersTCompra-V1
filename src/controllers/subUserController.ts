@@ -94,7 +94,7 @@ const changeStatusController = async ({ body }: Request, res: Response) => {
       if (responseUser.res?.uid)
         io.to(`${subUserRoomName}${responseUser.res.uid}`).emit("updateRoom", {
           dataPack: {
-            data: [{ field: "active_account", value: status }],
+            data: [{ active_account: status }],
           },
           typeSocket: TypeSocket.UPDATE_FIELD,
           key: uid,
@@ -123,7 +123,7 @@ const changeRoleController = async ({ body }: Request, res: Response) => {
           "updateRoom",
           {
             dataPack: {
-              data: [{ field: "typeID", value: typeID }],
+              data: [{ typeID: typeID }],
             },
             typeSocket: TypeSocket.UPDATE_FIELD,
             key: uid,
@@ -200,6 +200,30 @@ const searchSubUserController = async (req: Request, res: Response) => {
   }
 };
 
+const sendCounterUpdateController = async (req: Request, res: Response) => {
+  try {
+    for (const entity of Object.keys(req.body)) {
+      for (const subUser of Object.keys(req.body[entity])) {
+        io.to(`${subUserRoomName}${entity}`).emit("updateRoom", {
+          dataPack: {
+            data: [req.body[entity][subUser]],
+          },
+          typeSocket: TypeSocket.UPDATE_FIELD,
+          key: subUser,
+          userId: entity,
+        });
+      }
+    }
+    res.status(200).send();
+  } catch (error) {
+    console.error("Error en sendCounterUpdateController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
 export {
   registerSubUserController,
   getSubUserController,
@@ -208,4 +232,5 @@ export {
   changeRoleController,
   getSubUsersByEntity,
   searchSubUserController,
+  sendCounterUpdateController,
 };
