@@ -285,11 +285,15 @@ const LoginController = async (req: Request, res: Response) => {
     } else {
       // const roomName = "roomLogin" + responseUser.res?.dataUser[0].uid;
       const accesToken = responseUser.res?.accessToken || "";
-      const expiresIn =
+      const accessExpiresIn =
         decodeToken(accesToken) || alternativeAccessTokenExpiresIn;
-      return res
-        .status(responseUser.code)
-        .send({ ...responseUser, res: { ...responseUser.res, expiresIn } });
+      const refreshToken = responseUser.res?.refreshToken || "";
+      const refreshExpiresIn =
+        decodeToken(refreshToken) || alternativeAccessTokenExpiresIn;
+      return res.status(responseUser.code).send({
+        ...responseUser,
+        res: { ...responseUser.res, accessExpiresIn, refreshExpiresIn },
+      });
     }
   } catch (error: any) {
     return res.status(500).send({
@@ -335,7 +339,10 @@ const RefreshTokenController = async (req: Request, res: Response) => {
 
     return res.status(200).send({
       success: true,
-      accessToken: newAccessToken,
+      accessToken: newAccessToken.accessToken,
+      accessExpiresIn: newAccessToken.accessExpiresIn,
+      refreshToken: newAccessToken.refreshToken,
+      refreshExpiresIn: newAccessToken.refreshExpiresIn,
     });
   } catch (error) {
     return res.status(500).send({
@@ -362,9 +369,11 @@ const refreshAccessToken = async (req: Request, res: Response) => {
         .status(401)
         .json({ success: false, msg: "Refresh token inválido o expirado" });
     }
+
     const expiresIn = result.accessToken
       ? decodeToken(result.accessToken)
       : alternativeAccessTokenExpiresIn;
+
     return res.json({
       success: true,
       accessToken: result.accessToken,

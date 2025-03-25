@@ -18,7 +18,12 @@ const generateToken = async (uid: string) => {
     expiresIn: refreshTokenExpiresIn,
   });
 
-  return { accessToken, refreshToken };
+  return {
+    accessToken,
+    accessExpiresIn: accessTokenExpiresIn,
+    refreshToken,
+    refreshExpiresIn: refreshTokenExpiresIn,
+  };
 };
 
 const verifyToken = async (token: string) => {
@@ -74,7 +79,10 @@ const generateRefreshAccessToken = async (
         { $set: { accessToken: newAccessToken } } // Actualizar accessToken
       );
     }
-    return { success: true, accessToken: newAccessToken };
+    return {
+      success: true,
+      accessToken: newAccessToken,
+    };
   } catch (error) {
     console.error("Error al generar nuevo access token:", error);
     return { success: false, msg: "Refresh Token inválido" };
