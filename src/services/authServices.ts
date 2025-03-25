@@ -33,6 +33,7 @@ import { ResourceCountersI } from "../interfaces/resourceCounters";
 import { Response } from "express";
 import { setToken } from "../utils/authStore";
 import UserModel from "../models/userModel";
+import { accessTokenExpiresIn, refreshTokenExpiresIn } from "../utils/Globals";
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET as string;
@@ -1021,13 +1022,13 @@ export class AuthServices {
               //  exp: this.ExpirationDate(12),
             },
             JWT_SECRET,
-            { expiresIn: "2h" }
+            { expiresIn: accessTokenExpiresIn }
           );
 
           const refreshToken = jwt.sign(
             { uid: result[0].auth_users.Uid },
             JWT_REFRESH_SECRET,
-            { expiresIn: "7d" }
+            { expiresIn: refreshTokenExpiresIn }
           );
 
           // AQUI CONTINUAMOS ///////////////////////////////////////////
@@ -1131,13 +1132,13 @@ export class AuthServices {
             //    exp: this.ExpirationDate(12),
           },
           JWT_SECRET,
-          { expiresIn: "2h" }
+          { expiresIn: accessTokenExpiresIn }
         );
 
         const refreshToken = jwt.sign(
           { uid: user[0].uid },
           JWT_REFRESH_SECRET,
-          { expiresIn: "7d" }
+          { expiresIn: refreshTokenExpiresIn }
         );
 
         const dataUser = [

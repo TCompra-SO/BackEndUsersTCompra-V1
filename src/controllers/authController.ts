@@ -10,6 +10,7 @@ import {
   verifyToken,
 } from "../utils/jwt.handle";
 import { io } from "../server"; // Importamos el objeto `io` de Socket.IO
+import { alternativeAccessTokenExpiresIn } from "../utils/Globals";
 
 const getNameController = async (req: Request, res: Response) => {
   // Obtener el parámetro de la consulta
@@ -284,7 +285,8 @@ const LoginController = async (req: Request, res: Response) => {
     } else {
       // const roomName = "roomLogin" + responseUser.res?.dataUser[0].uid;
       const accesToken = responseUser.res?.accessToken || "";
-      const expiresIn = decodeToken(accesToken) || 3600;
+      const expiresIn =
+        decodeToken(accesToken) || alternativeAccessTokenExpiresIn;
       return res
         .status(responseUser.code)
         .send({ ...responseUser, res: { ...responseUser.res, expiresIn } });
@@ -362,7 +364,7 @@ const refreshAccessToken = async (req: Request, res: Response) => {
     }
     const expiresIn = result.accessToken
       ? decodeToken(result.accessToken)
-      : 3600;
+      : alternativeAccessTokenExpiresIn;
     return res.json({
       success: true,
       accessToken: result.accessToken,

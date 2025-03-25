@@ -5,13 +5,18 @@ import CompanyModel from "../models/companyModel";
 import { pipeline } from "stream";
 import { TypeEntity } from "../types/globalTypes";
 import UserModel from "../models/userModel";
+import { accessTokenExpiresIn, refreshTokenExpiresIn } from "./Globals";
 
 const JWT_SECRET = process.env.JWT_SECRET || "token.01010101";
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "refresh.01010101";
 
 const generateToken = async (uid: string) => {
-  const accessToken = sign({ uid }, JWT_SECRET, { expiresIn: "2h" });
-  const refreshToken = sign({ uid }, JWT_REFRESH_SECRET, { expiresIn: "7d" });
+  const accessToken = sign({ uid }, JWT_SECRET, {
+    expiresIn: accessTokenExpiresIn,
+  });
+  const refreshToken = sign({ uid }, JWT_REFRESH_SECRET, {
+    expiresIn: refreshTokenExpiresIn,
+  });
 
   return { accessToken, refreshToken };
 };
@@ -48,7 +53,7 @@ const generateRefreshAccessToken = async (
       uid: string;
     };
     const newAccessToken = sign({ uid: decoded.uid }, JWT_SECRET, {
-      expiresIn: "2h",
+      expiresIn: accessTokenExpiresIn,
     });
 
     const typeEntity = userData.data?.[0].typeEntity;
