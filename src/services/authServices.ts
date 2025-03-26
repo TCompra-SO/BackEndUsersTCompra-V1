@@ -1707,6 +1707,7 @@ export class AuthServices {
             customerScore: { $ifNull: ["$customerScore", 0] },
             sellerCount: { $ifNull: ["$sellerCount", 0] },
             sellerScore: { $ifNull: ["$sellerScore", 0] }, // Agregando sellerScore
+            categories: { $ifNull: ["$categories", []] },
           },
         },
         {
@@ -1795,6 +1796,7 @@ export class AuthServices {
               customerScore,
               sellerCount,
               sellerScore,
+              categories: entityData.data.categories,
             },
           ];
           break;
@@ -1821,6 +1823,7 @@ export class AuthServices {
               customerScore,
               sellerCount,
               sellerScore,
+              categories: entityData.data.categories,
             },
           ];
           break;
@@ -1832,7 +1835,9 @@ export class AuthServices {
           authUsers.document = dataProfile?.data?.[0].document ?? "";
           authUsers.typeEntity = entityData.data.typeEntity;
 
-          let dataCompany: any = this.getEntityService(entityData.data.uid);
+          let dataCompany: any = await this.getEntityService(
+            entityData.data.uid
+          );
           scores = ScoreService.getScoreCount(entityData.data.uid);
 
           customerCount = (await scores).data?.customerCount;
@@ -1844,8 +1849,8 @@ export class AuthServices {
               uid: entityData.data.uid,
               name: entityData.data.name,
               document: entityData.data.document,
-              email: (await dataCompany).data?.email,
-              tenure: (await dataCompany).data?.age,
+              email: dataCompany.data?.email,
+              tenure: dataCompany.data?.age,
               customerCount,
               customerScore,
               sellerCount,
@@ -1853,6 +1858,7 @@ export class AuthServices {
               typeEntity: "Company",
               image: entityData.data.avatar,
               auth_users: entityData.data.auth_users,
+              categories: dataCompany.data?.categories,
             },
           ];
           break;
@@ -1908,6 +1914,7 @@ export class AuthServices {
           cityID: 1,
           planID: 1,
           avatar: 1,
+          categories: 1,
           "auth_users.email": 1,
           "auth_users.typeID": 1,
           "auth_users.ultimate_session": 1,
