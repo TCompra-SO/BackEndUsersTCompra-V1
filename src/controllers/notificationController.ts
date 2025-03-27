@@ -16,8 +16,9 @@ export const getNotificationsController = async (
   res: Response
 ) => {
   try {
-    const { receiverId, page, pageSize } = req.params;
+    const { entityId, receiverId, page, pageSize } = req.params;
     const responseNotif = await getNotifications(
+      entityId,
       receiverId,
       Number(page),
       Number(pageSize)

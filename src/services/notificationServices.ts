@@ -18,6 +18,7 @@ import {
 } from "../utils/Globals";
 
 export const getNotifications = async (
+  entityId: string,
   receiverId: string,
   page: number,
   pageSize: number
@@ -29,7 +30,7 @@ export const getNotifications = async (
         { categories: 1, _id: 0 }
       )) ??
       (await CompanyModel.findOne(
-        { uid: receiverId },
+        { uid: entityId },
         { categories: 1, _id: 0 }
       ));
     const query: any = { $or: [{ receiverId }] }; // Incluir notificaciones directas siempre
