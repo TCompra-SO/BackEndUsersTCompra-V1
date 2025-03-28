@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { checkJwt } from "../middleware/session";
 import {
+  changeStateConnectionController,
   createChatController,
   createMessage,
   getChatController,
@@ -23,6 +24,7 @@ export class ChatRouter {
     this.router.post("/getChatUsersData", getChatUsersDataController);
     this.router.get("/getChat/:chatId", getChatController);
     this.router.get("/getMessage/:messageId", getMessage);
+    this.router.post("/changeStateConnection", changeStateConnectionController);
   }
 
   static getRouter(): Router {

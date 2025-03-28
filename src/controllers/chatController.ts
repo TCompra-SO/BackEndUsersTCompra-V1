@@ -3,6 +3,7 @@ import { io } from "../server";
 import { RequestExt } from "../interfaces/req-ext";
 import { JwtPayload } from "jsonwebtoken";
 import { ChatService } from "../services/chatService";
+import { TypeMessage } from "../types/globalTypes";
 
 export const createChatController = async (req: RequestExt, res: Response) => {
   // const { uid } = req.user as JwtPayload;
@@ -59,6 +60,12 @@ export const createMessage = async (req: RequestExt, res: Response) => {
 
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
+      const roomName = "roomChat" + responseUser.data?.chatId;
+
+      io.to(roomName).emit("updateChat", {
+        messageData: responseUser.data,
+        type: TypeMessage.NewMessage,
+      });
     } else {
       res.status(responseUser.code).send(responseUser);
     }
@@ -117,6 +124,12 @@ export const readMessages = async (req: RequestExt, res: Response) => {
     const responseUser = await ChatService.readMessages(messagesIds, chatId);
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
+      const roomName = "roomChat" + chatId;
+
+      io.to(roomName).emit("updateChat", {
+        messageData: responseUser.data,
+        type: TypeMessage.READ,
+      });
     } else {
       res.status(responseUser.code).send(responseUser);
     }
@@ -147,6 +160,34 @@ export const getChatUsersDataController = async (
     }
   } catch (error) {
     console.error("Error en readMessagesController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
+export const changeStateConnectionController = async (
+  req: RequestExt,
+  res: Response
+) => {
+  try {
+    const { userId, online } = req.body;
+    const responseUser = await ChatService.changeStateConnection(
+      userId,
+      Boolean(online)
+    );
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser);
+      const roomName = "roomLogin" + userId;
+      io.to(roomName).emit("updateRoom", {
+        state: responseUser.state,
+      });
+    } else {
+      res.status(responseUser.code).send(responseUser);
+    }
+  } catch (error) {
+    console.error("Error en chageStateConnectionController", error);
     res.status(500).send({
       success: false,
       msg: "Error interno del servidor.",

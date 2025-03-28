@@ -4,6 +4,9 @@ import MessageModel from "../models/messageModel";
 import dotenv from "dotenv";
 import { RequirementType, TypeEntity } from "../types/globalTypes";
 import { AuthServices } from "./authServices";
+import CompanyModel from "../models/companyModel";
+import UserModel from "../models/userModel";
+import { boolean } from "joi";
 
 export class ChatService {
   static createChat = async (
@@ -141,8 +144,7 @@ export class ChatService {
         };
       }
       // const partnerData = await AuthServices.getDataBaseUser()
-      console.log(userData.data?.[0].uid);
-      console.log(partnerData.data?.[0].uid);
+
       if (!chatData.data?.uid) {
         return {
           success: false,
@@ -258,6 +260,7 @@ export class ChatService {
     try {
       // Actualizar los mensajes cuyo _id esté en el array
       let count = 0;
+      let messages: any = [];
       while (count < messageIds.length) {
         const messageData = await this.getMessage(messageIds[count]);
         const read = messageData.data?.read;
@@ -271,10 +274,14 @@ export class ChatService {
           };
         }
         if (!read) {
-          await MessageModel.updateOne(
+          const updateResult = await MessageModel.updateOne(
             { uid: messageData.data?.uid },
             { $set: { read: true } }
           );
+          if (updateResult.modifiedCount > 0) {
+            messages.push({ messageId: messageIds[count], read: true });
+          }
+
           await ChatModel.updateOne(
             { uid: chatId },
             {
@@ -290,6 +297,7 @@ export class ChatService {
       return {
         success: true,
         code: 200,
+        data: messages,
         res: {
           msg: "Mensajes leídos con éxito",
         },
@@ -513,14 +521,82 @@ export class ChatService {
     }
   };
 
-  static changeStateConnection = async (userId: string) => {
+  static changeStateConnection = async (userId: string, online: boolean) => {
     try {
+      const userData = await AuthServices.getDataBaseUser(userId);
+      let typeEntity;
+
+      if (!userData.success) {
+        return {
+          success: false,
+          code: 407,
+          error: {
+            msg: "Error al obtener el usuario",
+          },
+        };
+      }
+      if (userData.data?.[0].auth_users) {
+        typeEntity = TypeEntity.SUBUSER;
+      } else {
+        typeEntity = userData.data?.[0].typeEntity;
+      }
+      let updateResult;
+      switch (typeEntity) {
+        case TypeEntity.SUBUSER:
+          updateResult = await CompanyModel.updateOne(
+            { "auth_users.Uid": userId }, // Encuentra la empresa que tiene un subusuario con el Uid dado
+            { $set: { "auth_users.$[elem].online": online } }, // Establece el campo auth_users.online en true
+            { arrayFilters: [{ "elem.Uid": userId }] }
+          );
+          break;
+        case TypeEntity.COMPANY:
+          updateResult = await CompanyModel.updateOne(
+            { uid: userId }, // Match con uid
+            { $set: { online: online } }
+          );
+          break;
+        case TypeEntity.USER:
+          updateResult = await UserModel.updateOne(
+            { uid: userId }, // Match en UserModel con uid
+            { $set: { online: online } }
+          );
+          break;
+        default:
+          return {
+            success: false,
+            code: 400,
+            error: {
+              msg: "Error al obtener el suario",
+            },
+          };
+          break;
+      }
+
+      // Verificar si la actualización fue exitosa
+      if (updateResult.modifiedCount > 0) {
+        return {
+          success: true,
+          code: 200,
+          state: online,
+          res: {
+            msg: "Estado de conexión actualizado con éxito",
+          },
+        };
+      } else {
+        return {
+          success: false,
+          code: 401,
+          error: {
+            msg: "Error al actualizar el estado de conexión",
+          },
+        };
+      }
     } catch (error) {
       return {
         success: false,
         code: 500,
         error: {
-          msg: "Error al obtener el getChatUserData",
+          msg: "Error al cambiar el estado",
         },
       };
     }
