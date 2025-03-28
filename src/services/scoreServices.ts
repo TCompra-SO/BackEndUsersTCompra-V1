@@ -117,7 +117,7 @@ export class ScoreService {
               scoreData = new ScoreClientModel(newScore);
 
               let savedScore = await scoreData.save();
-              console.log("Estamos");
+
               if (savedScore) {
                 await this.calculateScore(
                   entity.uid,

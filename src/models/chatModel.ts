@@ -23,7 +23,11 @@ const chatSchema = new Schema<ChatI>(
       type: String,
       required: true,
     },
-    requirementId: {
+    requerimentId: {
+      type: String,
+      required: true,
+    },
+    chatPartnerId: {
       type: String,
       required: true,
     },
@@ -32,7 +36,7 @@ const chatSchema = new Schema<ChatI>(
       required: false,
     },
     lastDate: {
-      type: String,
+      type: Date,
       required: false,
     },
     numUnreadMessages: {
