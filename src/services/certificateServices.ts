@@ -13,7 +13,7 @@ import { CertificateRequestI } from "../interfaces/certificateRequest.interface"
 import CertificateRequestModel from "../models/certificateRequestModel";
 import CompanyModel from "../models/companyModel";
 import { ResourceCountersModel } from "../models/resourceCountersModel";
-import { OrderType } from "../types/globalTypes";
+import { CertificationType, OrderType } from "../types/globalTypes";
 import { SortOrder } from "mongoose";
 import Fuse from "fuse.js";
 
@@ -1344,46 +1344,100 @@ export class CertificateService {
     }
   };
 
-  static getCertificateRequest = async (uid: string) => {
+  static getCertificateRequest = async (uid: string, type?: number) => {
     try {
-      const pipeline = [
-        {
-          $match: { uid: uid },
-        },
-        {
-          $lookup: {
-            from: "companys", // El nombre de la colección de la tabla 'Company'
-            localField: "sendByentityID", // Campo de la colección 'RequestModel' (recibe el ID)
-            foreignField: "uid", // Campo de la colección 'Company' (campo de unión)
-            as: "companyDetails", // El nombre del campo que almacenará la información de la tabla 'Company'
+      if (
+        (type &&
+          (type == CertificationType.RECEIVED ||
+            type == CertificationType.SENT)) ||
+        type == undefined
+      ) {
+        const createPipeline = (
+          idField: string,
+          companyPrefix: string,
+          type?: CertificationType
+        ) => [
+          {
+            $match: { uid: uid },
           },
-        },
-        {
-          $unwind: "$companyDetails", // Descompone el arreglo de la respuesta del $lookup para que se pueda acceder a los campos de la empresa
-        },
-        {
-          $project: {
-            uid: 1,
-            companyId: "$sendByentityID", // Incluir el campo 'name'
-            companyName: "$companyDetails.name",
-            companyDocument: "$companyDetails.document",
-            creationDate: "$createdAt", // Incluir el campo 'status'
-            note: 1, // Incluir '_id' (se incluye por defecto si no se excluye)
-            state: 1,
-            certificates: 1,
+          {
+            $lookup: {
+              from: "companys", // El nombre de la colección de la tabla 'Company'
+              localField: idField, // Campo de la colección 'RequestModel' (recibe el ID)
+              foreignField: "uid", // Campo de la colección 'Company' (campo de unión)
+              as: "companyDetails", // El nombre del campo que almacenará la información de la tabla 'Company'
+            },
           },
-        },
-      ];
+          {
+            $unwind: "$companyDetails", // Descompone el arreglo de la respuesta del $lookup para que se pueda acceder a los campos de la empresa
+          },
+          {
+            $project: {
+              uid: 1,
+              [`${type ? "company" : companyPrefix}Id`]: `$${idField}`, // Incluir el campo 'name'
+              [`${type ? "company" : companyPrefix}Name`]:
+                "$companyDetails.name",
+              [`${type ? "company" : companyPrefix}Document`]:
+                "$companyDetails.document",
+              creationDate: "$createdAt", // Incluir el campo 'status'
+              note: 1, // Incluir '_id' (se incluye por defecto si no se excluye)
+              state: 1,
+              certificates: 1,
+            },
+          },
+        ];
 
-      // Ejecutar el pipeline sin el filtro de palabras clave
-      const certificateRequestData = await CertificateRequestModel.aggregate(
-        pipeline
-      );
-      return {
-        success: true,
-        code: 200,
-        data: certificateRequestData,
-      };
+        // Ejecutar el pipeline sin el filtro de palabras clave
+        if (type == CertificationType.RECEIVED) {
+          const senderPipeline = createPipeline(
+            "sendByentityID",
+            "sender",
+            type
+          );
+          const senderData = await CertificateRequestModel.aggregate(
+            senderPipeline
+          );
+          return {
+            success: true,
+            code: 200,
+            data: senderData,
+          };
+        } else if (type == CertificationType.SENT) {
+          const receiverPipeline = createPipeline(
+            "receiverEntityID",
+            "receiver",
+            type
+          );
+          const receiverData = await CertificateRequestModel.aggregate(
+            receiverPipeline
+          );
+          return {
+            success: true,
+            code: 200,
+            data: receiverData,
+          };
+        }
+
+        const senderPipeline = createPipeline("sendByentityID", "sender");
+        const receiverPipeline = createPipeline("receiverEntityID", "receiver");
+        const senderData = await CertificateRequestModel.aggregate(
+          senderPipeline
+        );
+        const receiverData = await CertificateRequestModel.aggregate(
+          receiverPipeline
+        );
+
+        const mergedData = senderData.map((sender) => {
+          const receiver = receiverData.find((r) => r.uid === sender.uid) || {};
+          return { ...sender, ...receiver };
+        });
+
+        return {
+          success: true,
+          code: 200,
+          data: mergedData,
+        };
+      } else throw new Error("Tipo incorrecto");
     } catch (error) {
       console.error("Error inesperado en el servidor:", error);
       return {

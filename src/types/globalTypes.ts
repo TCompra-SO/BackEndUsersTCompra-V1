@@ -68,3 +68,8 @@ export enum CertificateRooms {
   SENT = "sentCert",
   RECEIVED = "receivedCert",
 }
+
+export enum CertificationType {
+  SENT = 1,
+  RECEIVED = 2,
+}
