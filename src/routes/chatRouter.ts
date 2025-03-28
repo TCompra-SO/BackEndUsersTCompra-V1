@@ -1,6 +1,14 @@
 import { Router } from "express";
 import { checkJwt } from "../middleware/session";
-import { createChatController } from "../controllers/chatController";
+import {
+  createChatController,
+  createMessage,
+  getChatController,
+  getChatUsersDataController,
+  getMessage,
+  getMessages,
+  readMessages,
+} from "../controllers/chatController";
 export class ChatRouter {
   private static instance: ChatRouter;
   private router: Router;
@@ -9,6 +17,12 @@ export class ChatRouter {
     this.router = Router();
 
     this.router.post("/createChat", createChatController);
+    this.router.post("/createMessage", createMessage);
+    this.router.post("/readMessages", readMessages);
+    this.router.post("/getMessages", getMessages);
+    this.router.post("/getChatUsersData", getChatUsersDataController);
+    this.router.get("/getChat/:chatId", getChatController);
+    this.router.get("/getMessage/:messageId", getMessage);
   }
 
   static getRouter(): Router {

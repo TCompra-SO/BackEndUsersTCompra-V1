@@ -5,9 +5,10 @@ export interface ChatI {
   userOnline?: boolean;
   userId: string;
   title: string;
-  requirementId: string;
+  requerimentId: string;
+  chatPartnerId: string;
   lastMessage: string;
-  lastDate: string;
+  lastDate: Date;
   numUnreadMessages?: number;
   createdAt: Date;
 }
