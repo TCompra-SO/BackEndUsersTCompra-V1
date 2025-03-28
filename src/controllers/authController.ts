@@ -10,6 +10,7 @@ import {
   verifyToken,
 } from "../utils/jwt.handle";
 import { io } from "../server"; // Importamos el objeto `io` de Socket.IO
+import { alternativeAccessTokenExpiresIn } from "../utils/Globals";
 
 const getNameController = async (req: Request, res: Response) => {
   // Obtener el parámetro de la consulta
@@ -282,18 +283,17 @@ const LoginController = async (req: Request, res: Response) => {
     if (!responseUser.success) {
       return res.status(responseUser.code).send(responseUser.error);
     } else {
-      const roomName = "roomLogin" + responseUser.res?.dataUser[0].uid;
+      // const roomName = "roomLogin" + responseUser.res?.dataUser[0].uid;
       const accesToken = responseUser.res?.accessToken || "";
-      console.log(roomName);
-      const expiresIn = decodeToken(accesToken) || 3600;
-      console.log(expiresIn);
-      // io.to(roomName).emit("updateToken", {
-      //   expiresIn,
-      //   accessToken: responseUser.res?.accessToken,
-      // });
-      return res
-        .status(responseUser.code)
-        .send({ ...responseUser, res: { ...responseUser.res, expiresIn } });
+      const accessExpiresIn =
+        decodeToken(accesToken) || alternativeAccessTokenExpiresIn;
+      const refreshToken = responseUser.res?.refreshToken || "";
+      const refreshExpiresIn =
+        decodeToken(refreshToken) || alternativeAccessTokenExpiresIn;
+      return res.status(responseUser.code).send({
+        ...responseUser,
+        res: { ...responseUser.res, accessExpiresIn, refreshExpiresIn },
+      });
     }
   } catch (error: any) {
     return res.status(500).send({
@@ -339,7 +339,10 @@ const RefreshTokenController = async (req: Request, res: Response) => {
 
     return res.status(200).send({
       success: true,
-      accessToken: newAccessToken,
+      accessToken: newAccessToken.accessToken,
+      accessExpiresIn: newAccessToken.accessExpiresIn,
+      refreshToken: newAccessToken.refreshToken,
+      refreshExpiresIn: newAccessToken.refreshExpiresIn,
     });
   } catch (error) {
     return res.status(500).send({
@@ -366,9 +369,11 @@ const refreshAccessToken = async (req: Request, res: Response) => {
         .status(401)
         .json({ success: false, msg: "Refresh token inválido o expirado" });
     }
+
     const expiresIn = result.accessToken
       ? decodeToken(result.accessToken)
-      : 3600;
+      : alternativeAccessTokenExpiresIn;
+
     return res.json({
       success: true,
       accessToken: result.accessToken,

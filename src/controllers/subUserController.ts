@@ -1,7 +1,7 @@
 import { Request, Response, response } from "express";
 import { subUserServices } from "../services/subUserServices";
 import { boolean } from "joi";
-import { subUserRoomName } from "../utils/Globals";
+import { subUserRoomName, userRoomName } from "../utils/Globals";
 import { io } from "../server";
 import { TypeSocket } from "../types/globalTypes";
 
@@ -94,12 +94,14 @@ const changeStatusController = async ({ body }: Request, res: Response) => {
       if (responseUser.res?.uid)
         io.to(`${subUserRoomName}${responseUser.res.uid}`).emit("updateRoom", {
           dataPack: {
-            data: [{ field: "state", value: status }],
+            data: [{ active_account: status }],
           },
           typeSocket: TypeSocket.UPDATE_FIELD,
           key: uid,
           userId: responseUser.res.uid,
         });
+      // Para cerrar sesión en frontend
+      if (!status) io.to(`${userRoomName}${uid}`).emit("suspend");
     } else {
       res.status(responseUser.code).send(responseUser.error);
     }
@@ -118,6 +120,18 @@ const changeRoleController = async ({ body }: Request, res: Response) => {
     const responseUser = await subUserServices.changeRole(uid, typeID);
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
+      if (responseUser.res?.companyUid)
+        io.to(`${subUserRoomName}${responseUser.res.companyUid}`).emit(
+          "updateRoom",
+          {
+            dataPack: {
+              data: [{ typeID: typeID }],
+            },
+            typeSocket: TypeSocket.UPDATE_FIELD,
+            key: uid,
+            userId: responseUser.res.companyUid,
+          }
+        );
     } else {
       res.status(responseUser.code).send(responseUser.error);
     }
@@ -188,6 +202,30 @@ const searchSubUserController = async (req: Request, res: Response) => {
   }
 };
 
+const sendCounterUpdateController = async (req: Request, res: Response) => {
+  try {
+    for (const entity of Object.keys(req.body)) {
+      for (const subUser of Object.keys(req.body[entity])) {
+        io.to(`${subUserRoomName}${entity}`).emit("updateRoom", {
+          dataPack: {
+            data: [req.body[entity][subUser]],
+          },
+          typeSocket: TypeSocket.UPDATE_FIELD,
+          key: subUser,
+          userId: entity,
+        });
+      }
+    }
+    res.status(200).send();
+  } catch (error) {
+    console.error("Error en sendCounterUpdateController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
 export {
   registerSubUserController,
   getSubUserController,
@@ -196,4 +234,5 @@ export {
   changeRoleController,
   getSubUsersByEntity,
   searchSubUserController,
+  sendCounterUpdateController,
 };

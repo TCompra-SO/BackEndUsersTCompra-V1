@@ -22,7 +22,7 @@ export class NotificationRouter {
       sendNotificationController
     );
     this.router.get(
-      "/getNotifications/:receiverId/:page/:pageSize",
+      "/getNotifications/:entityId/:receiverId/:page/:pageSize",
       getNotificationsController
     );
     this.router.post(

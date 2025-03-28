@@ -1,19 +1,34 @@
-import { sign, verify } from "jsonwebtoken";
+import {
+  JsonWebTokenError,
+  sign,
+  TokenExpiredError,
+  verify,
+} from "jsonwebtoken";
 import jwt from "jsonwebtoken";
 import { AuthServices } from "../services/authServices";
 import CompanyModel from "../models/companyModel";
 import { pipeline } from "stream";
 import { TypeEntity } from "../types/globalTypes";
 import UserModel from "../models/userModel";
+import { accessTokenExpiresIn, refreshTokenExpiresIn } from "./Globals";
 
 const JWT_SECRET = process.env.JWT_SECRET || "token.01010101";
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "refresh.01010101";
 
 const generateToken = async (uid: string) => {
-  const accessToken = sign({ uid }, JWT_SECRET, { expiresIn: "2h" });
-  const refreshToken = sign({ uid }, JWT_REFRESH_SECRET, { expiresIn: "7d" });
+  const accessToken = sign({ uid }, JWT_SECRET, {
+    expiresIn: accessTokenExpiresIn,
+  });
+  const refreshToken = sign({ uid }, JWT_REFRESH_SECRET, {
+    expiresIn: refreshTokenExpiresIn,
+  });
 
-  return { accessToken, refreshToken };
+  return {
+    accessToken,
+    accessExpiresIn: accessTokenExpiresIn,
+    refreshToken,
+    refreshExpiresIn: refreshTokenExpiresIn,
+  };
 };
 
 const verifyToken = async (token: string) => {
@@ -25,54 +40,90 @@ const verifyToken = async (token: string) => {
   }
 };
 
+function validateAccessToken(accessToken: string): {
+  valid: boolean;
+  expired: boolean;
+  uid: string | null;
+  error?: Error;
+} {
+  try {
+    const decoded: any = jwt.verify(accessToken, JWT_SECRET, {
+      ignoreExpiration: true,
+    });
+
+    const now = Math.floor(Date.now() / 1000); // Current time in seconds
+    const expired = decoded.exp ? decoded.exp < now : false;
+
+    return { valid: true, expired, uid: decoded.uid };
+  } catch (error) {
+    if (error instanceof JsonWebTokenError) {
+      return { valid: false, expired: false, uid: null, error };
+    } else {
+      return {
+        valid: false,
+        expired: false,
+        uid: null,
+        error: new Error("Unknown error"),
+      };
+    }
+  }
+}
+
 const generateRefreshAccessToken = async (
   accessToken: string,
   refreshToken: string
 ) => {
   try {
-    const decoded = verify(accessToken, JWT_SECRET) as { uid: string };
-    // console.log(decoded1.uid);
+    const decoded = validateAccessToken(accessToken);
+    // const decoded = verify(accessToken, JWT_SECRET) as { uid: string };
 
-    const userData = await AuthServices.getDataBaseUser(decoded.uid);
+    if (decoded.valid && decoded.uid) {
+      const userData = await AuthServices.getDataBaseUser(decoded.uid);
 
-    if (refreshToken !== userData.data?.[0].auth_users.regreshToken) {
-      return {
-        success: false,
-        code: 400,
-        error: {
-          msg: "El Refresh Token es invalido",
-        },
+      if (refreshToken !== userData.data?.[0].auth_users.refreshToken) {
+        return {
+          success: false,
+          code: 400,
+          error: {
+            msg: "El Refresh Token es invalido",
+          },
+        };
+      }
+      const decodedRefreshToken = verify(refreshToken, JWT_REFRESH_SECRET) as {
+        uid: string;
       };
-    }
-    const decodedRefreshToken = verify(refreshToken, JWT_REFRESH_SECRET) as {
-      uid: string;
-    };
-    const newAccessToken = sign({ uid: decoded.uid }, JWT_SECRET, {
-      expiresIn: "2h",
-    });
+      const newAccessToken = sign({ uid: decoded.uid }, JWT_SECRET, {
+        expiresIn: accessTokenExpiresIn,
+      });
 
-    const typeEntity = userData.data?.[0].typeEntity;
-    console.log(typeEntity);
-    if (userData.data?.[0].auth_users) {
-      await CompanyModel.updateOne(
-        { "auth_users.Uid": userData.data[0].auth_users.Uid }, // Filtrar por Uid dentro del array
-        { $set: { "auth_users.$.accessToken": newAccessToken } } // Actualizar accessToken
-      );
-    } else if (typeEntity === TypeEntity.COMPANY) {
-      await CompanyModel.updateOne(
-        { uid: decoded.uid }, // Filtrar por uid
-        { $set: { accessToken: newAccessToken } } // Actualizar accessToken
-      );
+      const typeEntity = userData.data?.[0].typeEntity;
+
+      if (userData.data?.[0].auth_users) {
+        await CompanyModel.updateOne(
+          { "auth_users.Uid": userData.data[0].auth_users.Uid }, // Filtrar por Uid dentro del array
+          { $set: { "auth_users.$.accessToken": newAccessToken } } // Actualizar accessToken
+        );
+      } else if (typeEntity === TypeEntity.COMPANY) {
+        await CompanyModel.updateOne(
+          { uid: decoded.uid }, // Filtrar por uid
+          { $set: { accessToken: newAccessToken } } // Actualizar accessToken
+        );
+      } else {
+        await UserModel.updateOne(
+          { uid: decoded.uid }, // Filtrar por uid
+          { $set: { accessToken: newAccessToken } } // Actualizar accessToken
+        );
+      }
+      return {
+        success: true,
+        accessToken: newAccessToken,
+      };
     } else {
-      await UserModel.updateOne(
-        { uid: decoded.uid }, // Filtrar por uid
-        { $set: { accessToken: newAccessToken } } // Actualizar accessToken
-      );
+      throw new Error(decoded.error?.message);
     }
-    return { success: true, accessToken: newAccessToken };
   } catch (error) {
     console.error("Error al generar nuevo access token:", error);
-    return { success: false, msg: "Refresh Token inválido" };
+    return { success: false, msg: "Error al generar nuevo access token" };
   }
 };
 
