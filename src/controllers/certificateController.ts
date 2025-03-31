@@ -244,9 +244,12 @@ export const getCertificateRequestController = async (
   req: Request,
   res: Response
 ) => {
-  const { uid } = req.params;
+  const { type, uid } = req.params;
   try {
-    const responseUser = await CertificateService.getCertificateRequest(uid);
+    const responseUser = await CertificateService.getCertificateRequest(
+      uid,
+      Number(type)
+    );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
     } else {

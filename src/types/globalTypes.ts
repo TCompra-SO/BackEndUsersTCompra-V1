@@ -69,6 +69,11 @@ export enum CertificateRooms {
   RECEIVED = "receivedCert",
 }
 
+export enum CertificationType {
+  SENT = 1,
+  RECEIVED = 2,
+}
+
 export enum TypeMessage {
   NewMessage = 0,
   READ = 1,

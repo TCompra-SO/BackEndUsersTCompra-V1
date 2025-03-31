@@ -61,6 +61,7 @@ export class ChatService {
         code: 400,
         error: {
           msg: "ya tienes una conversación iniciada",
+          uid: result.uid,
         },
       };
     }

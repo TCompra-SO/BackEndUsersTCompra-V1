@@ -88,7 +88,7 @@ export class CertificateRouter {
       deleteCertificateController
     );
     this.router.get(
-      "/getCertificateRequest/:uid",
+      "/getCertificateRequest/:type/:uid",
       getCertificateRequestController
     );
 
