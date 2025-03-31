@@ -1043,6 +1043,7 @@ export class AuthServices {
               type: entity,
               typeID: result[0].auth_users.typeID,
               planID: result[0].planID,
+              online: true,
             },
           ];
 
@@ -1150,6 +1151,7 @@ export class AuthServices {
             type: entity,
             typeID: user[0].typeID,
             planID: user[0].planID,
+            online: true,
           },
         ];
         if (entity === "Company") {

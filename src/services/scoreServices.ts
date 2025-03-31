@@ -285,8 +285,8 @@ export class ScoreService {
           try {
             offerData = await axios.get(`${API_POINT}${endpoint}`, {
               headers: {
-                Authorization: `Bearer ${token}`,
                 "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
               },
             });
           } catch (error) {

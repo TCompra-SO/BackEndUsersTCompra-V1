@@ -23,6 +23,7 @@ const registerScoreController = async (req: RequestExt, res: Response) => {
     const datatoken = await AuthServices.getDataBaseUser(uidUser);
     //const dataus = await AuthServices.getDataBaseUser(uidUser);
     let token;
+
     if (datatoken.data?.[0].auth_users) {
       token = datatoken.data?.[0].auth_users.accessToken;
     } else {

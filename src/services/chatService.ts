@@ -179,7 +179,11 @@ export class ChatService {
 
       await ChatModel.updateOne(
         { uid: chatId }, // Filtro por chatId
-        { $set: { lastDate: new Date() }, $inc: { numUnreadMessages: 1 } } // Actualiza lastDate con la fecha actual
+        {
+          $set: { lastDate: new Date() },
+          $inc: { numUnreadMessages: 1 },
+          lastMessage: message,
+        } // Actualiza lastDate con la fecha actual
       );
       return {
         success: true,
@@ -597,6 +601,32 @@ export class ChatService {
         code: 500,
         error: {
           msg: "Error al cambiar el estado",
+        },
+      };
+    }
+  };
+
+  static getChatInfo = async (userId: string, requerimentId: string) => {
+    try {
+      const chatData = await ChatModel.aggregate([
+        {
+          $match: {
+            $or: [{ userId: userId } /* { chatPartnerId: userId }*/], // Filtrar por userId o chatPartnerId
+            requerimentId: requerimentId, // Filtrar por requerimentId
+          },
+        },
+      ]);
+      return {
+        success: true,
+        code: 200,
+        data: chatData,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error al obtener el chat",
         },
       };
     }

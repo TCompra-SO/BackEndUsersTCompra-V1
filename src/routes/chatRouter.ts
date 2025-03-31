@@ -5,6 +5,7 @@ import {
   createChatController,
   createMessage,
   getChatController,
+  getChatInfoController,
   getChatUsersDataController,
   getMessage,
   getMessages,
@@ -22,6 +23,7 @@ export class ChatRouter {
     this.router.post("/readMessages", readMessages);
     this.router.post("/getMessages", getMessages);
     this.router.post("/getChatUsersData", getChatUsersDataController);
+    this.router.post("/getChatInfo", getChatInfoController);
     this.router.get("/getChat/:chatId", getChatController);
     this.router.get("/getMessage/:messageId", getMessage);
     this.router.post("/changeStateConnection", changeStateConnectionController);

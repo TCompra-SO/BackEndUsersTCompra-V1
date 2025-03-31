@@ -179,8 +179,8 @@ export const changeStateConnectionController = async (
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
-      const roomName = "roomLogin" + userId;
-      io.to(roomName).emit("updateRoom", {
+      const roomName = "roomChat" + userId;
+      io.to(roomName).emit("updateChat", {
         state: responseUser.state,
       });
     } else {
@@ -188,6 +188,24 @@ export const changeStateConnectionController = async (
     }
   } catch (error) {
     console.error("Error en chageStateConnectionController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
+export const getChatInfoController = async (req: RequestExt, res: Response) => {
+  try {
+    const { userId, requerimentId } = req.body;
+    const responseUser = await ChatService.getChatInfo(userId, requerimentId);
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser);
+    } else {
+      res.status(responseUser.code).send(responseUser);
+    }
+  } catch (error) {
+    console.error("Error en chatInfoController", error);
     res.status(500).send({
       success: false,
       msg: "Error interno del servidor.",

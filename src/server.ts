@@ -39,6 +39,8 @@ const startApp = async () => {
       socket.emit("joinedRoom", `Te has unido a la sala ${room}`);
     });
 
+    
+
     // Cuando un usuario se desconecta
     socket.on("disconnect", () => {
       console.log("Usuario desconectado", socket.id);
