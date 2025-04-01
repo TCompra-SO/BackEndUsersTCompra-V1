@@ -7,7 +7,11 @@ import { RequestExt } from "../interfaces/req-ext";
 
 import { JwtPayload } from "jsonwebtoken";
 import { io } from "../server";
-import { CertificateRooms, TypeSocket } from "../types/globalTypes";
+import {
+  CertificateRooms,
+  CertificationType,
+  TypeSocket,
+} from "../types/globalTypes";
 
 const uploadDir = path.join(__dirname, "../uploads");
 
@@ -308,13 +312,27 @@ export const sendCertificationController = async (
           certificateRequest.data.length
         ) {
           io.to(`${CertificateRooms.RECEIVED}${companyID}`).emit("updateRoom", {
-            dataPack: certificateRequest,
+            dataPack: {
+              data: [
+                CertificateService.transformCertificateRequest(
+                  certificateRequest.data[0],
+                  CertificationType.SENT
+                ),
+              ],
+            },
             typeSocket: TypeSocket.CREATE,
             key: responseUser.res.uid,
             userId: companyID,
           });
           io.to(`${CertificateRooms.SENT}${userID}`).emit("updateRoom", {
-            dataPack: certificateRequest,
+            dataPack: {
+              data: [
+                CertificateService.transformCertificateRequest(
+                  certificateRequest.data[0],
+                  CertificationType.RECEIVED
+                ),
+              ],
+            },
             typeSocket: TypeSocket.CREATE,
             key: responseUser.res.uid,
             userId: userID,
@@ -385,7 +403,14 @@ export const updateCertifyStateController = async (
         io.to(`${CertificateRooms.RECEIVED}${data.receiverEntityID}`).emit(
           "updateRoom",
           {
-            dataPack: certificateRequest,
+            dataPack: {
+              data: [
+                CertificateService.transformCertificateRequest(
+                  certificateRequest.data[0],
+                  CertificationType.SENT
+                ),
+              ],
+            },
             typeSocket: TypeSocket.UPDATE,
             key: data.uid,
             userId: data.receiverEntityID,
@@ -394,7 +419,14 @@ export const updateCertifyStateController = async (
         io.to(`${CertificateRooms.SENT}${data.sendByentityID}`).emit(
           "updateRoom",
           {
-            dataPack: certificateRequest,
+            dataPack: {
+              data: [
+                CertificateService.transformCertificateRequest(
+                  certificateRequest.data[0],
+                  CertificationType.RECEIVED
+                ),
+              ],
+            },
             typeSocket: TypeSocket.UPDATE,
             key: data.uid,
             userId: data.sendByentityID,
@@ -517,7 +549,14 @@ export const resendCertifyController = async (req: Request, res: Response) => {
           io.to(`${CertificateRooms.RECEIVED}${data.receiverEntityID}`).emit(
             "updateRoom",
             {
-              dataPack: certificateRequest,
+              dataPack: {
+                data: [
+                  CertificateService.transformCertificateRequest(
+                    certificateRequest.data[0],
+                    CertificationType.SENT
+                  ),
+                ],
+              },
               typeSocket: TypeSocket.UPDATE,
               key: data.uid,
               userId: data.receiverEntityID,
@@ -526,7 +565,14 @@ export const resendCertifyController = async (req: Request, res: Response) => {
           io.to(`${CertificateRooms.SENT}${data.sendByentityID}`).emit(
             "updateRoom",
             {
-              dataPack: certificateRequest,
+              dataPack: {
+                data: [
+                  CertificateService.transformCertificateRequest(
+                    certificateRequest.data[0],
+                    CertificationType.RECEIVED
+                  ),
+                ],
+              },
               typeSocket: TypeSocket.UPDATE,
               key: data.uid,
               userId: data.sendByentityID,
