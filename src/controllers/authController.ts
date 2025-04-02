@@ -328,22 +328,23 @@ const RefreshTokenController = async (req: Request, res: Response) => {
         .send({ success: false, msg: "No hay refresh token" });
     }
 
-    const decoded: any = await verifyRefreshAccessToken(refreshToken);
-    if (!decoded) {
-      return res
-        .status(401)
-        .send({ success: false, msg: "Refresh token inválido" });
+    const newAccessToken = await generateToken(refreshToken); // Genera un nuevo token de acceso
+    if (newAccessToken.success) {
+      const accessExpiresIn = newAccessToken.res?.accessToken
+        ? decodeToken(newAccessToken.res?.accessToken)
+        : alternativeAccessTokenExpiresIn;
+      const refreshExpiresIn = newAccessToken.res?.refreshToken
+        ? decodeToken(newAccessToken.res?.refreshToken)
+        : alternativeAccessTokenExpiresIn;
+
+      return res.status(200).send({
+        success: true,
+        accessToken: newAccessToken.res?.accessToken,
+        accessExpiresIn,
+        refreshToken: newAccessToken.res?.refreshToken,
+        refreshExpiresIn,
+      });
     }
-
-    const newAccessToken = await generateToken(decoded.id); // Genera un nuevo token de acceso
-
-    return res.status(200).send({
-      success: true,
-      accessToken: newAccessToken.accessToken,
-      accessExpiresIn: newAccessToken.accessExpiresIn,
-      refreshToken: newAccessToken.refreshToken,
-      refreshExpiresIn: newAccessToken.refreshExpiresIn,
-    });
   } catch (error) {
     return res.status(500).send({
       success: false,
