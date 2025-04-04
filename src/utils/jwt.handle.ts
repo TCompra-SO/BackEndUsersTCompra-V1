@@ -16,7 +16,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "token.01010101";
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "refresh.01010101";
 
 const generateToken = async (prevRefreshToken: string) => {
-  const decoded: any = await verifyRefreshAccessToken(prevRefreshToken);
+  const decoded: any = verifyRefreshAccessToken(prevRefreshToken);
 
   if (!decoded)
     return {
@@ -28,7 +28,13 @@ const generateToken = async (prevRefreshToken: string) => {
     };
 
   const userData = await AuthServices.getDataBaseUser(decoded.uid);
-  if (prevRefreshToken !== userData.data?.[0].refreshToken) {
+
+  if (
+    prevRefreshToken !==
+    (userData.data?.[0].auth_users && userData.data?.[0].auth_users.refreshToken
+      ? userData.data?.[0].auth_users.refreshToken
+      : userData.data?.[0].refreshToken)
+  ) {
     return {
       success: false,
       code: 401,
@@ -181,7 +187,7 @@ const generateRefreshAccessToken = async (
   }
 };
 
-const verifyRefreshAccessToken = async (token: string) => {
+const verifyRefreshAccessToken = (token: string) => {
   try {
     return verify(token, JWT_REFRESH_SECRET) as { uid: string };
   } catch (error) {
