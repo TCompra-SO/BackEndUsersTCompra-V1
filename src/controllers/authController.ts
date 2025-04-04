@@ -329,6 +329,7 @@ const RefreshTokenController = async (req: Request, res: Response) => {
     }
 
     const newAccessToken = await generateToken(refreshToken); // Genera un nuevo token de acceso
+
     if (newAccessToken.success) {
       const accessExpiresIn = newAccessToken.res?.accessToken
         ? decodeToken(newAccessToken.res?.accessToken)
@@ -344,7 +345,7 @@ const RefreshTokenController = async (req: Request, res: Response) => {
         refreshToken: newAccessToken.res?.refreshToken,
         refreshExpiresIn,
       });
-    }
+    } else return res.status(newAccessToken.code).send(newAccessToken.error);
   } catch (error) {
     return res.status(500).send({
       success: false,

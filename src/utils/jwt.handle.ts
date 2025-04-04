@@ -17,6 +17,7 @@ const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "refresh.01010101";
 
 const generateToken = async (prevRefreshToken: string) => {
   const decoded: any = await verifyRefreshAccessToken(prevRefreshToken);
+
   if (!decoded)
     return {
       success: false,
@@ -125,8 +126,14 @@ const generateRefreshAccessToken = async (
 
     if (decoded.valid && decoded.uid) {
       const userData = await AuthServices.getDataBaseUser(decoded.uid);
-      // console.log("==========?", userData);
-      if (refreshToken !== userData.data?.[0].refreshToken) {
+
+      if (
+        refreshToken !==
+        (userData.data?.[0].auth_users &&
+        userData.data?.[0].auth_users.refreshToken
+          ? userData.data?.[0].auth_users.refreshToken
+          : userData.data?.[0].refreshToken)
+      ) {
         // userData.data?.[0].auth_users.refreshToken
         return {
           success: false,
@@ -179,7 +186,7 @@ const verifyRefreshAccessToken = async (token: string) => {
     return verify(token, JWT_REFRESH_SECRET) as { uid: string };
   } catch (error) {
     console.error("Error al verificar refresh token:", error);
-    return { success: false, msg: "Refresh Token inválido" };
+    return null;
   }
 };
 
