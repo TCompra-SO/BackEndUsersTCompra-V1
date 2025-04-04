@@ -44,8 +44,8 @@ const chatSchema = new Schema<ChatI>(
       default: 0,
     },
     archive: {
-      type: Object,
-      default: false,
+      type: [{ userId: String, state: Boolean }],
+      default: [],
     },
     createdAt: {
       type: Date,

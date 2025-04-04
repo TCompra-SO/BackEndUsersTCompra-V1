@@ -10,7 +10,7 @@ export interface ChatI {
   lastMessage: string;
   lastDate: Date;
   numUnreadMessages?: number;
-  archive?: archiveI;
+  archive?: archiveI[];
   createdAt: Date;
 }
 

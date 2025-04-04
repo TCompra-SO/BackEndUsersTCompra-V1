@@ -155,15 +155,22 @@ export const readMessages = async (req: RequestExt, res: Response) => {
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
       const roomName = "roomChat" + chatId;
-
+      const numUnReadByChat = await ChatService.getCountUnReadByUser(
+        userId,
+        chatId
+      );
       io.to(roomName).emit("updateChat", {
         messageData: responseUser.data,
+        numUnreadMessages: numUnReadByChat.unRead,
         type: TypeMessage.READ,
       });
 
       const roomNameChat = "roomGeneralChat" + responseUser.data?.userId;
+
+      const numUnReads = await ChatService.getCountMessageUnRead(userId);
+
       io.to(roomNameChat).emit("updateGeneralChat", {
-        numUnreadMessages: responseUser.data?.[0].totalUnread,
+        numUnreadMessages: numUnReads.data?.[0].totalUnread,
         type: TypeMessage.NewMessage,
       });
     } else {
@@ -272,8 +279,8 @@ export const searchChat = async (req: RequestExt, res: Response) => {
 };
 export const archiveChatController = async (req: RequestExt, res: Response) => {
   try {
-    const { chatId, archive } = req.body;
-    const responseUser = await ChatService.archiveChat(chatId, archive);
+    const { chatId, userId, archive } = req.body;
+    const responseUser = await ChatService.archiveChat(chatId, userId, archive);
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
     } else {

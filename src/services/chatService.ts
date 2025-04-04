@@ -72,7 +72,6 @@ export class ChatService {
         chatPartnerId,
         title,
         lastDate: new Date(), // Fecha en string
-        archive: false,
       });
       await newChat.save();
       return {
@@ -1219,13 +1218,55 @@ export class ChatService {
     }
   };
 
-  static archiveChat = async (chatId: string, archive: boolean) => {
+  static archiveChat = async (
+    chatId: string,
+    userId: string,
+    archive: boolean
+  ) => {
     try {
-      const updatedChat = await ChatModel.findOneAndUpdate(
-        { uid: chatId }, // Buscar por ID
-        { $set: { archive: archive } }, // Actualizar el campo archive
-        { new: true } // Devolver el documento actualizado
+      const chat = await ChatModel.findOne({ uid: chatId });
+
+      if (!chat) {
+        return {
+          success: false,
+          code: 404,
+          error: { msg: "Chat no encontrado" },
+        };
+      }
+
+      // Verificar si el campo 'archive' es un array, si no lo es lo convertimos
+      if (!Array.isArray(chat.archive)) {
+        chat.archive = []; // Convertimos a array
+        await chat.save(); // Guardamos el cambio
+      }
+
+      // Primero intentamos actualizar si ya existe ese userId en el array
+      const updated = await ChatModel.findOneAndUpdate(
+        {
+          uid: chatId,
+          "archive.userId": userId,
+        },
+        {
+          $set: {
+            "archive.$.state": archive, // Usamos $ para apuntar al elemento correcto del array
+          },
+        },
+        { new: true }
       );
+
+      // Si no se actualizó porque el userId no existe, hacemos un push
+      let updatedChat = updated;
+      if (!updated) {
+        updatedChat = await ChatModel.findOneAndUpdate(
+          { uid: chatId },
+          {
+            $push: {
+              archive: { userId: userId, state: archive },
+            },
+          },
+          { new: true }
+        );
+      }
 
       if (!updatedChat) {
         return {
@@ -1243,11 +1284,13 @@ export class ChatService {
       return {
         success: true,
         code: 200,
+        data: updatedChat,
         res: {
           msg: msg,
         },
       };
     } catch (error) {
+      console.log(error);
       return {
         success: false,
         code: 500,
