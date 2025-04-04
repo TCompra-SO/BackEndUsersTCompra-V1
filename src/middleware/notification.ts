@@ -49,10 +49,6 @@ export const saveNotificationMiddleware = (
           );
           NotificationModel.create(notification)
             .then((res) => {
-              console.log(
-                "sending to ",
-                `notification${notification.receiverId}`
-              );
               io.to(`notification${notification.receiverId}`).emit(
                 "updateRoom",
                 {
