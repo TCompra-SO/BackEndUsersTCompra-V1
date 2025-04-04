@@ -10,6 +10,11 @@ export interface ChatI {
   lastMessage: string;
   lastDate: Date;
   numUnreadMessages?: number;
-  archive: boolean;
+  archive?: archiveI;
   createdAt: Date;
+}
+
+interface archiveI {
+  userId: string;
+  state: boolean;
 }

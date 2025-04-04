@@ -77,4 +77,5 @@ export enum CertificationType {
 export enum TypeMessage {
   NewMessage = 0,
   READ = 1,
+  UPDATE = 2,
 }

@@ -9,6 +9,7 @@ import {
   getChatInfoController,
   getChatUsersDataController,
   getCountMessageUnRead,
+  getCountUnReadByUser,
   getMessage,
   getMessages,
   readMessages,
@@ -29,6 +30,7 @@ export class ChatRouter {
     this.router.post("/getChatInfo", getChatInfoController);
     this.router.post("/searchChat", searchChat);
     this.router.post("/archiveChat", archiveChatController);
+    this.router.post("/getCountUnReadByUser", getCountUnReadByUser);
     this.router.get("/getCountMessageUnRead/:userId", getCountMessageUnRead);
     this.router.get("/getChat/:chatId", getChatController);
     this.router.get("/getMessage/:messageId", getMessage);

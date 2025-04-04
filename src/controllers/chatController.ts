@@ -63,17 +63,33 @@ export const createMessage = async (req: RequestExt, res: Response) => {
       const roomName = "roomChat" + responseUser.data?.chatId;
 
       const chatData = await ChatService.getChat(chatId);
+      let receivingUser: any;
+      if (chatData.data?.userId === userId) {
+        receivingUser = chatData.data?.chatPartnerId;
+      } else {
+        receivingUser = chatData.data?.userId;
+      }
+      let unReadreivingUser = await ChatService.getCountUnReadByUser(
+        receivingUser,
+        chatId
+      );
       const numUnReads = await ChatService.getCountMessageUnRead(userId);
       if (!chatData.data?.archive) {
         io.to(roomName).emit("updateChat", {
           messageData: responseUser.data,
           numUnreadMessages: chatData.data?.numUnreadMessages,
+          userReceiving: unReadreivingUser.userId,
+          unReadreivingUser: unReadreivingUser.unRead,
           type: TypeMessage.NewMessage,
         });
 
         const roomNameChat = "roomGeneralChat" + responseUser.data?.userId;
+
         io.to(roomNameChat).emit("updateGeneralChat", {
           numUnreadMessages: numUnReads.data?.[0].totalUnread,
+          messageData: responseUser.data,
+          chatData: chatData,
+          type: TypeMessage.NewMessage,
         });
       }
     } else {
@@ -143,6 +159,12 @@ export const readMessages = async (req: RequestExt, res: Response) => {
       io.to(roomName).emit("updateChat", {
         messageData: responseUser.data,
         type: TypeMessage.READ,
+      });
+
+      const roomNameChat = "roomGeneralChat" + responseUser.data?.userId;
+      io.to(roomNameChat).emit("updateGeneralChat", {
+        numUnreadMessages: responseUser.data?.[0].totalUnread,
+        type: TypeMessage.NewMessage,
       });
     } else {
       res.status(responseUser.code).send(responseUser);
@@ -277,6 +299,24 @@ export const getCountMessageUnRead = async (req: RequestExt, res: Response) => {
     }
   } catch (error) {
     console.error("Error en getCountMessageUnReadController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
+export const getCountUnReadByUser = async (req: RequestExt, res: Response) => {
+  try {
+    const { chatId, userId } = req.body;
+    const responseUser = await ChatService.getCountUnReadByUser(userId, chatId);
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser);
+    } else {
+      res.status(responseUser.code).send(responseUser);
+    }
+  } catch (error) {
+    console.error("Error en getCountUnReadByUserController", error);
     res.status(500).send({
       success: false,
       msg: "Error interno del servidor.",

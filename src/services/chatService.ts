@@ -862,7 +862,13 @@ export class ChatService {
 
       // 🔍 1️⃣ Buscar coincidencias exactas en MongoDB
       let chats = await ChatModel.aggregate([
-        { $match: { $or: [{ userId: userId }, { chatPartnerId: userId }] } },
+        {
+          $match: {
+            $or: [{ userId: userId }, { chatPartnerId: userId }],
+          },
+        },
+
+        // Lookups base
         {
           $lookup: {
             from: "companys",
@@ -896,23 +902,87 @@ export class ChatService {
           },
         },
         {
+          $lookup: {
+            from: "profiles",
+            localField: "userId",
+            foreignField: "uid",
+            as: "subUserUserInfo",
+          },
+        },
+        {
+          $lookup: {
+            from: "profiles",
+            localField: "chatPartnerId",
+            foreignField: "uid",
+            as: "subUserPartnerInfo",
+          },
+        },
+        {
+          $lookup: {
+            from: "companys",
+            localField: "subUserUserInfo.companyID",
+            foreignField: "uid",
+            as: "subUserCompanyUser",
+          },
+        },
+        {
+          $lookup: {
+            from: "companys",
+            localField: "subUserPartnerInfo.companyID",
+            foreignField: "uid",
+            as: "subUserCompanyPartner",
+          },
+        },
+
+        // Agregamos campos necesarios
+        {
           $addFields: {
             user: {
               $ifNull: [
-                { $arrayElemAt: ["$userCompany.name", 0] },
-                { $arrayElemAt: ["$userInfo.name", 0] },
+                { $first: "$subUserUserInfo.name" },
+                { $first: "$userInfo.name" },
+                { $first: "$userCompany.name" },
                 "",
               ],
             },
             partner: {
               $ifNull: [
-                { $arrayElemAt: ["$partnerCompany.name", 0] },
-                { $arrayElemAt: ["$partnerInfo.name", 0] },
+                { $first: "$subUserPartnerInfo.name" },
+                { $first: "$partnerInfo.name" },
+                { $first: "$partnerCompany.name" },
                 "",
               ],
             },
+            userAvatar: {
+              $cond: {
+                if: { $gt: [{ $size: "$subUserUserInfo" }, 0] },
+                then: { $first: "$subUserCompanyUser.avatar" },
+                else: {
+                  $ifNull: [
+                    { $first: "$userInfo.avatar" },
+                    { $first: "$userCompany.avatar" },
+                    "",
+                  ],
+                },
+              },
+            },
+            partnerAvatar: {
+              $cond: {
+                if: { $gt: [{ $size: "$subUserPartnerInfo" }, 0] },
+                then: { $first: "$subUserCompanyPartner.avatar" },
+                else: {
+                  $ifNull: [
+                    { $first: "$partnerInfo.avatar" },
+                    { $first: "$partnerCompany.avatar" },
+                    "",
+                  ],
+                },
+              },
+            },
           },
         },
+
+        // Determinar userName y userImage para quien consulta (userId)
         {
           $addFields: {
             userName: {
@@ -922,13 +992,24 @@ export class ChatService {
                 else: "$user",
               },
             },
+            userImage: {
+              $cond: {
+                if: { $eq: ["$userId", userId] },
+                then: "$partnerAvatar",
+                else: "$userAvatar",
+              },
+            },
           },
         },
+
+        // Búsqueda por texto
         {
           $match: {
             $or: [{ title: searchRegex }, { userName: searchRegex }],
           },
         },
+
+        // Limpiar campos innecesarios
         {
           $project: {
             userCompany: 0,
@@ -945,6 +1026,7 @@ export class ChatService {
             partnerAvatar: 0,
           },
         },
+
         { $sort: { createdAt: -1 } },
         { $limit: 10 },
       ]);
@@ -953,6 +1035,8 @@ export class ChatService {
       if (chats.length === 0) {
         const recentChats = await ChatModel.aggregate([
           { $match: { $or: [{ userId: userId }, { chatPartnerId: userId }] } },
+
+          // 🔍 Lookups
           {
             $lookup: {
               from: "companys",
@@ -986,23 +1070,87 @@ export class ChatService {
             },
           },
           {
+            $lookup: {
+              from: "profiles",
+              localField: "userId",
+              foreignField: "uid",
+              as: "subUserUserInfo",
+            },
+          },
+          {
+            $lookup: {
+              from: "profiles",
+              localField: "chatPartnerId",
+              foreignField: "uid",
+              as: "subUserPartnerInfo",
+            },
+          },
+          {
+            $lookup: {
+              from: "companys",
+              localField: "subUserUserInfo.companyID",
+              foreignField: "uid",
+              as: "subUserCompanyUser",
+            },
+          },
+          {
+            $lookup: {
+              from: "companys",
+              localField: "subUserPartnerInfo.companyID",
+              foreignField: "uid",
+              as: "subUserCompanyPartner",
+            },
+          },
+
+          // 🛠️ Extraer el nombre y avatar correctamente
+          {
             $addFields: {
               user: {
                 $ifNull: [
-                  { $arrayElemAt: ["$userCompany.name", 0] },
-                  { $arrayElemAt: ["$userInfo.name", 0] },
+                  { $first: "$subUserUserInfo.name" },
+                  { $first: "$userInfo.name" },
+                  { $first: "$userCompany.name" },
                   "",
                 ],
               },
               partner: {
                 $ifNull: [
-                  { $arrayElemAt: ["$partnerCompany.name", 0] },
-                  { $arrayElemAt: ["$partnerInfo.name", 0] },
+                  { $first: "$subUserPartnerInfo.name" },
+                  { $first: "$partnerInfo.name" },
+                  { $first: "$partnerCompany.name" },
                   "",
                 ],
               },
+              userAvatar: {
+                $cond: {
+                  if: { $gt: [{ $size: "$subUserUserInfo" }, 0] },
+                  then: { $first: "$subUserCompanyUser.avatar" },
+                  else: {
+                    $ifNull: [
+                      { $first: "$userInfo.avatar" },
+                      { $first: "$userCompany.avatar" },
+                      "",
+                    ],
+                  },
+                },
+              },
+              partnerAvatar: {
+                $cond: {
+                  if: { $gt: [{ $size: "$subUserPartnerInfo" }, 0] },
+                  then: { $first: "$subUserCompanyPartner.avatar" },
+                  else: {
+                    $ifNull: [
+                      { $first: "$partnerInfo.avatar" },
+                      { $first: "$partnerCompany.avatar" },
+                      "",
+                    ],
+                  },
+                },
+              },
             },
           },
+
+          // 🔀 Determinar userName y userImage respecto al usuario que consulta
           {
             $addFields: {
               userName: {
@@ -1012,8 +1160,17 @@ export class ChatService {
                   else: "$user",
                 },
               },
+              userImage: {
+                $cond: {
+                  if: { $eq: ["$userId", userId] },
+                  then: "$partnerAvatar",
+                  else: "$userAvatar",
+                },
+              },
             },
           },
+
+          // 🧹 Limpiar campos innecesarios
           {
             $project: {
               userCompany: 0,
@@ -1031,7 +1188,7 @@ export class ChatService {
             },
           },
           { $sort: { createdAt: -1 } },
-          { $limit: 100 }, // Tomamos 50 registros recientes para la búsqueda difusa
+          { $limit: 100 },
         ]);
 
         if (recentChats.length > 0) {
@@ -1120,6 +1277,31 @@ export class ChatService {
         success: true,
         code: 200,
         data: result,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error al archivar el chat",
+        },
+      };
+    }
+  };
+
+  static getCountUnReadByUser = async (userId: string, chatId: string) => {
+    try {
+      const unreadCount = await MessageModel.countDocuments({
+        chatId: chatId,
+        userId: userId,
+        read: false,
+      });
+
+      return {
+        success: true,
+        code: 200,
+        unRead: unreadCount,
+        userId: userId,
       };
     } catch (error) {
       return {
