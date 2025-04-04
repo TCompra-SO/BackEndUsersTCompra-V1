@@ -224,7 +224,7 @@ export class ChatService {
       const messages = await MessageModel.find({
         chatId: chatId,
       })
-        .sort({ createdAt: -1 }) // Orden descendente (últimos mensajes primero)
+        .sort({ timestamp: -1 }) // Orden descendente (últimos mensajes primero)
         .skip(skip) // Saltar los mensajes según la página
         .limit(pageSize) // Limitar la cantidad de mensajes por página
         .lean(); // Optimiza la consulta para solo devolver JSON

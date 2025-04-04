@@ -15,19 +15,65 @@ import { accessTokenExpiresIn, refreshTokenExpiresIn } from "./Globals";
 const JWT_SECRET = process.env.JWT_SECRET || "token.01010101";
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "refresh.01010101";
 
-const generateToken = async (uid: string) => {
-  const accessToken = sign({ uid }, JWT_SECRET, {
+const generateToken = async (prevRefreshToken: string) => {
+  const decoded: any = await verifyRefreshAccessToken(prevRefreshToken);
+  if (!decoded)
+    return {
+      success: false,
+      code: 401,
+      error: {
+        msg: "El Refresh Token es invalido",
+      },
+    };
+
+  const userData = await AuthServices.getDataBaseUser(decoded.uid);
+  if (prevRefreshToken !== userData.data?.[0].refreshToken) {
+    return {
+      success: false,
+      code: 401,
+      error: {
+        msg: "El Refresh Token es invalido",
+      },
+    };
+  }
+
+  const typeEntity = userData.data?.[0].typeEntity;
+  const accessToken = sign({ uid: decoded.uid }, JWT_SECRET, {
     expiresIn: accessTokenExpiresIn,
   });
-  const refreshToken = sign({ uid }, JWT_REFRESH_SECRET, {
+  const refreshToken = sign({ uid: decoded.uid }, JWT_REFRESH_SECRET, {
     expiresIn: refreshTokenExpiresIn,
   });
 
+  if (userData.data?.[0].auth_users) {
+    await CompanyModel.updateOne(
+      { "auth_users.Uid": userData.data[0].auth_users.Uid }, // Filtrar por Uid dentro del array
+      {
+        $set: {
+          "auth_users.$.accessToken": accessToken,
+          "auth_users.$.refreshToken": refreshToken,
+        },
+      } // Actualizar accessToken
+    );
+  } else if (typeEntity === TypeEntity.COMPANY) {
+    await CompanyModel.updateOne(
+      { uid: decoded.uid }, // Filtrar por uid
+      { $set: { accessToken: accessToken, refreshToken } } // Actualizar accessToken
+    );
+  } else {
+    await UserModel.updateOne(
+      { uid: decoded.uid }, // Filtrar por uid
+      { $set: { accessToken: accessToken, refreshToken } } // Actualizar accessToken
+    );
+  }
+
   return {
-    accessToken,
-    accessExpiresIn: accessTokenExpiresIn,
-    refreshToken,
-    refreshExpiresIn: refreshTokenExpiresIn,
+    success: true,
+    code: 200,
+    res: {
+      accessToken,
+      refreshToken,
+    },
   };
 };
 

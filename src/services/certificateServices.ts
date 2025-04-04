@@ -1450,6 +1450,29 @@ export class CertificateService {
     }
   };
 
+  static transformCertificateRequest = (
+    certRequest: any,
+    type: CertificationType
+  ) => {
+    try {
+      const fieldName =
+        type == CertificationType.RECEIVED ? "receiver" : "sender";
+      const companyId = certRequest[`${fieldName}Id`];
+      const companyName = certRequest[`${fieldName}Name`];
+      const companyDocument = certRequest[`${fieldName}Document`];
+      const {
+        [`${fieldName}Id`]: _,
+        [`${fieldName}Name`]: __,
+        [`${fieldName}Document`]: ___,
+        ...rest
+      } = certRequest;
+
+      return { companyId, companyName, companyDocument, ...rest };
+    } catch (e) {
+      return null;
+    }
+  };
+
   static searchCertificates = async (
     companyID: string,
     page: number,

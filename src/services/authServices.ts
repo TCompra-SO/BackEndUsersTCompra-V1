@@ -6,7 +6,6 @@ import User from "../models/userModel";
 import Company from "../models/companyModel";
 import Fuse from "fuse.js";
 import { encrypt, verified } from "../utils/bcrypt.handle";
-import { generateToken, verifyRefreshAccessToken } from "../utils/jwt.handle";
 import { ErrorMessages } from "../utils/ErrorMessages";
 import axios, { AxiosRequestConfig } from "axios";
 import { MetadataI } from "../interfaces/utils.interface";
