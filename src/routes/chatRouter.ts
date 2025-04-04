@@ -1,15 +1,18 @@
 import { Router } from "express";
 import { checkJwt } from "../middleware/session";
 import {
+  archiveChatController,
   changeStateConnectionController,
   createChatController,
   createMessage,
   getChatController,
   getChatInfoController,
   getChatUsersDataController,
+  getCountMessageUnRead,
   getMessage,
   getMessages,
   readMessages,
+  searchChat,
 } from "../controllers/chatController";
 export class ChatRouter {
   private static instance: ChatRouter;
@@ -24,6 +27,9 @@ export class ChatRouter {
     this.router.post("/getMessages", getMessages);
     this.router.post("/getChatUsersData", getChatUsersDataController);
     this.router.post("/getChatInfo", getChatInfoController);
+    this.router.post("/searchChat", searchChat);
+    this.router.post("/archiveChat", archiveChatController);
+    this.router.get("/getCountMessageUnRead/:userId", getCountMessageUnRead);
     this.router.get("/getChat/:chatId", getChatController);
     this.router.get("/getMessage/:messageId", getMessage);
     this.router.post("/changeStateConnection", changeStateConnectionController);

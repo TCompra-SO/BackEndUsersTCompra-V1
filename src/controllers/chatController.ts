@@ -62,10 +62,20 @@ export const createMessage = async (req: RequestExt, res: Response) => {
       res.status(responseUser.code).send(responseUser);
       const roomName = "roomChat" + responseUser.data?.chatId;
 
-      io.to(roomName).emit("updateChat", {
-        messageData: responseUser.data,
-        type: TypeMessage.NewMessage,
-      });
+      const chatData = await ChatService.getChat(chatId);
+      const numUnReads = await ChatService.getCountMessageUnRead(userId);
+      if (!chatData.data?.archive) {
+        io.to(roomName).emit("updateChat", {
+          messageData: responseUser.data,
+          numUnreadMessages: chatData.data?.numUnreadMessages,
+          type: TypeMessage.NewMessage,
+        });
+
+        const roomNameChat = "roomGeneralChat" + responseUser.data?.userId;
+        io.to(roomNameChat).emit("updateGeneralChat", {
+          numUnreadMessages: numUnReads.data?.[0].totalUnread,
+        });
+      }
     } else {
       res.status(responseUser.code).send(responseUser);
     }
@@ -120,8 +130,12 @@ export const getMessage = async (req: RequestExt, res: Response) => {
 
 export const readMessages = async (req: RequestExt, res: Response) => {
   try {
-    const { messagesIds, chatId } = req.body;
-    const responseUser = await ChatService.readMessages(messagesIds, chatId);
+    const { messagesIds, chatId, userId } = req.body;
+    const responseUser = await ChatService.readMessages(
+      messagesIds,
+      chatId,
+      userId
+    );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
       const roomName = "roomChat" + chatId;
@@ -197,8 +211,12 @@ export const changeStateConnectionController = async (
 
 export const getChatInfoController = async (req: RequestExt, res: Response) => {
   try {
-    const { userId, requerimentId } = req.body;
-    const responseUser = await ChatService.getChatInfo(userId, requerimentId);
+    const { userId, userChat, requerimentId } = req.body;
+    const responseUser = await ChatService.getChatInfo(
+      userId,
+      userChat,
+      requerimentId
+    );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
     } else {
@@ -206,6 +224,59 @@ export const getChatInfoController = async (req: RequestExt, res: Response) => {
     }
   } catch (error) {
     console.error("Error en chatInfoController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
+export const searchChat = async (req: RequestExt, res: Response) => {
+  try {
+    const { userId, keyWords } = req.body;
+    const responseUser = await ChatService.searchChat(userId, keyWords);
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser);
+    } else {
+      res.status(responseUser.code).send(responseUser);
+    }
+  } catch (error) {
+    console.error("Error en searchChatController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+export const archiveChatController = async (req: RequestExt, res: Response) => {
+  try {
+    const { chatId, archive } = req.body;
+    const responseUser = await ChatService.archiveChat(chatId, archive);
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser);
+    } else {
+      res.status(responseUser.code).send(responseUser);
+    }
+  } catch (error) {
+    console.error("Error en sarchiveChatController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
+export const getCountMessageUnRead = async (req: RequestExt, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const responseUser = await ChatService.getCountMessageUnRead(userId);
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser);
+    } else {
+      res.status(responseUser.code).send(responseUser);
+    }
+  } catch (error) {
+    console.error("Error en getCountMessageUnReadController", error);
     res.status(500).send({
       success: false,
       msg: "Error interno del servidor.",

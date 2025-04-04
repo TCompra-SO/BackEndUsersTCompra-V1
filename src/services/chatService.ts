@@ -7,7 +7,7 @@ import { AuthServices } from "./authServices";
 import CompanyModel from "../models/companyModel";
 import UserModel from "../models/userModel";
 import { boolean } from "joi";
-
+import Fuse from "fuse.js";
 export class ChatService {
   static createChat = async (
     userId: string,
@@ -72,6 +72,7 @@ export class ChatService {
         chatPartnerId,
         title,
         lastDate: new Date(), // Fecha en string
+        archive: false,
       });
       await newChat.save();
       return {
@@ -177,15 +178,25 @@ export class ChatService {
       });
 
       await sendMessage.save();
+      if (!chatData.data?.archive) {
+        await ChatModel.updateOne(
+          { uid: chatId }, // Filtro por chatId
+          {
+            $set: { lastDate: new Date() },
+            $inc: { numUnreadMessages: 1 },
+            lastMessage: message,
+          } // Actualiza lastDate con la fecha actual
+        );
+      } else {
+        await ChatModel.updateOne(
+          { uid: chatId }, // Filtro por chatId
+          {
+            $set: { lastDate: new Date() },
+            lastMessage: message,
+          } // Actualiza lastDate con la fecha actual
+        );
+      }
 
-      await ChatModel.updateOne(
-        { uid: chatId }, // Filtro por chatId
-        {
-          $set: { lastDate: new Date() },
-          $inc: { numUnreadMessages: 1 },
-          lastMessage: message,
-        } // Actualiza lastDate con la fecha actual
-      );
       return {
         success: true,
         code: 200,
@@ -261,11 +272,57 @@ export class ChatService {
     }
   };
 
-  static readMessages = async (messageIds: string[], chatId: string) => {
+  static readMessages = async (
+    messageIds: string[],
+    chatId: string,
+    userId?: string
+  ) => {
     try {
       // Actualizar los mensajes cuyo _id esté en el array
       let count = 0;
       let messages: any = [];
+      if (messageIds.length === 1) {
+        const message = await MessageModel.findOne({ uid: messageIds[0] });
+
+        if (!message) {
+          return {
+            success: false,
+            code: 404,
+            error: {
+              msg: "Mensaje no encontrado",
+            },
+          };
+        }
+
+        const result = await MessageModel.updateMany(
+          {
+            chatId: chatId,
+            userId: userId,
+            read: false,
+            timestamp: { $lte: message.timestamp }, // Solo mensajes anteriores
+          },
+          { $set: { read: true } } // Campo a actualizar
+        );
+        //PENDIENTE LOS MENSAJES ARCHIVADOS
+        await ChatModel.updateOne(
+          { uid: chatId },
+          {
+            $inc: {
+              numUnreadMessages: -result.modifiedCount,
+            },
+          }
+        );
+
+        return {
+          success: true,
+          code: 200,
+          data: result,
+          res: {
+            endMessageId: messageIds[0],
+            msg: "mensajes marcados como leidos",
+          },
+        };
+      }
       while (count < messageIds.length) {
         const messageData = await this.getMessage(messageIds[count]);
         const read = messageData.data?.read;
@@ -343,7 +400,10 @@ export class ChatService {
       const chatUsersData = await ChatModel.aggregate([
         {
           $match: {
-            $or: [{ userId: userId }, { chatPartnerId: userId }],
+            $and: [
+              { $or: [{ userId: userId }, { chatPartnerId: userId }] },
+              { $or: [{ archive: false }, { archive: { $exists: false } }] },
+            ],
           },
         },
         // 🔍 Lookups
@@ -416,17 +476,17 @@ export class ChatService {
           $addFields: {
             user: {
               $ifNull: [
-                { $arrayElemAt: ["$userCompany.name", 0] },
-                { $arrayElemAt: ["$userInfo.name", 0] },
-                { $arrayElemAt: ["$subUserUserInfo.name", 0] },
+                { $arrayElemAt: ["$subUserUserInfo.name", 0] }, // ✅ Primero intenta con "profiles"
+                { $arrayElemAt: ["$userInfo.name", 0] }, // ✅ Luego "users"
+                { $arrayElemAt: ["$userCompany.name", 0] }, // 🔽 Finalmente, "companys"
                 "",
               ],
             },
             partner: {
               $ifNull: [
-                { $arrayElemAt: ["$partnerCompany.name", 0] },
-                { $arrayElemAt: ["$partnerInfo.name", 0] },
-                { $arrayElemAt: ["$subUserPartnerInfo.name", 0] },
+                { $arrayElemAt: ["$subUserPartnerInfo.name", 0] }, // ✅ Primero "profiles"
+                { $arrayElemAt: ["$partnerInfo.name", 0] }, // ✅ Luego "users"
+                { $arrayElemAt: ["$partnerCompany.name", 0] }, // 🔽 Finalmente "companys"
                 "",
               ],
             },
@@ -607,13 +667,176 @@ export class ChatService {
     }
   };
 
-  static getChatInfo = async (userId: string, requerimentId: string) => {
+  static getChatInfo = async (
+    userId: string,
+    userChat: string,
+    requerimentId: string
+  ) => {
     try {
       const chatData = await ChatModel.aggregate([
         {
           $match: {
-            $or: [{ userId: userId } /* { chatPartnerId: userId }*/], // Filtrar por userId o chatPartnerId
-            requerimentId: requerimentId, // Filtrar por requerimentId
+            $and: [
+              {
+                $or: [
+                  { $and: [{ userId: userId }, { chatPartnerId: userChat }] }, // Caso 1
+                  { $and: [{ userId: userChat }, { chatPartnerId: userId }] }, // Caso 2
+                ],
+              },
+              { requerimentId: requerimentId }, // Filtrar por requerimentId
+            ],
+          },
+        },
+
+        // 🔍 Lookups
+        {
+          $lookup: {
+            from: "companys",
+            localField: "userId",
+            foreignField: "uid",
+            as: "userCompany",
+          },
+        },
+        {
+          $lookup: {
+            from: "companys",
+            localField: "chatPartnerId",
+            foreignField: "uid",
+            as: "partnerCompany",
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "uid",
+            as: "userInfo",
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "chatPartnerId",
+            foreignField: "uid",
+            as: "partnerInfo",
+          },
+        },
+        {
+          $lookup: {
+            from: "profiles",
+            localField: "userId",
+            foreignField: "uid",
+            as: "subUserUserInfo",
+          },
+        },
+        {
+          $lookup: {
+            from: "profiles",
+            localField: "chatPartnerId",
+            foreignField: "uid",
+            as: "subUserPartnerInfo",
+          },
+        },
+        {
+          $lookup: {
+            from: "companys",
+            localField: "subUserUserInfo.companyID",
+            foreignField: "uid",
+            as: "subUserCompanyUser",
+          },
+        },
+        {
+          $lookup: {
+            from: "companys",
+            localField: "subUserPartnerInfo.companyID",
+            foreignField: "uid",
+            as: "subUserCompanyPartner",
+          },
+        },
+
+        // 🛠️ Extraer el nombre y avatar correctamente
+        {
+          $addFields: {
+            user: {
+              $ifNull: [
+                { $first: "$subUserUserInfo.name" },
+                { $first: "$userInfo.name" },
+                { $first: "$userCompany.name" },
+                "",
+              ],
+            },
+            partner: {
+              $ifNull: [
+                { $first: "$subUserPartnerInfo.name" },
+                { $first: "$partnerInfo.name" },
+                { $first: "$partnerCompany.name" },
+                "",
+              ],
+            },
+            userAvatar: {
+              $cond: {
+                if: { $gt: [{ $size: "$subUserUserInfo" }, 0] },
+                then: { $first: "$subUserCompanyUser.avatar" },
+                else: {
+                  $ifNull: [
+                    { $first: "$userInfo.avatar" },
+                    { $first: "$userCompany.avatar" },
+                    "",
+                  ],
+                },
+              },
+            },
+            partnerAvatar: {
+              $cond: {
+                if: { $gt: [{ $size: "$subUserPartnerInfo" }, 0] },
+                then: { $first: "$subUserCompanyPartner.avatar" },
+                else: {
+                  $ifNull: [
+                    { $first: "$partnerInfo.avatar" },
+                    { $first: "$partnerCompany.avatar" },
+                    "",
+                  ],
+                },
+              },
+            },
+          },
+        },
+
+        // 🔀 Determinar userName y userImage basado en userChat
+        {
+          $addFields: {
+            userName: {
+              $cond: {
+                if: { $eq: ["$userId", userChat] },
+                then: "$user",
+                else: "$partner",
+              },
+            },
+            userImage: {
+              $cond: {
+                if: { $eq: ["$userId", userChat] },
+                then: "$userAvatar",
+                else: "$partnerAvatar",
+              },
+            },
+          },
+        },
+
+        // 🔍 Limpiar los arrays innecesarios
+        {
+          $project: {
+            userCompany: 0,
+            partnerCompany: 0,
+            userInfo: 0,
+            partnerInfo: 0,
+            subUserUserInfo: 0,
+            subUserPartnerInfo: 0,
+            subUserCompanyUser: 0,
+            subUserCompanyPartner: 0,
+            user: 0,
+            partner: 0,
+            userAvatar: 0,
+            partnerAvatar: 0,
           },
         },
       ]);
@@ -628,6 +851,282 @@ export class ChatService {
         code: 500,
         error: {
           msg: "Error al obtener el chat",
+        },
+      };
+    }
+  };
+
+  static searchChat = async (userId: string, keyWords: string) => {
+    try {
+      const searchRegex = new RegExp(keyWords, "i");
+
+      // 🔍 1️⃣ Buscar coincidencias exactas en MongoDB
+      let chats = await ChatModel.aggregate([
+        { $match: { $or: [{ userId: userId }, { chatPartnerId: userId }] } },
+        {
+          $lookup: {
+            from: "companys",
+            localField: "userId",
+            foreignField: "uid",
+            as: "userCompany",
+          },
+        },
+        {
+          $lookup: {
+            from: "companys",
+            localField: "chatPartnerId",
+            foreignField: "uid",
+            as: "partnerCompany",
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "uid",
+            as: "userInfo",
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "chatPartnerId",
+            foreignField: "uid",
+            as: "partnerInfo",
+          },
+        },
+        {
+          $addFields: {
+            user: {
+              $ifNull: [
+                { $arrayElemAt: ["$userCompany.name", 0] },
+                { $arrayElemAt: ["$userInfo.name", 0] },
+                "",
+              ],
+            },
+            partner: {
+              $ifNull: [
+                { $arrayElemAt: ["$partnerCompany.name", 0] },
+                { $arrayElemAt: ["$partnerInfo.name", 0] },
+                "",
+              ],
+            },
+          },
+        },
+        {
+          $addFields: {
+            userName: {
+              $cond: {
+                if: { $eq: ["$userId", userId] },
+                then: "$partner",
+                else: "$user",
+              },
+            },
+          },
+        },
+        {
+          $match: {
+            $or: [{ title: searchRegex }, { userName: searchRegex }],
+          },
+        },
+        {
+          $project: {
+            userCompany: 0,
+            partnerCompany: 0,
+            userInfo: 0,
+            partnerInfo: 0,
+            subUserUserInfo: 0,
+            subUserPartnerInfo: 0,
+            subUserCompanyUser: 0,
+            subUserCompanyPartner: 0,
+            user: 0,
+            partner: 0,
+            userAvatar: 0,
+            partnerAvatar: 0,
+          },
+        },
+        { $sort: { createdAt: -1 } },
+        { $limit: 10 },
+      ]);
+
+      // 🚀 2️⃣ Si no hay resultados exactos, hacer búsqueda difusa con Fuse.js
+      if (chats.length === 0) {
+        const recentChats = await ChatModel.aggregate([
+          { $match: { $or: [{ userId: userId }, { chatPartnerId: userId }] } },
+          {
+            $lookup: {
+              from: "companys",
+              localField: "userId",
+              foreignField: "uid",
+              as: "userCompany",
+            },
+          },
+          {
+            $lookup: {
+              from: "companys",
+              localField: "chatPartnerId",
+              foreignField: "uid",
+              as: "partnerCompany",
+            },
+          },
+          {
+            $lookup: {
+              from: "users",
+              localField: "userId",
+              foreignField: "uid",
+              as: "userInfo",
+            },
+          },
+          {
+            $lookup: {
+              from: "users",
+              localField: "chatPartnerId",
+              foreignField: "uid",
+              as: "partnerInfo",
+            },
+          },
+          {
+            $addFields: {
+              user: {
+                $ifNull: [
+                  { $arrayElemAt: ["$userCompany.name", 0] },
+                  { $arrayElemAt: ["$userInfo.name", 0] },
+                  "",
+                ],
+              },
+              partner: {
+                $ifNull: [
+                  { $arrayElemAt: ["$partnerCompany.name", 0] },
+                  { $arrayElemAt: ["$partnerInfo.name", 0] },
+                  "",
+                ],
+              },
+            },
+          },
+          {
+            $addFields: {
+              userName: {
+                $cond: {
+                  if: { $eq: ["$userId", userId] },
+                  then: "$partner",
+                  else: "$user",
+                },
+              },
+            },
+          },
+          {
+            $project: {
+              userCompany: 0,
+              partnerCompany: 0,
+              userInfo: 0,
+              partnerInfo: 0,
+              subUserUserInfo: 0,
+              subUserPartnerInfo: 0,
+              subUserCompanyUser: 0,
+              subUserCompanyPartner: 0,
+              user: 0,
+              partner: 0,
+              userAvatar: 0,
+              partnerAvatar: 0,
+            },
+          },
+          { $sort: { createdAt: -1 } },
+          { $limit: 100 }, // Tomamos 50 registros recientes para la búsqueda difusa
+        ]);
+
+        if (recentChats.length > 0) {
+          const fuse = new Fuse(recentChats, {
+            keys: ["title", "userName"],
+            threshold: 0.4,
+          });
+          chats = fuse
+            .search(keyWords)
+            .slice(0, 10)
+            .map((result) => result.item);
+        }
+      }
+
+      return {
+        success: true,
+        code: 200,
+        data: chats,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error al obtener el chats",
+        },
+      };
+    }
+  };
+
+  static archiveChat = async (chatId: string, archive: boolean) => {
+    try {
+      const updatedChat = await ChatModel.findOneAndUpdate(
+        { uid: chatId }, // Buscar por ID
+        { $set: { archive: archive } }, // Actualizar el campo archive
+        { new: true } // Devolver el documento actualizado
+      );
+
+      if (!updatedChat) {
+        return {
+          success: false,
+          code: 404,
+          error: { msg: "Chat no encontrado" },
+        };
+      }
+      let msg;
+      if (archive) {
+        msg = "Chat archivado con éxito";
+      } else {
+        msg = "Chat desarchivado con éxito";
+      }
+      return {
+        success: true,
+        code: 200,
+        res: {
+          msg: msg,
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error al archivar el chat",
+        },
+      };
+    }
+  };
+
+  static getCountMessageUnRead = async (userId: string) => {
+    try {
+      const result = await ChatModel.aggregate([
+        {
+          $match: {
+            $or: [{ userId }, { chatPartnerId: userId }],
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalUnread: { $sum: "$numUnreadMessages" },
+          },
+        },
+      ]);
+      return {
+        success: true,
+        code: 200,
+        data: result,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error al archivar el chat",
         },
       };
     }
