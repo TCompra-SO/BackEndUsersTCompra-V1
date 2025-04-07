@@ -61,7 +61,7 @@ export const createMessage = async (req: RequestExt, res: Response) => {
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
       const roomName = "roomChat" + responseUser.data?.chatId;
-
+      console.log(roomName);
       const chatData = await ChatService.getChat(chatId);
       let receivingUser: any;
       if (chatData.data?.userId === userId) {
@@ -74,7 +74,13 @@ export const createMessage = async (req: RequestExt, res: Response) => {
         chatId
       );
       const numUnReads = await ChatService.getCountMessageUnRead(userId);
-      if (!chatData.data?.archive) {
+
+      const archiveEntry = chatData.data?.archive?.find(
+        (a) => a.userId?.toString() === userId?.toString()
+      );
+      const state = archiveEntry?.state ?? null;
+
+      if (!state) {
         io.to(roomName).emit("updateChat", {
           messageData: responseUser.data,
           numUnreadMessages: chatData.data?.numUnreadMessages,
@@ -346,6 +352,31 @@ export const getCountUnReadByUser = async (req: RequestExt, res: Response) => {
     }
   } catch (error) {
     console.error("Error en getCountUnReadByUserController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
+export const getArchivedChatsController = async (
+  req: RequestExt,
+  res: Response
+) => {
+  try {
+    const { userId, page, pageSize } = req.body;
+    const responseUser = await ChatService.getArchivedChats(
+      userId,
+      Number(page),
+      Number(pageSize)
+    );
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser);
+    } else {
+      res.status(responseUser.code).send(responseUser);
+    }
+  } catch (error) {
+    console.error("Error en getArchivedChatsController", error);
     res.status(500).send({
       success: false,
       msg: "Error interno del servidor.",

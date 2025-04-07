@@ -459,7 +459,23 @@ export class ChatService {
           $match: {
             $and: [
               { $or: [{ userId: userId }, { chatPartnerId: userId }] },
-              { $or: [{ archive: false }, { archive: { $exists: false } }] },
+              {
+                $or: [
+                  {
+                    archive: {
+                      $not: {
+                        $elemMatch: {
+                          userId: userId,
+                          state: true, // si hay state true => excluimos
+                        },
+                      },
+                    },
+                  },
+                  {
+                    archive: { $exists: false }, // sin campo archive
+                  },
+                ],
+              },
             ],
           },
         },
@@ -609,6 +625,7 @@ export class ChatService {
             partner: 0,
             userAvatar: 0,
             partnerAvatar: 0,
+            archive: 0,
           },
         },
       ])
@@ -618,7 +635,24 @@ export class ChatService {
       // .lean(); // Optimiza la consulta para solo devolver JSON;
       // Obtener el total de documentos antes de paginar
       const totalDocuments = await ChatModel.countDocuments({
-        $or: [{ userId }, { chatPartnerId: userId }],
+        $and: [
+          { $or: [{ userId }, { chatPartnerId: userId }] },
+          {
+            $or: [
+              {
+                archive: {
+                  $not: {
+                    $elemMatch: {
+                      userId: userId,
+                      state: true,
+                    },
+                  },
+                },
+              },
+              { archive: { $exists: false } },
+            ],
+          },
+        ],
       });
       return {
         success: true,
@@ -1292,34 +1326,28 @@ export class ChatService {
         };
       }
 
-      // Verificar si el campo 'archive' es un array, si no lo es lo convertimos
-      if (!Array.isArray(chat.archive)) {
-        chat.archive = []; // Convertimos a array
-        await chat.save(); // Guardamos el cambio
-      }
-
-      // Primero intentamos actualizar si ya existe ese userId en el array
+      // Intentar actualizar si el userId ya está en archive
       const updated = await ChatModel.findOneAndUpdate(
         {
           uid: chatId,
-          "archive.userId": userId,
+          "archive.userId": userId, // FIX aquí
         },
         {
           $set: {
-            "archive.$.state": archive, // Usamos $ para apuntar al elemento correcto del array
+            "archive.$.state": archive,
           },
         },
         { new: true }
       );
 
-      // Si no se actualizó porque el userId no existe, hacemos un push
+      // Si no existía, hacemos un push
       let updatedChat = updated;
       if (!updated) {
         updatedChat = await ChatModel.findOneAndUpdate(
           { uid: chatId },
           {
             $push: {
-              archive: { userId: userId, state: archive },
+              archive: { userId, state: archive },
             },
           },
           { new: true }
@@ -1354,6 +1382,73 @@ export class ChatService {
         code: 500,
         error: {
           msg: "Error al archivar el chat",
+        },
+      };
+    }
+  };
+
+  static getArchivedChats = async (
+    userId: string,
+    page: number,
+    pageSize: number
+  ) => {
+    try {
+      if (page < 1) page = 1;
+      if (pageSize < 1) pageSize = 10;
+
+      const skip = (page - 1) * pageSize;
+
+      // Obtener total para la paginación
+      const total = await ChatModel.countDocuments({
+        $or: [{ userId: userId }, { chatPartnerId: userId }],
+        archive: {
+          $elemMatch: {
+            userId: userId,
+            state: true,
+          },
+        },
+      });
+
+      // Obtener los chats paginados
+      const chats = await ChatModel.find({
+        $or: [{ userId: userId }, { chatPartnerId: userId }],
+        archive: {
+          $elemMatch: {
+            userId: userId,
+            state: true,
+          },
+        },
+      })
+        .skip(skip)
+        .limit(pageSize)
+        .sort({ updatedAt: -1 }) // opcional, orden por última actualización
+        .lean();
+      for (const chat of chats) {
+        if (Array.isArray(chat.archive)) {
+          chat.archive = chat.archive.filter((a) => a.userId === userId);
+        } else {
+          chat.archive = []; // Por si acaso, lo dejamos limpio
+        }
+      }
+
+      return {
+        success: true,
+        code: 200,
+        data: chats,
+        res: {
+          totalDocuments: total,
+          totalPages: Math.ceil(total / pageSize),
+          currentPage: page,
+          pageSize: pageSize,
+        },
+      };
+    } catch (error) {
+      console.log(error);
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error al obtener los chats",
         },
       };
     }

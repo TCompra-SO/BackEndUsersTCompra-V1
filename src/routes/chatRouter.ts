@@ -5,6 +5,7 @@ import {
   changeStateConnectionController,
   createChatController,
   createMessage,
+  getArchivedChatsController,
   getChatController,
   getChatInfoController,
   getChatUsersDataController,
@@ -35,6 +36,7 @@ export class ChatRouter {
     this.router.get("/getCountMessageUnRead/:userId", getCountMessageUnRead);
     this.router.get("/getChat/:chatId", getChatController);
     this.router.get("/getMessage/:messageId", getMessage);
+    this.router.post("/getArchivedChats", getArchivedChatsController);
     this.router.post("/changeStateConnection", changeStateConnectionController);
   }
 
