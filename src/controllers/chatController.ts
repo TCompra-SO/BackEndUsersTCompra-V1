@@ -61,7 +61,7 @@ export const createMessage = async (req: RequestExt, res: Response) => {
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
       const roomName = "roomChat" + responseUser.data?.chatId;
-
+      console.log(roomName);
       const chatData = await ChatService.getChat(chatId);
       let receivingUser: any;
       if (chatData.data?.userId === userId) {
@@ -74,7 +74,13 @@ export const createMessage = async (req: RequestExt, res: Response) => {
         chatId
       );
       const numUnReads = await ChatService.getCountMessageUnRead(userId);
-      if (!chatData.data?.archive) {
+
+      const archiveEntry = chatData.data?.archive?.find(
+        (a) => a.userId?.toString() === userId?.toString()
+      );
+      const state = archiveEntry?.state ?? null;
+
+      if (!state) {
         io.to(roomName).emit("updateChat", {
           messageData: responseUser.data,
           numUnreadMessages: chatData.data?.numUnreadMessages,
