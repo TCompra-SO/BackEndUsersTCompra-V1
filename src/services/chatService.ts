@@ -213,6 +213,64 @@ export class ChatService {
     }
   };
 
+  static getMessagesBefore = async (
+    chatId: string,
+    beforeMessageId: string,
+    pageSize: number
+  ) => {
+    try {
+      let timestampCursor: Date | null = null;
+
+      if (beforeMessageId) {
+        const referenceMessage = await MessageModel.findOne({
+          chatId,
+          uid: beforeMessageId,
+        }).lean();
+
+        if (!referenceMessage) {
+          return {
+            success: false,
+            code: 404,
+            error: { msg: "Reference message not found" },
+          };
+        }
+
+        timestampCursor = referenceMessage.timestamp;
+      }
+
+      const query: any = { chatId };
+      if (timestampCursor) {
+        query.timestamp = { $lt: timestampCursor };
+      }
+
+      const messages = await MessageModel.find(query)
+        .sort({ timestamp: -1 })
+        .limit(pageSize)
+        .lean();
+      const totalMessages = await MessageModel.countDocuments({
+        chatId: chatId,
+      });
+      return {
+        success: true,
+        code: 200,
+        data: messages,
+        res: {
+          totalDocuments: totalMessages,
+          totalPages: Math.ceil(totalMessages / pageSize),
+          pageSize: pageSize,
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error retrieving messages",
+        },
+      };
+    }
+  };
+
   static getMessages = async (
     chatId: string,
     page: number,

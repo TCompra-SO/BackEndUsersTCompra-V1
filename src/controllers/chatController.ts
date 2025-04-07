@@ -126,6 +126,28 @@ export const getMessages = async (req: RequestExt, res: Response) => {
   }
 };
 
+export const getMessagesBefore = async (req: RequestExt, res: Response) => {
+  try {
+    const { chatId, messageId, pageSize } = req.body;
+    const responseUser = await ChatService.getMessagesBefore(
+      chatId,
+      messageId,
+      Number(pageSize)
+    );
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser);
+    } else {
+      res.status(responseUser.code).send(responseUser);
+    }
+  } catch (error) {
+    console.error("Error en getMessagesController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
 export const getMessage = async (req: RequestExt, res: Response) => {
   try {
     const { messageId } = req.params;
