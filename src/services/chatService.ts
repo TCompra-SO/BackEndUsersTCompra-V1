@@ -231,7 +231,7 @@ export class ChatService {
           return {
             success: false,
             code: 404,
-            error: { msg: "Reference message not found" },
+            error: { msg: "Error al obtener el mensaje de referencia" },
           };
         }
 
@@ -265,7 +265,7 @@ export class ChatService {
         success: false,
         code: 500,
         error: {
-          msg: "Error retrieving messages",
+          msg: "Error al obtener mensajes",
         },
       };
     }
@@ -428,6 +428,252 @@ export class ChatService {
         code: 500,
         error: {
           msg: "Error al leer los Mensajes",
+        },
+      };
+    }
+  };
+
+  static getChatUsersDataBefore = async (
+    userId: string,
+    lastChatId: string,
+    pageSize: number
+  ) => {
+    try {
+      const dataUser = await AuthServices.getDataBaseUser(userId);
+      let typeUser;
+
+      if (dataUser.data?.[0].auth_users) {
+        typeUser = TypeEntity.SUBUSER;
+      } else {
+        typeUser = dataUser.data?.[0].typeEntity;
+      }
+
+      const matchConditions: any[] = [
+        { $or: [{ userId }, { chatPartnerId: userId }] },
+        {
+          $or: [
+            {
+              archive: {
+                $not: {
+                  $elemMatch: {
+                    userId: userId,
+                    state: true,
+                  },
+                },
+              },
+            },
+            { archive: { $exists: false } },
+          ],
+        },
+      ];
+
+      if (lastChatId) {
+        const lastChat = await ChatModel.findOne(
+          { uid: lastChatId },
+          { createdAt: 1 }
+        );
+        if (!lastChat)
+          return {
+            success: false,
+            code: 404,
+            error: { msg: "Error al obtener el chat de referencia" },
+          };
+        matchConditions.push({ createdAt: { $lt: lastChat.createdAt } });
+      }
+
+      const chatUsersData = await ChatModel.aggregate([
+        {
+          $match: {
+            $and: matchConditions,
+          },
+        },
+        {
+          $lookup: {
+            from: "companys",
+            localField: "userId",
+            foreignField: "uid",
+            as: "userCompany",
+          },
+        },
+        {
+          $lookup: {
+            from: "companys",
+            localField: "chatPartnerId",
+            foreignField: "uid",
+            as: "partnerCompany",
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "uid",
+            as: "userInfo",
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "chatPartnerId",
+            foreignField: "uid",
+            as: "partnerInfo",
+          },
+        },
+        {
+          $lookup: {
+            from: "profiles",
+            localField: "userId",
+            foreignField: "uid",
+            as: "subUserUserInfo",
+          },
+        },
+        {
+          $lookup: {
+            from: "profiles",
+            localField: "chatPartnerId",
+            foreignField: "uid",
+            as: "subUserPartnerInfo",
+          },
+        },
+        {
+          $lookup: {
+            from: "companys",
+            localField: "subUserUserInfo.companyID",
+            foreignField: "uid",
+            as: "subUserCompanyUser",
+          },
+        },
+        {
+          $lookup: {
+            from: "companys",
+            localField: "subUserPartnerInfo.companyID",
+            foreignField: "uid",
+            as: "subUserCompanyPartner",
+          },
+        },
+        {
+          $addFields: {
+            user: {
+              $ifNull: [
+                { $arrayElemAt: ["$subUserUserInfo.name", 0] },
+                { $arrayElemAt: ["$userInfo.name", 0] },
+                { $arrayElemAt: ["$userCompany.name", 0] },
+                "",
+              ],
+            },
+            partner: {
+              $ifNull: [
+                { $arrayElemAt: ["$subUserPartnerInfo.name", 0] },
+                { $arrayElemAt: ["$partnerInfo.name", 0] },
+                { $arrayElemAt: ["$partnerCompany.name", 0] },
+                "",
+              ],
+            },
+            userAvatar: {
+              $cond: {
+                if: { $gt: [{ $size: "$subUserUserInfo" }, 0] },
+                then: { $arrayElemAt: ["$subUserCompanyUser.avatar", 0] },
+                else: {
+                  $ifNull: [
+                    { $arrayElemAt: ["$userInfo.avatar", 0] },
+                    { $arrayElemAt: ["$userCompany.avatar", 0] },
+                    "",
+                  ],
+                },
+              },
+            },
+            partnerAvatar: {
+              $cond: {
+                if: { $gt: [{ $size: "$subUserPartnerInfo" }, 0] },
+                then: { $arrayElemAt: ["$subUserCompanyPartner.avatar", 0] },
+                else: {
+                  $ifNull: [
+                    { $arrayElemAt: ["$partnerInfo.avatar", 0] },
+                    { $arrayElemAt: ["$partnerCompany.avatar", 0] },
+                    "",
+                  ],
+                },
+              },
+            },
+          },
+        },
+        {
+          $addFields: {
+            userName: {
+              $cond: {
+                if: { $eq: ["$userId", userId] },
+                then: "$partner",
+                else: "$user",
+              },
+            },
+            userImage: {
+              $cond: {
+                if: { $eq: ["$userId", userId] },
+                then: "$partnerAvatar",
+                else: "$userAvatar",
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            userCompany: 0,
+            partnerCompany: 0,
+            userInfo: 0,
+            partnerInfo: 0,
+            subUserUserInfo: 0,
+            subUserPartnerInfo: 0,
+            subUserCompanyUser: 0,
+            subUserCompanyPartner: 0,
+            user: 0,
+            partner: 0,
+            userAvatar: 0,
+            partnerAvatar: 0,
+            archive: 0,
+          },
+        },
+      ])
+        .sort({ createdAt: -1 })
+        .limit(pageSize);
+
+      const totalDocuments = await ChatModel.countDocuments({
+        $and: [
+          { $or: [{ userId }, { chatPartnerId: userId }] },
+          {
+            $or: [
+              {
+                archive: {
+                  $not: {
+                    $elemMatch: {
+                      userId: userId,
+                      state: true,
+                    },
+                  },
+                },
+              },
+              { archive: { $exists: false } },
+            ],
+          },
+        ],
+      });
+
+      return {
+        success: true,
+        code: 200,
+        data: chatUsersData,
+        res: {
+          totalDocuments: totalDocuments,
+          totalPages: Math.ceil(totalDocuments / pageSize),
+          pageSize: pageSize,
+        },
+      };
+    } catch (error) {
+      console.error(error);
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error al obtener el getChatUserData",
         },
       };
     }

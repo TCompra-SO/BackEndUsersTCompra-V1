@@ -146,7 +146,7 @@ export const getMessagesBefore = async (req: RequestExt, res: Response) => {
       res.status(responseUser.code).send(responseUser);
     }
   } catch (error) {
-    console.error("Error en getMessagesController", error);
+    console.error("Error en getMessagesBefore", error);
     res.status(500).send({
       success: false,
       msg: "Error interno del servidor.",
@@ -231,6 +231,31 @@ export const getChatUsersDataController = async (
     }
   } catch (error) {
     console.error("Error en readMessagesController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
+export const getChatUsersDataBeforeController = async (
+  req: RequestExt,
+  res: Response
+) => {
+  try {
+    const { userId, chatId, pageSize } = req.body;
+    const responseUser = await ChatService.getChatUsersDataBefore(
+      userId,
+      chatId,
+      Number(pageSize)
+    );
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser);
+    } else {
+      res.status(responseUser.code).send(responseUser);
+    }
+  } catch (error) {
+    console.error("Error en getChatUsersDataBeforeController", error);
     res.status(500).send({
       success: false,
       msg: "Error interno del servidor.",
