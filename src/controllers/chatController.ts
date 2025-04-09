@@ -408,3 +408,28 @@ export const getArchivedChatsController = async (
     });
   }
 };
+
+export const getArchivedChatsBeforeController = async (
+  req: RequestExt,
+  res: Response
+) => {
+  try {
+    const { userId, chatId, pageSize } = req.body;
+    const responseUser = await ChatService.getArchivedChatsBefore(
+      userId,
+      chatId,
+      Number(pageSize)
+    );
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser);
+    } else {
+      res.status(responseUser.code).send(responseUser);
+    }
+  } catch (error) {
+    console.error("Error en getArchivedChatsBeforeController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};

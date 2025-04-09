@@ -1633,6 +1633,83 @@ export class ChatService {
     }
   };
 
+  static getArchivedChatsBefore = async (
+    userId: string,
+    chatId: string,
+    pageSize: number
+  ) => {
+    try {
+      if (pageSize < 1) pageSize = 10;
+
+      const baseFilter = {
+        $or: [{ userId: userId }, { chatPartnerId: userId }],
+        archive: {
+          $elemMatch: {
+            userId: userId,
+            state: true,
+          },
+        },
+      };
+
+      let createdAtCursor: Date | null = null;
+      if (chatId) {
+        const referenceChat = await ChatModel.findOne(
+          { uid: chatId },
+          { updatedAt: 1 }
+        );
+        if (!referenceChat) {
+          return {
+            success: false,
+            code: 404,
+            error: {
+              msg: "Chat de referencia no encontrado",
+            },
+          };
+        }
+        createdAtCursor = referenceChat.createdAt;
+      }
+
+      const filter = createdAtCursor
+        ? { ...baseFilter, createdAt: { $lt: createdAtCursor } }
+        : baseFilter;
+
+      const chats = await ChatModel.find(filter)
+        .sort({ createdAt: -1 })
+        .limit(pageSize)
+        .lean();
+
+      for (const chat of chats) {
+        if (Array.isArray(chat.archive)) {
+          chat.archive = chat.archive.filter((a) => a.userId === userId);
+        } else {
+          chat.archive = [];
+        }
+      }
+
+      const total = await ChatModel.countDocuments(baseFilter);
+
+      return {
+        success: true,
+        code: 200,
+        data: chats,
+        res: {
+          totalDocuments: total,
+          totalPages: Math.ceil(total / pageSize),
+          pageSize: pageSize,
+        },
+      };
+    } catch (error) {
+      console.log(error);
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error al obtener los chats",
+        },
+      };
+    }
+  };
+
   static getArchivedChats = async (
     userId: string,
     page: number,
@@ -1667,7 +1744,7 @@ export class ChatService {
       })
         .skip(skip)
         .limit(pageSize)
-        .sort({ updatedAt: -1 }) // opcional, orden por última actualización
+        .sort({ createdAt: -1 }) // opcional, orden por última actualización
         .lean();
       for (const chat of chats) {
         if (Array.isArray(chat.archive)) {
