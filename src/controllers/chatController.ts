@@ -199,7 +199,7 @@ export const readMessages = async (req: RequestExt, res: Response) => {
 
       io.to(roomNameChat).emit("updateGeneralChat", {
         numUnreadMessages: numUnReads.data?.[0].totalUnread,
-        type: TypeMessage.NewMessage,
+        type: TypeMessage.READ,
       });
     } else {
       res.status(responseUser.code).send(responseUser);
