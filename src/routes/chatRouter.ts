@@ -5,14 +5,17 @@ import {
   changeStateConnectionController,
   createChatController,
   createMessage,
+  getArchivedChatsBeforeController,
   getArchivedChatsController,
   getChatController,
   getChatInfoController,
+  getChatUsersDataBeforeController,
   getChatUsersDataController,
   getCountMessageUnRead,
   getCountUnReadByUser,
   getMessage,
   getMessages,
+  getMessagesBefore,
   readMessages,
   searchChat,
 } from "../controllers/chatController";
@@ -26,8 +29,8 @@ export class ChatRouter {
     this.router.post("/createChat", createChatController);
     this.router.post("/createMessage", createMessage);
     this.router.post("/readMessages", readMessages);
-    this.router.post("/getMessages", getMessages);
-    this.router.post("/getChatUsersData", getChatUsersDataController);
+    this.router.post("/getMessages", getMessagesBefore);
+    this.router.post("/getChatUsersData", getChatUsersDataBeforeController);
     this.router.post("/getChatInfo", getChatInfoController);
     this.router.post("/searchChat", searchChat);
     this.router.post("/archiveChat", archiveChatController);
@@ -35,7 +38,7 @@ export class ChatRouter {
     this.router.get("/getCountMessageUnRead/:userId", getCountMessageUnRead);
     this.router.get("/getChat/:chatId", getChatController);
     this.router.get("/getMessage/:messageId", getMessage);
-    this.router.post("/getArchivedChats", getArchivedChatsController);
+    this.router.post("/getArchivedChats", getArchivedChatsBeforeController);
     this.router.post("/changeStateConnection", changeStateConnectionController);
   }
 
