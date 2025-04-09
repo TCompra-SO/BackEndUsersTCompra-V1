@@ -470,7 +470,7 @@ export class ChatService {
       if (lastChatId) {
         const lastChat = await ChatModel.findOne(
           { uid: lastChatId },
-          { createdAt: 1 }
+          { lastDate: 1 }
         );
         if (!lastChat)
           return {
@@ -478,7 +478,7 @@ export class ChatService {
             code: 404,
             error: { msg: "Error al obtener el chat de referencia" },
           };
-        matchConditions.push({ createdAt: { $lt: lastChat.createdAt } });
+        matchConditions.push({ lastDate: { $lt: lastChat.lastDate } });
       }
 
       const chatUsersData = await ChatModel.aggregate([
@@ -633,7 +633,7 @@ export class ChatService {
           },
         },
       ])
-        .sort({ createdAt: -1 })
+        .sort({ lastDate: -1 })
         .limit(pageSize);
 
       const totalDocuments = await ChatModel.countDocuments({
@@ -875,7 +875,7 @@ export class ChatService {
           },
         },
       ])
-        .sort({ createdAt: -1 }) // Orden descendente (últimos mensajes primero)
+        .sort({ lastDate: -1 }) // Orden descendente (últimos mensajes primero)
         .skip(skip) // Saltar los mensajes según la página
         .limit(pageSize); // Limitar la cantidad de mensajes por página
       // .lean(); // Optimiza la consulta para solo devolver JSON;
@@ -1655,7 +1655,7 @@ export class ChatService {
       if (chatId) {
         const referenceChat = await ChatModel.findOne(
           { uid: chatId },
-          { updatedAt: 1 }
+          { lastDate: 1 }
         );
         if (!referenceChat) {
           return {
@@ -1666,15 +1666,15 @@ export class ChatService {
             },
           };
         }
-        createdAtCursor = referenceChat.createdAt;
+        createdAtCursor = referenceChat.lastDate;
       }
 
       const filter = createdAtCursor
-        ? { ...baseFilter, createdAt: { $lt: createdAtCursor } }
+        ? { ...baseFilter, lastDate: { $lt: createdAtCursor } }
         : baseFilter;
 
       const chats = await ChatModel.find(filter)
-        .sort({ createdAt: -1 })
+        .sort({ lastDate: -1 })
         .limit(pageSize)
         .lean();
 
@@ -1744,7 +1744,7 @@ export class ChatService {
       })
         .skip(skip)
         .limit(pageSize)
-        .sort({ createdAt: -1 }) // opcional, orden por última actualización
+        .sort({ lastDate: -1 }) // opcional, orden por última actualización
         .lean();
       for (const chat of chats) {
         if (Array.isArray(chat.archive)) {
