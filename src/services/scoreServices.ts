@@ -290,6 +290,7 @@ export class ScoreService {
               },
             });
           } catch (error) {
+            console.error(error);
             if (axios.isAxiosError(error)) {
               return {
                 success: false,
@@ -530,6 +531,7 @@ export class ScoreService {
               },
             });
           } catch (error) {
+            console.error(error);
             if (axios.isAxiosError(error)) {
               return {
                 success: false,

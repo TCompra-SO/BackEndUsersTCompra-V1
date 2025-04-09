@@ -9,7 +9,8 @@ export interface ChatI {
   chatPartnerId: string;
   lastMessage: string;
   lastDate: Date;
-  numUnreadMessages?: number;
+  unReadUser: number;
+  unReadPartner: number;
   archive?: archiveI[];
   createdAt: Date;
 }

@@ -39,7 +39,11 @@ const chatSchema = new Schema<ChatI>(
       type: Date,
       required: false,
     },
-    numUnreadMessages: {
+    unReadUser: {
+      type: Number,
+      default: 0,
+    },
+    unReadPartner: {
       type: Number,
       default: 0,
     },

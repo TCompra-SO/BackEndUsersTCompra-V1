@@ -95,6 +95,7 @@ export class ChatService {
   static getChat = async (chatId: string) => {
     try {
       const result = await ChatModel.findOne({ uid: chatId });
+      //const result = await ChatModel.aggregate([]);
       return {
         success: true,
         code: 200,
@@ -119,7 +120,7 @@ export class ChatService {
     message: string
   ) => {
     try {
-      const chatData = await this.getChat(chatId);
+      const chatData: any = await this.getChat(chatId);
       const chatUserId = chatData.data?.userId;
       const chatPartnerId = chatData.data?.chatPartnerId;
       let userData, partnerData;
@@ -176,25 +177,23 @@ export class ChatService {
         read: false,
       });
 
-      await sendMessage.save();
-      if (!chatData.data?.archive) {
-        await ChatModel.updateOne(
-          { uid: chatId }, // Filtro por chatId
-          {
-            $set: { lastDate: new Date() },
-            $inc: { numUnreadMessages: 1 },
-            lastMessage: message,
-          } // Actualiza lastDate con la fecha actual
-        );
+      let receiverUser, fieldRead;
+      if (userId === chatData.data?.userId) {
+        receiverUser = chatData.data?.chatPartnerId;
+        fieldRead = "unReadPartner";
       } else {
-        await ChatModel.updateOne(
-          { uid: chatId }, // Filtro por chatId
-          {
-            $set: { lastDate: new Date() },
-            lastMessage: message,
-          } // Actualiza lastDate con la fecha actual
-        );
+        receiverUser = chatData.data?.userId;
+        fieldRead = "unReadUser";
       }
+      await sendMessage.save();
+
+      await ChatModel.updateOne(
+        { uid: chatId }, // Filtro por chatId
+        {
+          $set: { lastDate: new Date(), lastMessage: message },
+          $inc: { numUnreadMessages: 1, [fieldRead]: 1 },
+        } // Actualiza lastDate con la fecha actual
+      );
 
       return {
         success: true,
@@ -1402,12 +1401,32 @@ export class ChatService {
         {
           $match: {
             $or: [{ userId }, { chatPartnerId: userId }],
+            // Excluye si el usuario tiene archive.state == true
+            archive: {
+              $not: {
+                $elemMatch: {
+                  userId: userId,
+                  state: true,
+                },
+              },
+            },
+          },
+        },
+        {
+          $addFields: {
+            myUnread: {
+              $cond: [
+                { $eq: ["$userId", userId] },
+                "$unReadUser",
+                "$unReadPartner",
+              ],
+            },
           },
         },
         {
           $group: {
             _id: null,
-            totalUnread: { $sum: "$numUnreadMessages" },
+            totalUnread: { $sum: "$myUnread" },
           },
         },
       ]);
@@ -1429,7 +1448,7 @@ export class ChatService {
 
   static getCountUnReadByUser = async (userId: string, chatId: string) => {
     try {
-      const unreadCount = await MessageModel.countDocuments({
+      const unreadCount = await ChatModel.countDocuments({
         chatId: chatId,
         userId: userId,
         read: false,

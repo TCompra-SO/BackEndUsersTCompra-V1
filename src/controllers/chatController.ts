@@ -61,40 +61,60 @@ export const createMessage = async (req: RequestExt, res: Response) => {
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
       const roomName = "roomChat" + responseUser.data?.chatId;
-      console.log(roomName);
+
       const chatData = await ChatService.getChat(chatId);
       let receivingUser: any;
+      let numUnreadMessages;
       if (chatData.data?.userId === userId) {
         receivingUser = chatData.data?.chatPartnerId;
+        numUnreadMessages = chatData.data?.unReadPartner;
       } else {
         receivingUser = chatData.data?.userId;
+        numUnreadMessages = chatData.data?.unReadUser;
       }
       let unReadreivingUser = await ChatService.getCountUnReadByUser(
         receivingUser,
         chatId
       );
-      const numUnReads = await ChatService.getCountMessageUnRead(userId);
+      const requerimentId: any = chatData.data?.requerimentId;
+      const chatDataInfo: any = await ChatService.getChatInfo(
+        receivingUser,
+        userId,
+        requerimentId
+      );
+
+      const chatDataUser: any = await ChatService.getChatInfo(
+        userId,
+        receivingUser,
+        requerimentId
+      );
+      const numUnReads = await ChatService.getCountMessageUnRead(receivingUser);
 
       const archiveEntry = chatData.data?.archive?.find(
         (a) => a.userId?.toString() === userId?.toString()
       );
       const state = archiveEntry?.state ?? null;
-
+      console.log(chatDataInfo);
       if (!state) {
         io.to(roomName).emit("updateChat", {
           messageData: responseUser.data,
-          numUnreadMessages: chatData.data?.numUnreadMessages,
-          userReceiving: unReadreivingUser.userId,
-          unReadreivingUser: unReadreivingUser.unRead,
+          numUnreadMessages: numUnreadMessages,
+          userReceiving: receivingUser,
           type: TypeMessage.NewMessage,
         });
 
-        const roomNameChat = "roomGeneralChat" + responseUser.data?.userId;
-
+        const roomNameChat = "roomGeneralChat" + receivingUser;
         io.to(roomNameChat).emit("updateGeneralChat", {
           numUnreadMessages: numUnReads.data?.[0].totalUnread,
           messageData: responseUser.data,
-          chatData: chatData,
+          chatData: chatDataInfo.data,
+          type: TypeMessage.NewMessage,
+        });
+
+        const roomNameChatUser = "roomGeneralChat" + userId;
+        io.to(roomNameChatUser).emit("updateGeneralChat", {
+          messageData: responseUser.data,
+          chatData: chatDataUser.data,
           type: TypeMessage.NewMessage,
         });
       }
@@ -170,7 +190,7 @@ export const readMessages = async (req: RequestExt, res: Response) => {
         numUnreadMessages: numUnReadByChat.unRead,
         type: TypeMessage.READ,
       });
-
+      //cambiar el Socket debe enviar los datos al Usuario Receptor
       const roomNameChat = "roomGeneralChat" + responseUser.data?.userId;
 
       const numUnReads = await ChatService.getCountMessageUnRead(userId);
