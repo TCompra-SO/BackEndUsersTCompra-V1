@@ -94,7 +94,7 @@ export const createMessage = async (req: RequestExt, res: Response) => {
         (a) => a.userId?.toString() === userId?.toString()
       );
       const state = archiveEntry?.state ?? null;
-      console.log(chatDataInfo);
+
       if (!state) {
         io.to(roomName).emit("updateChat", {
           messageData: responseUser.data,
@@ -203,22 +203,36 @@ export const readMessages = async (req: RequestExt, res: Response) => {
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
       const roomName = "roomChat" + chatId;
-      const numUnReadByChat = await ChatService.getCountUnReadByUser(
+
+      const chatData = await ChatService.getChat(chatId);
+      let userReceiving: any, numUnreadMessages;
+      if (userId === chatData.data?.userId) {
+        userReceiving = chatData.data?.chatPartnerId;
+        numUnreadMessages = chatData.data?.unReadPartner;
+      } else {
+        userReceiving = chatData.data?.userId;
+        numUnreadMessages = chatData.data?.unReadUser;
+      }
+      const requerimentId: any = chatData.data?.requerimentId;
+      const chatDataInfo = await ChatService.getChatInfo(
+        userReceiving,
         userId,
-        chatId
+        requerimentId
       );
       io.to(roomName).emit("updateChat", {
         messageData: responseUser.data,
-        numUnreadMessages: numUnReadByChat.unRead,
+        numUnreadMessages: numUnreadMessages,
         type: TypeMessage.READ,
       });
       //cambiar el Socket debe enviar los datos al Usuario Receptor
-      const roomNameChat = "roomGeneralChat" + responseUser.data?.userId;
+      const roomNameChat = "roomGeneralChat" + userReceiving;
 
-      const numUnReads = await ChatService.getCountMessageUnRead(userId);
+      const numUnReads = await ChatService.getCountMessageUnRead(userReceiving);
 
       io.to(roomNameChat).emit("updateGeneralChat", {
         numUnreadMessages: numUnReads.data?.[0].totalUnread,
+        messageData: responseUser.data,
+        chatData: chatDataInfo.data,
         type: TypeMessage.READ,
       });
     } else {
