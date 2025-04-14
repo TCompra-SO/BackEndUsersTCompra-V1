@@ -429,6 +429,7 @@ export const getArchivedChatsController = async (
       Number(page),
       Number(pageSize)
     );
+
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
     } else {

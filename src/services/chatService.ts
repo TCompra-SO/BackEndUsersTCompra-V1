@@ -1731,23 +1731,186 @@ export class ChatService {
         },
       });
 
-      // Obtener los chats paginados
-      const chats = await ChatModel.find({
-        $or: [{ userId: userId }, { chatPartnerId: userId }],
-        archive: {
-          $elemMatch: {
-            userId: userId,
-            state: true,
+      // FALTA TRAER USERNAME Y USERIMAGE
+      const chats = await ChatModel.aggregate([
+        // 🔍 Filtrar los chats donde participa el usuario y están archivados por él
+        {
+          $match: {
+            $and: [
+              {
+                $or: [{ userId: userId }, { chatPartnerId: userId }],
+              },
+              {
+                archive: {
+                  $elemMatch: {
+                    userId: userId,
+                    state: true,
+                  },
+                },
+              },
+            ],
           },
         },
-      })
+
+        // 🔄 Lookups para datos de usuario
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "uid",
+            as: "userInfo",
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "chatPartnerId",
+            foreignField: "uid",
+            as: "partnerInfo",
+          },
+        },
+        {
+          $lookup: {
+            from: "profiles",
+            localField: "userId",
+            foreignField: "uid",
+            as: "subUserUserInfo",
+          },
+        },
+        {
+          $lookup: {
+            from: "profiles",
+            localField: "chatPartnerId",
+            foreignField: "uid",
+            as: "subUserPartnerInfo",
+          },
+        },
+        {
+          $lookup: {
+            from: "companys",
+            localField: "userId",
+            foreignField: "uid",
+            as: "userCompany",
+          },
+        },
+        {
+          $lookup: {
+            from: "companys",
+            localField: "chatPartnerId",
+            foreignField: "uid",
+            as: "partnerCompany",
+          },
+        },
+        {
+          $lookup: {
+            from: "companys",
+            localField: "subUserUserInfo.companyID",
+            foreignField: "uid",
+            as: "subUserCompanyUser",
+          },
+        },
+        {
+          $lookup: {
+            from: "companys",
+            localField: "subUserPartnerInfo.companyID",
+            foreignField: "uid",
+            as: "subUserCompanyPartner",
+          },
+        },
+
+        // 🛠️ Campos de nombre y avatar
+        {
+          $addFields: {
+            user: {
+              $ifNull: [
+                { $first: "$subUserUserInfo.name" },
+                { $first: "$userInfo.name" },
+                { $first: "$userCompany.name" },
+                "",
+              ],
+            },
+            partner: {
+              $ifNull: [
+                { $first: "$subUserPartnerInfo.name" },
+                { $first: "$partnerInfo.name" },
+                { $first: "$partnerCompany.name" },
+                "",
+              ],
+            },
+            userAvatar: {
+              $cond: {
+                if: { $gt: [{ $size: "$subUserUserInfo" }, 0] },
+                then: { $first: "$subUserCompanyUser.avatar" },
+                else: {
+                  $ifNull: [
+                    { $first: "$userInfo.avatar" },
+                    { $first: "$userCompany.avatar" },
+                    "",
+                  ],
+                },
+              },
+            },
+            partnerAvatar: {
+              $cond: {
+                if: { $gt: [{ $size: "$subUserPartnerInfo" }, 0] },
+                then: { $first: "$subUserCompanyPartner.avatar" },
+                else: {
+                  $ifNull: [
+                    { $first: "$partnerInfo.avatar" },
+                    { $first: "$partnerCompany.avatar" },
+                    "",
+                  ],
+                },
+              },
+            },
+          },
+        },
+
+        // 🧠 Mostrar nombre y avatar del otro participante
+        {
+          $addFields: {
+            userName: {
+              $cond: {
+                if: { $eq: ["$userId", userId] },
+                then: "$partner",
+                else: "$user",
+              },
+            },
+            userImage: {
+              $cond: {
+                if: { $eq: ["$userId", userId] },
+                then: "$partnerAvatar",
+                else: "$userAvatar",
+              },
+            },
+          },
+        },
+
+        // 🧹 Limpiar campos no necesarios
+        {
+          $project: {
+            userCompany: 0,
+            partnerCompany: 0,
+            userInfo: 0,
+            partnerInfo: 0,
+            subUserUserInfo: 0,
+            subUserPartnerInfo: 0,
+            subUserCompanyUser: 0,
+            subUserCompanyPartner: 0,
+            user: 0,
+            partner: 0,
+            userAvatar: 0,
+            partnerAvatar: 0,
+          },
+        },
+      ])
         .skip(skip)
         .limit(pageSize)
-        .sort({ lastDate: -1 }) // opcional, orden por última actualización
-        .lean();
+        .sort({ lastDate: -1 }); // opcional, orden por última actualización
+
       for (const chat of chats) {
         if (Array.isArray(chat.archive)) {
-          chat.archive = chat.archive.filter((a) => a.userId === userId);
+          chat.archive = chat.archive.filter((a: any) => a.userId === userId);
         } else {
           chat.archive = []; // Por si acaso, lo dejamos limpio
         }

@@ -2,7 +2,10 @@ import { Request, Response, Router } from "express";
 import { listCountries } from "../controllers/countryController";
 import { listCategories } from "../controllers/categoryController";
 import { listUserRoles } from "../controllers/userRolesController";
-import { getUtilDataController } from "../controllers/ultilDataController";
+import {
+  getLastRecordsController,
+  getUtilDataController,
+} from "../controllers/ultilDataController";
 export class UtilRouter {
   private static instance: UtilRouter;
   private router: Router;
@@ -13,6 +16,7 @@ export class UtilRouter {
     this.router.get("/categories", listCategories);
     this.router.get("/userRoles", listUserRoles);
     this.router.get("/utilData/:namedata", getUtilDataController);
+    this.router.post("/getLastRecords", getLastRecordsController);
   }
 
   static getRouter(): Router {
