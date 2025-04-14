@@ -1640,16 +1640,6 @@ export class ChatService {
     try {
       if (pageSize < 1) pageSize = 10;
 
-      const baseFilter = {
-        $or: [{ userId: userId }, { chatPartnerId: userId }],
-        archive: {
-          $elemMatch: {
-            userId: userId,
-            state: true,
-          },
-        },
-      };
-
       let createdAtCursor: Date | null = null;
       if (chatId) {
         const referenceChat = await ChatModel.findOne(
@@ -1660,32 +1650,196 @@ export class ChatService {
           return {
             success: false,
             code: 404,
-            error: {
-              msg: "Chat de referencia no encontrado",
-            },
+            error: { msg: "Chat de referencia no encontrado" },
           };
         }
         createdAtCursor = referenceChat.lastDate;
       }
 
-      const filter = createdAtCursor
-        ? { ...baseFilter, lastDate: { $lt: createdAtCursor } }
-        : baseFilter;
+      const baseMatch: any = {
+        $and: [
+          {
+            $or: [{ userId: userId }, { chatPartnerId: userId }],
+          },
+          {
+            archive: {
+              $elemMatch: { userId: userId, state: true },
+            },
+          },
+        ],
+      };
 
-      const chats = await ChatModel.find(filter)
-        .sort({ lastDate: -1 })
-        .limit(pageSize)
-        .lean();
-
-      for (const chat of chats) {
-        if (Array.isArray(chat.archive)) {
-          chat.archive = chat.archive.filter((a) => a.userId === userId);
-        } else {
-          chat.archive = [];
-        }
+      if (createdAtCursor) {
+        baseMatch.$and.push({ lastDate: { $lt: createdAtCursor } });
       }
 
-      const total = await ChatModel.countDocuments(baseFilter);
+      const chats = await ChatModel.aggregate([
+        { $match: baseMatch },
+
+        // 🔄 Lookups
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "uid",
+            as: "userInfo",
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "chatPartnerId",
+            foreignField: "uid",
+            as: "partnerInfo",
+          },
+        },
+        {
+          $lookup: {
+            from: "profiles",
+            localField: "userId",
+            foreignField: "uid",
+            as: "subUserUserInfo",
+          },
+        },
+        {
+          $lookup: {
+            from: "profiles",
+            localField: "chatPartnerId",
+            foreignField: "uid",
+            as: "subUserPartnerInfo",
+          },
+        },
+        {
+          $lookup: {
+            from: "companys",
+            localField: "userId",
+            foreignField: "uid",
+            as: "userCompany",
+          },
+        },
+        {
+          $lookup: {
+            from: "companys",
+            localField: "chatPartnerId",
+            foreignField: "uid",
+            as: "partnerCompany",
+          },
+        },
+        {
+          $lookup: {
+            from: "companys",
+            localField: "subUserUserInfo.companyID",
+            foreignField: "uid",
+            as: "subUserCompanyUser",
+          },
+        },
+        {
+          $lookup: {
+            from: "companys",
+            localField: "subUserPartnerInfo.companyID",
+            foreignField: "uid",
+            as: "subUserCompanyPartner",
+          },
+        },
+
+        // 🔧 Calcular nombre y avatar
+        {
+          $addFields: {
+            user: {
+              $ifNull: [
+                { $first: "$subUserUserInfo.name" },
+                { $first: "$userInfo.name" },
+                { $first: "$userCompany.name" },
+                "",
+              ],
+            },
+            partner: {
+              $ifNull: [
+                { $first: "$subUserPartnerInfo.name" },
+                { $first: "$partnerInfo.name" },
+                { $first: "$partnerCompany.name" },
+                "",
+              ],
+            },
+            userAvatar: {
+              $cond: {
+                if: { $gt: [{ $size: "$subUserUserInfo" }, 0] },
+                then: { $first: "$subUserCompanyUser.avatar" },
+                else: {
+                  $ifNull: [
+                    { $first: "$userInfo.avatar" },
+                    { $first: "$userCompany.avatar" },
+                    "",
+                  ],
+                },
+              },
+            },
+            partnerAvatar: {
+              $cond: {
+                if: { $gt: [{ $size: "$subUserPartnerInfo" }, 0] },
+                then: { $first: "$subUserCompanyPartner.avatar" },
+                else: {
+                  $ifNull: [
+                    { $first: "$partnerInfo.avatar" },
+                    { $first: "$partnerCompany.avatar" },
+                    "",
+                  ],
+                },
+              },
+            },
+          },
+        },
+
+        // 👥 Mostrar info del otro participante
+        {
+          $addFields: {
+            userName: {
+              $cond: {
+                if: { $eq: ["$userId", userId] },
+                then: "$partner",
+                else: "$user",
+              },
+            },
+            userImage: {
+              $cond: {
+                if: { $eq: ["$userId", userId] },
+                then: "$partnerAvatar",
+                else: "$userAvatar",
+              },
+            },
+          },
+        },
+
+        // 🧹 Eliminar campos innecesarios
+        {
+          $project: {
+            userCompany: 0,
+            partnerCompany: 0,
+            userInfo: 0,
+            partnerInfo: 0,
+            subUserUserInfo: 0,
+            subUserPartnerInfo: 0,
+            subUserCompanyUser: 0,
+            subUserCompanyPartner: 0,
+            user: 0,
+            partner: 0,
+            userAvatar: 0,
+            partnerAvatar: 0,
+          },
+        },
+
+        // 🔽 Orden y paginación
+        { $sort: { lastDate: -1 } },
+        { $limit: pageSize },
+      ]);
+
+      // 📊 Total de documentos (para paginación)
+      const total = await ChatModel.countDocuments({
+        $or: [{ userId: userId }, { chatPartnerId: userId }],
+        archive: {
+          $elemMatch: { userId: userId, state: true },
+        },
+      });
 
       return {
         success: true,

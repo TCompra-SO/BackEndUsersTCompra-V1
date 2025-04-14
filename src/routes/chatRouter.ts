@@ -39,6 +39,10 @@ export class ChatRouter {
     this.router.get("/getChat/:chatId", getChatController);
     this.router.get("/getMessage/:messageId", getMessage);
     this.router.post("/getArchivedChats", getArchivedChatsController);
+    this.router.post(
+      "/getArchivedChatsBefore",
+      getArchivedChatsBeforeController
+    );
     this.router.post("/changeStateConnection", changeStateConnectionController);
   }
 
