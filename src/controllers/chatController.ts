@@ -226,12 +226,11 @@ export const readMessages = async (req: RequestExt, res: Response) => {
         type: TypeMessage.READ,
       });
       //cambiar el Socket debe enviar los datos al Usuario Receptor
-      const roomNameChat = "roomGeneralChat" + userReceiving;
+      const roomNameChat = "roomGeneralChat" + userId;
 
-      const numUnReads = await ChatService.getCountMessageUnRead(userReceiving);
+      const numUnReads = await ChatService.getCountMessageUnRead(userId);
 
       io.to(roomNameChat).emit("updateGeneralChat", {
-        res: responseUser.res,
         numUnreadMessages: numUnReads.data?.[0].totalUnread,
         // messageData: responseUser.data,
         //chatData: chatDataInfo.data,
