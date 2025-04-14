@@ -220,7 +220,8 @@ export const readMessages = async (req: RequestExt, res: Response) => {
         requerimentId
       );
       io.to(roomName).emit("updateChat", {
-        messageData: responseUser.data,
+        //messageData: responseUser.data,
+        res: responseUser.res,
         numUnreadMessages: numUnreadMessages,
         type: TypeMessage.READ,
       });
@@ -230,9 +231,10 @@ export const readMessages = async (req: RequestExt, res: Response) => {
       const numUnReads = await ChatService.getCountMessageUnRead(userReceiving);
 
       io.to(roomNameChat).emit("updateGeneralChat", {
+        res: responseUser.res,
         numUnreadMessages: numUnReads.data?.[0].totalUnread,
-        messageData: responseUser.data,
-        chatData: chatDataInfo.data,
+        // messageData: responseUser.data,
+        //chatData: chatDataInfo.data,
         type: TypeMessage.READ,
       });
     } else {
