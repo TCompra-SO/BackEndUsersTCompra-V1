@@ -2210,14 +2210,25 @@ export class ChatService {
     }
   };
 
-  static getChatState = async (userId: string, requerimentId: string) => {
+  static getChatState = async (
+    userId1: string,
+    userId2: string,
+    requerimentId: string
+  ) => {
     try {
       const chatData = await ChatModel.aggregate([
         {
           $match: {
             $and: [
               {
-                $or: [{ userId: userId }, { chatPartnerId: userId }],
+                $or: [
+                  {
+                    $and: [{ userId: userId1 }, { chatPartnerId: userId2 }],
+                  },
+                  {
+                    $and: [{ userId: userId2 }, { chatPartnerId: userId1 }],
+                  },
+                ],
               },
               { requerimentId: requerimentId },
             ],
@@ -2229,7 +2240,7 @@ export class ChatService {
               $filter: {
                 input: "$archive",
                 as: "item",
-                cond: { $eq: ["$$item.userId", userId] },
+                cond: { $eq: ["$$item.userId", userId2] }, // <-- o cámbialo si quieres que sea userId2 o ambos
               },
             },
           },
