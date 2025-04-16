@@ -388,11 +388,24 @@ export class ChatService {
         // 3. Devolver los mensajes modificados
 
         //PENDIENTE LOS MENSAJES ARCHIVADOS
+        const chatData: any = await this.getChat(chatId);
+        const chatUserId = chatData.data?.userId;
+        const chatPartnerId = chatData.data?.chatPartnerId;
+        let receiverUser, fieldRead;
+        if (userId === chatData.data?.userId) {
+          receiverUser = chatData.data?.chatPartnerId;
+          fieldRead = "unReadPartner";
+        } else {
+          receiverUser = chatData.data?.userId;
+          fieldRead = "unReadUser";
+        }
+
         await ChatModel.updateOne(
           { uid: chatId },
           {
             $inc: {
               numUnreadMessages: -messagesToUpdate.length,
+              [fieldRead]: -messagesToUpdate.length,
             },
           }
         );
