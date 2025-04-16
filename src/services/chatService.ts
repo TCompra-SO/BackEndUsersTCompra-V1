@@ -337,7 +337,15 @@ export class ChatService {
       // Actualizar los mensajes cuyo _id esté en el array
       let count = 0;
       let messages: any = [];
-      console.log(messageIds.length);
+      if (messageIds.length <= 0) {
+        return {
+          success: false,
+          code: 403,
+          error: {
+            msg: "No hay mensajes para leer",
+          },
+        };
+      }
       if (messageIds.length === 1) {
         const message = await MessageModel.findOne({ uid: messageIds[0] });
 
@@ -359,6 +367,15 @@ export class ChatService {
           timestamp: { $lte: message.timestamp },
         });
 
+        if (messagesToUpdate.length <= 0) {
+          return {
+            success: false,
+            code: 400,
+            error: {
+              msg: "No hay mensajes para leer",
+            },
+          };
+        }
         // 2. Actualizarlos
         await MessageModel.updateMany(
           { uid: { $in: messagesToUpdate.map((msg) => msg.uid) } },
@@ -2182,7 +2199,6 @@ export class ChatService {
 
   static getChatState = async (userId: string, requerimentId: string) => {
     try {
-      console.log(requerimentId);
       const chatData = await ChatModel.aggregate([
         {
           $match: {
