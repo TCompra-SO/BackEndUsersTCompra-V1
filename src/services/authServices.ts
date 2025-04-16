@@ -1215,14 +1215,18 @@ export class AuthServices {
       }
       let typeUser, tokenExists, entityModel: Model<any>;
       const userData = await this.getDataBaseUser(userID);
-
-      if (userData.data?.[0].auth_users.typeEntity === TypeEntity.SUBUSER) {
+      console.log(userData);
+      console.log(userData.data?.[0].auth_users);
+      if (
+        userData.data?.[0].auth_users &&
+        userData.data?.[0].auth_users.typeEntity === TypeEntity.SUBUSER
+      ) {
         typeUser = TypeEntity.SUBUSER;
       } else {
         typeUser = userData.data?.[0].typeEntity;
       }
       // Determinar el modelo y verificar la existencia del token
-
+      console.log(typeUser);
       switch (typeUser) {
         case TypeEntity.COMPANY:
           entityModel = CompanyModel;
@@ -1288,7 +1292,7 @@ export class AuthServices {
       return {
         success: false,
         code: 500,
-        msg: "Error en el servidor",
+        msg: "Error en el servidor m",
       };
     }
   }

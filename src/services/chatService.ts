@@ -366,7 +366,7 @@ export class ChatService {
           read: false,
           timestamp: { $lte: message.timestamp },
         });
-
+        console.log(messagesToUpdate);
         if (messagesToUpdate.length <= 0) {
           return {
             success: false,

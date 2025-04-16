@@ -167,18 +167,20 @@ export const getLastRecords = async (entityID: string, rubros: [number]) => {
       .toArray();
 
     let i = 0;
+
     let category: any = new Array(rubros.length);
     console.log(categories.find((r) => r.id === 1));
     while (i < rubros.length) {
       category[i] = categories.find((r) => r.id === rubros[i]);
-      console.log(category[i].value);
 
       i++;
     }
+    console.log(category);
     console.log(products);
+    i = 0;
     products.forEach((product) => {
-      category = category.find((r: any) => r.id === product.categoryID);
-      product.categoryName = category?.value || "Categoría desconocida";
+      const cat = category.find((r: any) => r.id === product.categoryID);
+      product.categoryName = cat?.value || "Categoría desconocida";
     });
     console.log(products);
     // Consultar las liquidaciones filtradas por rubros
