@@ -2257,6 +2257,16 @@ export class ChatService {
         };
       }
 
+      const userData = await AuthServices.getDataBaseUser(userId2);
+      let userName, userImage;
+
+      userName = userData.data?.[0].name;
+      userImage = userData.data?.[0].image;
+      chatData.forEach((item) => {
+        item.userName = userName;
+        item.userImage = userImage;
+      });
+
       return {
         success: true,
         code: 200,
