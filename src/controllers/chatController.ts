@@ -231,7 +231,7 @@ export const readMessages = async (req: RequestExt, res: Response) => {
       const numUnReads = await ChatService.getCountMessageUnRead(userReceiving);
 
       io.to(roomNameChat).emit("updateGeneralChat", {
-        numUnreadMessages: numUnReads,
+        numUnreadMessages: numUnReads.data?.[0].totalUnread,
         // messageData: responseUser.data,
         //chatData: chatDataInfo.data,
         type: TypeMessage.READ,
