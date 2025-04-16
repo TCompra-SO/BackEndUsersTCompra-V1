@@ -337,6 +337,7 @@ export class ChatService {
       // Actualizar los mensajes cuyo _id esté en el array
       let count = 0;
       let messages: any = [];
+      console.log(messageIds.length);
       if (messageIds.length === 1) {
         const message = await MessageModel.findOne({ uid: messageIds[0] });
 
@@ -350,21 +351,31 @@ export class ChatService {
           };
         }
 
-        const result = await MessageModel.updateMany(
-          {
-            chatId: chatId,
-            userId: userId,
-            read: false,
-            timestamp: { $lte: message.timestamp }, // Solo mensajes anteriores
-          },
-          { $set: { read: true } } // Campo a actualizar
-        );
+        // 1. Buscar los mensajes que se van a modificar
+        const messagesToUpdate = await MessageModel.find({
+          chatId: chatId,
+          userId: userId,
+          read: false,
+          timestamp: { $lte: message.timestamp },
+        });
+
+        // 2. Actualizarlos
+        await MessageModel.updateMany(
+          { uid: { $in: messagesToUpdate.map((msg) => msg.uid) } },
+          { $set: { read: true } }
+        ).sort({ timestamp: -1 }); // Más reciente a más antiguo
+
+        // 2. Obtener el _id del mensaje más antiguo (último en el array)
+        const endMessageId = messagesToUpdate?.[0].uid;
+
+        // 3. Devolver los mensajes modificados
+
         //PENDIENTE LOS MENSAJES ARCHIVADOS
         await ChatModel.updateOne(
           { uid: chatId },
           {
             $inc: {
-              numUnreadMessages: -result.modifiedCount,
+              numUnreadMessages: -messagesToUpdate.length,
             },
           }
         );
@@ -372,9 +383,9 @@ export class ChatService {
         return {
           success: true,
           code: 200,
-          data: result,
+          data: messagesToUpdate,
           res: {
-            endMessageId: messageIds[0],
+            endMessageId: endMessageId,
             msg: "mensajes marcados como leidos",
           },
         };
@@ -2157,6 +2168,59 @@ export class ChatService {
         code: 200,
         unRead: unreadCount,
         userId: userId,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error al archivar el chat",
+        },
+      };
+    }
+  };
+
+  static getChatState = async (userId: string, requerimentId: string) => {
+    try {
+      console.log(requerimentId);
+      const chatData = await ChatModel.aggregate([
+        {
+          $match: {
+            $and: [
+              {
+                $or: [{ userId: userId }, { chatPartnerId: userId }],
+              },
+              { requerimentId: requerimentId },
+            ],
+          },
+        },
+        {
+          $addFields: {
+            archive: {
+              $filter: {
+                input: "$archive",
+                as: "item",
+                cond: { $eq: ["$$item.userId", userId] },
+              },
+            },
+          },
+        },
+      ]);
+
+      if (chatData.length <= 0) {
+        return {
+          success: false,
+          code: 404,
+          res: {
+            msg: "No se encontró el chat",
+          },
+        };
+      }
+
+      return {
+        success: true,
+        code: 200,
+        data: chatData,
       };
     } catch (error) {
       return {

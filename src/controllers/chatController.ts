@@ -469,3 +469,24 @@ export const getArchivedChatsBeforeController = async (
     });
   }
 };
+
+export const getChatStateController = async (
+  req: RequestExt,
+  res: Response
+) => {
+  try {
+    const { userId, requerimentId } = req.body;
+    const responseUser = await ChatService.getChatState(userId, requerimentId);
+    if (responseUser.success) {
+      res.status(responseUser.code).send(responseUser);
+    } else {
+      res.status(responseUser.code).send(responseUser);
+    }
+  } catch (error) {
+    console.error("Error en getChatStateController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};

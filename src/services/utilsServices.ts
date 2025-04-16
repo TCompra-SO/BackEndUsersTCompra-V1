@@ -3,6 +3,7 @@ import { UtilDataType } from "../types/globalTypes";
 import { RequestExt } from "../interfaces/req-ext";
 import mongoose, { Mongoose } from "mongoose";
 import dbConnect from "../database/mongo";
+import { categories } from "../utils/Categories";
 
 export const getUtilData = (type: UtilDataType) => {
   try {
@@ -41,7 +42,7 @@ export const getLastRecords = async (entityID: string, rubros: [number]) => {
       .aggregate([
         {
           $match: {
-            userID: { $ne: entityID },
+            entityID: { $ne: entityID },
             categoryID: { $in: rubros },
             stateID: 1,
           },
@@ -93,6 +94,7 @@ export const getLastRecords = async (entityID: string, rubros: [number]) => {
             createdAt: 1,
             entityID: 1,
             entityName: 1,
+            categoryID: 1,
           },
         },
       ])
@@ -105,7 +107,7 @@ export const getLastRecords = async (entityID: string, rubros: [number]) => {
       .aggregate([
         {
           $match: {
-            userID: { $ne: entityID },
+            entityID: { $ne: entityID },
             categoryID: { $in: rubros },
             stateID: 1,
           },
@@ -164,12 +166,27 @@ export const getLastRecords = async (entityID: string, rubros: [number]) => {
       .limit(10)
       .toArray();
 
+    let i = 0;
+    let category: any = new Array(rubros.length);
+    console.log(categories.find((r) => r.id === 1));
+    while (i < rubros.length) {
+      category[i] = categories.find((r) => r.id === rubros[i]);
+      console.log(category[i].value);
+
+      i++;
+    }
+    console.log(products);
+    products.forEach((product) => {
+      category = category.find((r: any) => r.id === product.categoryID);
+      product.categoryName = category?.value || "Categoría desconocida";
+    });
+    console.log(products);
     // Consultar las liquidaciones filtradas por rubros
     const liquidations = await liquidationsCollection
       .aggregate([
         {
           $match: {
-            userID: { $ne: entityID },
+            entityID: { $ne: entityID },
             categoryID: { $in: rubros },
             stateID: 1,
           },
