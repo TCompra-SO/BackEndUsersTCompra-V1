@@ -29,7 +29,7 @@ export const saveNotificationMiddleware = (
         (req.body?.notification || body?.notification)
       ) {
         notificationSaved = true;
-        const notification: NotificationI =
+        const notification: BaseNotificationI =
           req.body.notification ?? body.notification;
 
         // Certificación enviada por 1ra vez

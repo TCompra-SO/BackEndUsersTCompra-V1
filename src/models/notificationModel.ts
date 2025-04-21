@@ -2,6 +2,7 @@ import mongoose, { Schema } from "mongoose";
 import ShortUniqueId from "short-unique-id";
 import { NotificationI } from "../interfaces/notification.interface";
 import { NotificationType } from "../types/globalTypes";
+import { boolean, required } from "joi";
 
 const uid = new ShortUniqueId({ length: 20 });
 
@@ -69,6 +70,12 @@ const NotificationSchema: Schema = new Schema<NotificationI>({
   categoryId: {
     type: Number,
     required: false,
+  },
+  read: {
+    type: Boolean,
+    required: true,
+    default: false,
+    set: (v: any) => (v === undefined ? false : v),
   },
 });
 

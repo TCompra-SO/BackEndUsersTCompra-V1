@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   getNotificationsController,
+  getUnreadNotificationsCounterController,
   sendLastRequirementsNotificationController,
   sendNotificationController,
 } from "../controllers/notificationController";
@@ -29,6 +30,10 @@ export class NotificationRouter {
       "/sendLastRequirementsNotification/:type",
       saveNotificationsAndBroadcastMiddleware,
       sendLastRequirementsNotificationController
+    );
+    this.router.post(
+      "/getUnreadNotificationsCounter/",
+      getUnreadNotificationsCounterController
     );
   }
 

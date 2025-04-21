@@ -15,6 +15,7 @@ export interface BaseNotificationI {
   type: NotificationType;
   expiresAt: Date;
   extraTargetType?: number;
+  read?: boolean;
 }
 
 export interface NotificationI extends BaseNotificationI {

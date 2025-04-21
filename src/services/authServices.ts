@@ -50,6 +50,7 @@ export interface UserDocument extends Document {
   active_account: boolean;
   planID: number;
   typeID: number;
+  ultimate_session: string;
 }
 
 enum UserType {
@@ -955,6 +956,7 @@ export class AuthServices {
             planID: 1,
             active_account: 1,
             metadata: 1,
+            ultimate_session: 1,
           },
         },
       ];
@@ -1043,6 +1045,7 @@ export class AuthServices {
               typeID: result[0].auth_users.typeID,
               planID: result[0].planID,
               online: true,
+              lastSession: result[0].auth_users.ultimate_session,
             },
           ];
 
@@ -1151,6 +1154,7 @@ export class AuthServices {
             typeID: user[0].typeID,
             planID: user[0].planID,
             online: true,
+            lastSession: user[0].ultimate_session,
           },
         ];
         if (entity === "Company") {
@@ -1324,6 +1328,7 @@ export class AuthServices {
           "auth_users.password": 1,
           "auth_users.typeID": 1,
           "auth_users.active_account": 1,
+          "auth_users.ultimate_session": 1,
           planID: 1,
         },
       },
