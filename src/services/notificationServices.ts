@@ -182,3 +182,25 @@ export const getNotificationFromLastRequirementsPublished = (
     };
   }
 };
+
+export const readNotification = async (notificationId: string) => {
+  try {
+    const resultData = await NotificationModel.updateOne(
+      { uid: notificationId },
+      { read: true }
+    );
+    return {
+      success: true,
+      code: 200,
+    };
+  } catch (error) {
+    console.error("Error al marcar notificación como leída:", error);
+    return {
+      success: false,
+      code: 500,
+      error: {
+        msg: "Error al al marcar notificación como leída.",
+      },
+    };
+  }
+};

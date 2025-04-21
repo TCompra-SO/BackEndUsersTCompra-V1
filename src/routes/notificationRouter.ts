@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   getNotificationsController,
   getUnreadNotificationsCounterController,
+  readNotificationController,
   sendLastRequirementsNotificationController,
   sendNotificationController,
 } from "../controllers/notificationController";
@@ -34,6 +35,10 @@ export class NotificationRouter {
     this.router.post(
       "/getUnreadNotificationsCounter/",
       getUnreadNotificationsCounterController
+    );
+    this.router.get(
+      "/readNotification/:notificationId",
+      readNotificationController
     );
   }
 

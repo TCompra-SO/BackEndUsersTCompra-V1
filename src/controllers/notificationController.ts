@@ -3,6 +3,7 @@ import {
   getNotificationFromLastRequirementsPublished,
   getNotifications,
   getUnreadNotificationsCounter,
+  readNotification,
 } from "../services/notificationServices";
 
 export const sendNotificationController = async (
@@ -74,6 +75,25 @@ export const sendLastRequirementsNotificationController = async (
       else res.status(response.code).send(response.error);
   } catch (error) {
     console.error("Error en sendLastRequirementsNotificationController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
+export const readNotificationController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { notificationId } = req.params;
+    const responseNotif = await readNotification(notificationId);
+    if (responseNotif.success)
+      res.status(responseNotif.code).send(responseNotif);
+    else res.status(responseNotif.code).send(responseNotif.error);
+  } catch (error) {
+    console.error("Error en readNotificationController", error);
     res.status(500).send({
       success: false,
       msg: "Error interno del servidor.",
