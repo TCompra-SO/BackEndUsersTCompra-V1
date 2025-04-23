@@ -1,4 +1,7 @@
 import nodemailer from "nodemailer";
+import { AuthServices } from "../services/authServices";
+import { getLastRecords } from "../services/utilsServices";
+import { categories } from "./Categories";
 
 export const sendEmail = async (email: string, code: string) => {
   const transporter = nodemailer.createTransport({
@@ -74,6 +77,71 @@ export const sendEmailRecovery = async (email: string, code: string) => {
     const info = await transporter.sendMail(mailOptions);
     console.log("Message sent: %s", info.messageId);
     return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error("Failed to send email:", error);
+    return { success: false, error: error };
+  }
+};
+
+export const sendEmailCategories = async () => {
+  try {
+    const usersData = await AuthServices.getUsers();
+    const companyAuth = usersData.companies;
+    const userAuth = usersData.users;
+    let email;
+    const mailOptions = {
+      from: '"TCompraPeru" <tcompraperu@gmail.com>', //... Sustituye por el correo de la empresa
+      to: email,
+      subject: "Nuevos Requerimientos en tus Rubros - TCompraPeru.com",
+      text: `Nuevos Requerimientos en tus Rubros`,
+      html: `
+    <html>
+    
+    </html>
+  `,
+    };
+
+    let cont = 0;
+    let entityID;
+    let rubros;
+    let categoryName;
+    if (companyAuth) {
+      const countCompany = companyAuth?.length;
+      while (cont < countCompany) {
+        if (companyAuth[cont].auth_users.length > 0) {
+          entityID = companyAuth[cont].uid;
+          rubros = companyAuth[cont].categories;
+          console.log(entityID);
+          console.log(rubros);
+          const requerimentsData = await getLastRecords(entityID, rubros);
+
+          console.log("?=================");
+          console.log(requerimentsData.data?.requeriments);
+          if (requerimentsData.data?.requeriments.length > 0) {
+            for (
+              let index = 0;
+              index < requerimentsData?.data?.requeriments.length;
+              index++
+            ) {
+              // ARMAR CUERPO DEL MENSAJE CON LOS DATOS
+              if (requerimentsData.data?.requeriments[index].length > 0) {
+                categoryName =
+                  requerimentsData.data?.requeriments[index][0].categoryName;
+
+                console.log(categoryName);
+                //   console.log(requerimentsData.data?.requeriments);
+                //    console.log(requerimentsData.data?.requeriments.length);
+              }
+            }
+          }
+        } else {
+          email = companyAuth[cont].email;
+        }
+        cont++;
+      }
+    }
+
+    console.log(companyAuth?.length);
   } catch (error) {
     console.error("Failed to send email:", error);
     return { success: false, error: error };

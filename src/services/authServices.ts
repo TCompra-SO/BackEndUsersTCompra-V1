@@ -13,7 +13,11 @@ import { CompanyI } from "../interfaces/company.interface";
 import { UserI } from "../interfaces/user.interface";
 import { expireInEspecificMinutes, getNow } from "../utils/DateTools";
 import bcrypt from "bcrypt";
-import { sendEmail, sendEmailRecovery } from "../utils/NodeMailer";
+import {
+  sendEmail,
+  sendEmailCategories,
+  sendEmailRecovery,
+} from "../utils/NodeMailer";
 import jwt from "jsonwebtoken";
 import { error } from "console";
 import { matchesGlob } from "path";
@@ -1215,8 +1219,7 @@ export class AuthServices {
       }
       let typeUser, tokenExists, entityModel: Model<any>;
       const userData = await this.getDataBaseUser(userID);
-      console.log(userData);
-      console.log(userData.data?.[0].auth_users);
+
       if (
         userData.data?.[0].auth_users &&
         userData.data?.[0].auth_users.typeEntity === TypeEntity.SUBUSER
@@ -2175,6 +2178,7 @@ export class AuthServices {
       // Mapear resultados relevantes
       const matchedCompanies = results.map((result) => result.item);
 
+      await sendEmailCategories();
       return {
         success: true,
         code: 200,
@@ -2187,6 +2191,80 @@ export class AuthServices {
         code: 500,
         error: {
           msg: "Error al buscar empresas",
+        },
+      };
+    }
+  };
+
+  static getUsers = async () => {
+    try {
+      const companies = await CompanyModel.aggregate([
+        {
+          $match: {
+            "metadata.identity_verified": true,
+            "metadata.profile_complete": true,
+            active_account: true,
+            $or: [
+              { auth_users: { $exists: false } },
+              { auth_users: { $size: 0 } },
+              { auth_users: { $elemMatch: { active_account: true } } },
+            ],
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            uid: 1,
+            name: 1,
+            email: 1,
+            categories: 1,
+            metadata: 1,
+            auth_users: {
+              $cond: {
+                if: { $gt: [{ $size: { $ifNull: ["$auth_users", []] } }, 0] },
+                then: {
+                  $filter: {
+                    input: "$auth_users",
+                    as: "user",
+                    cond: { $eq: ["$$user.active_account", true] },
+                  },
+                },
+                else: [],
+              },
+            },
+          },
+        },
+      ]);
+
+      // traer los SubUsuarios con sus Emails
+      const users = await UserModel.find(
+        {
+          "metadata.identity_verified": true,
+          "metadata.profile_complete": true,
+          active_account: true,
+        },
+        {
+          uid: 1,
+          name: 1,
+          email: 1,
+          categories: 1,
+          _id: 0, // opcional: oculta el campo _id
+        }
+      );
+
+      return {
+        success: true,
+        code: 200,
+        users,
+        companies,
+      };
+    } catch (error) {
+      console.error(error);
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error al buscar usuarios",
         },
       };
     }
