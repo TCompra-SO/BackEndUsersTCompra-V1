@@ -2240,7 +2240,7 @@ export class ChatService {
               $filter: {
                 input: "$archive",
                 as: "item",
-                cond: { $eq: ["$$item.userId", userId2] }, // <-- o cámbialo si quieres que sea userId2 o ambos
+                cond: { $eq: ["$$item.userId", userId1] }, // <-- o cámbialo si quieres que sea userId2 o ambos
               },
             },
           },
