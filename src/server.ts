@@ -5,6 +5,7 @@ import { Server as SocketIOServer } from "socket.io";
 
 import { join } from "path";
 import jwt from "jsonwebtoken";
+import "./utils/cronJobs";
 // Declarar `io` en un alcance más amplio
 let io: SocketIOServer;
 const JWT_SECRET = process.env.JWT_SECRET || "token.01010101";
@@ -38,8 +39,6 @@ const startApp = async () => {
       console.log(`Usuario ${socket.id} se unió a la sala ${room}`);
       socket.emit("joinedRoom", `Te has unido a la sala ${room}`);
     });
-
-    
 
     // Cuando un usuario se desconecta
     socket.on("disconnect", () => {

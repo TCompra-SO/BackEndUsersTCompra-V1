@@ -95,29 +95,29 @@ export const createMessage = async (req: RequestExt, res: Response) => {
       );
       const state = archiveEntry?.state ?? null;
 
-      if (!state) {
-        io.to(roomName).emit("updateChat", {
-          messageData: responseUser.data,
-          numUnreadMessages: numUnreadMessages,
-          userReceiving: receivingUser,
-          type: TypeMessage.NewMessage,
-        });
+      //  if (!state) {
+      io.to(roomName).emit("updateChat", {
+        messageData: responseUser.data,
+        numUnreadMessages: numUnreadMessages,
+        userReceiving: receivingUser,
+        type: TypeMessage.NewMessage,
+      });
 
-        const roomNameChat = "roomGeneralChat" + receivingUser;
-        io.to(roomNameChat).emit("updateGeneralChat", {
-          numUnreadMessages: numUnReads.data?.[0].totalUnread,
-          messageData: responseUser.data,
-          chatData: chatDataInfo.data,
-          type: TypeMessage.NewMessage,
-        });
+      const roomNameChat = "roomGeneralChat" + receivingUser;
+      io.to(roomNameChat).emit("updateGeneralChat", {
+        numUnreadMessages: numUnReads.data?.[0].totalUnread,
+        messageData: responseUser.data,
+        chatData: chatDataInfo.data,
+        type: TypeMessage.NewMessage,
+      });
 
-        const roomNameChatUser = "roomGeneralChat" + userId;
-        io.to(roomNameChatUser).emit("updateGeneralChat", {
-          messageData: responseUser.data,
-          chatData: chatDataUser.data,
-          type: TypeMessage.NewMessage,
-        });
-      }
+      const roomNameChatUser = "roomGeneralChat" + userId;
+      io.to(roomNameChatUser).emit("updateGeneralChat", {
+        messageData: responseUser.data,
+        chatData: chatDataUser.data,
+        type: TypeMessage.NewMessage,
+      });
+      //     }
     } else {
       res.status(responseUser.code).send(responseUser);
     }

@@ -1,5 +1,5 @@
 import { UtilData } from "../utils/UtilData";
-import { UtilDataType } from "../types/globalTypes";
+import { RequirementType, UtilDataType } from "../types/globalTypes";
 import { RequestExt } from "../interfaces/req-ext";
 import mongoose, { Mongoose } from "mongoose";
 import dbConnect from "../database/mongo";
@@ -197,6 +197,18 @@ export const getLastRecords = async (entityID: string, rubros: [number]) => {
       cont++;
     }
 
+    products.forEach((subArray) => {
+      subArray.forEach((item: any) => {
+        item.type = RequirementType.GOOD;
+      });
+    });
+
+    services.forEach((subArray) => {
+      subArray.forEach((item: any) => {
+        item.type = RequirementType.SERVICE;
+      });
+    });
+
     const requeriments: any = services.map((servGroup, index) => {
       const prodGroup = products[index] || [];
       const merged = [...servGroup, ...prodGroup];
@@ -305,6 +317,12 @@ export const getLastRecords = async (entityID: string, rubros: [number]) => {
 
       cont++;
     }
+
+    liquidations.forEach((subArray) => {
+      subArray.forEach((item: any) => {
+        item.type = RequirementType.SALE;
+      });
+    });
 
     liquidations.forEach((grupo: any) => {
       grupo.forEach((item: any) => {
