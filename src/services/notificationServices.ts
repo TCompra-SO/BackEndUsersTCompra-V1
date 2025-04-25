@@ -186,7 +186,7 @@ export const getNotificationFromLastRequirementsPublished = (
 export const readNotification = async (notificationId: string) => {
   try {
     const resultData = await NotificationModel.updateOne(
-      { uid: notificationId },
+      { uid: notificationId, type: NotificationType.DIRECT },
       { read: true }
     );
     return {
