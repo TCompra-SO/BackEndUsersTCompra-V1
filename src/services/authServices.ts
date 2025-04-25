@@ -1050,6 +1050,7 @@ export class AuthServices {
               planID: result[0].planID,
               online: true,
               lastSession: result[0].auth_users.ultimate_session,
+              premiun: result[0].premiun,
             },
           ];
 
