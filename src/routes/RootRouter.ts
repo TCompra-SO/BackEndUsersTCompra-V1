@@ -10,6 +10,7 @@ import { ReportsRouter } from "./reportsRouter";
 import { checkJwt } from "../middleware/session";
 import { NotificationRouter } from "./notificationRouter";
 import { ChatRouter } from "./chatRouter";
+import { PlanRouter } from "./planRouter";
 
 export class RootRouter {
   private static instance: RootRouter;
@@ -27,6 +28,7 @@ export class RootRouter {
     this.router.use("/v1/reports/", ReportsRouter.getRouter());
     this.router.use("/v1/notification/", NotificationRouter.getRouter());
     this.router.use("/v1/chat/", ChatRouter.getRouter());
+    this.router.use("/v1/plan/", PlanRouter.getRouter());
   }
 
   static getRouter(): Router {

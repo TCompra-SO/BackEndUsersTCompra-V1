@@ -22,7 +22,7 @@ export interface CompanyI {
   password: string;
   typeID: number;
   avatar?: string; // Opcional
-  planID: number;
+  planID: string;
   metadata?: MetadataI;
   ultimate_session: Date;
   verified: boolean;

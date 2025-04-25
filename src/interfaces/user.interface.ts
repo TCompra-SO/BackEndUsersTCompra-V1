@@ -13,7 +13,7 @@ export interface UserI {
   password: string;
   typeID: number; // Contraseña del usuario
   avatar?: string; // URL del avatar del usuario (opcional)
-  planID: number;
+  planID: string;
   metadata?: MetadataI;
   score_provider: [ScoreI];
   score_client: [ScoreI];

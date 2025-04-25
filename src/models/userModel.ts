@@ -65,7 +65,7 @@ const userSchema = new Schema<UserI>(
       required: false,
     }, // Opcional
     planID: {
-      type: Number,
+      type: String,
       required: false,
     },
     score_provider: {

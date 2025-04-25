@@ -107,7 +107,7 @@ const CompanySchema = new Schema<CompanyI>(
       required: false,
     },
     planID: {
-      type: Number,
+      type: String,
       required: false,
     },
     metadata: {
