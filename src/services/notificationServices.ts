@@ -162,6 +162,7 @@ export const getNotificationFromLastRequirementsPublished = (
             Date.now() + broadcastNotificationExpiresIn * 60 * 1000
           ),
           categoryId: group._id,
+          read: true,
         };
         return notification;
       });
