@@ -1749,6 +1749,7 @@ export class AuthServices {
         ...entityData[0],
         typeEntity,
       };
+
       return {
         success: true,
         code: 200,
@@ -1810,6 +1811,8 @@ export class AuthServices {
               sellerCount,
               sellerScore,
               categories: entityData.data.categories,
+              planID: entityData.data.planID,
+              premiun: entityData.data.premiun,
             },
           ];
           break;
@@ -1837,6 +1840,8 @@ export class AuthServices {
               sellerCount,
               sellerScore,
               categories: entityData.data.categories,
+              planID: entityData.data.planID,
+              premiun: entityData.data.premiun,
             },
           ];
           break;

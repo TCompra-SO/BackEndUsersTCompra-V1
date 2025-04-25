@@ -111,27 +111,6 @@ export class PlanService {
         };
       }
 
-      if (typeEntity === TypeEntity.COMPANY) {
-        entityModel = CompanyModel;
-      } else {
-        entityModel = UserModel;
-      }
-
-      const updateResult = await entityModel.updateOne(
-        { uid: userId },
-        { $set: { planID: planId } }
-      );
-
-      if (updateResult.modifiedCount === 0) {
-        return {
-          success: false,
-          code: 409,
-          error: {
-            msg: "No se pudo actualizar el plan.",
-          },
-        };
-      }
-
       // if(userData)
       if (planVerify.success) {
       } else {
@@ -140,6 +119,27 @@ export class PlanService {
           code: 401,
           error: {
             msg: "El plan no existe",
+          },
+        };
+      }
+
+      if (typeEntity === TypeEntity.COMPANY) {
+        entityModel = CompanyModel;
+      } else {
+        entityModel = UserModel;
+      }
+
+      const updateResult = await entityModel.updateOne(
+        { uid: userId },
+        { $set: { planID: planId, premiun: planVerify.data?.premium } }
+      );
+
+      if (updateResult.modifiedCount === 0) {
+        return {
+          success: false,
+          code: 409,
+          error: {
+            msg: "No se pudo actualizar el plan.",
           },
         };
       }

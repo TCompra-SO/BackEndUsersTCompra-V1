@@ -26,4 +26,5 @@ export interface UserI {
   refreshToken?: string;
   accessToken?: string;
   online?: boolean;
+  premiun?: boolean;
 }

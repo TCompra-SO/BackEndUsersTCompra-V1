@@ -35,4 +35,5 @@ export interface CompanyI {
   refreshToken?: string;
   accessToken?: string;
   online?: boolean;
+  premiun?: boolean;
 }

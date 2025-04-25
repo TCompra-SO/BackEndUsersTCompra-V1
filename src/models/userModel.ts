@@ -121,6 +121,10 @@ const userSchema = new Schema<UserI>(
       type: Boolean,
       required: false,
     },
+    premiun: {
+      type: Boolean,
+      required: false,
+    },
   },
   {
     versionKey: false,
