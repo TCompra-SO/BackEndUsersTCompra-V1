@@ -1878,6 +1878,8 @@ export class AuthServices {
               image: entityData.data.avatar,
               auth_users: entityData.data.auth_users,
               categories: dataCompany.data?.categories,
+              planID: entityData.data.planID,
+              premiun: entityData.data.premiun,
             },
           ];
           break;
@@ -1932,6 +1934,7 @@ export class AuthServices {
           document: 1,
           cityID: 1,
           planID: 1,
+          premiun: 1,
           avatar: 1,
           categories: 1,
           "auth_users.email": 1,
