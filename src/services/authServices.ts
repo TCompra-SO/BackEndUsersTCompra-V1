@@ -1338,6 +1338,7 @@ export class AuthServices {
           "auth_users.active_account": 1,
           "auth_users.ultimate_session": 1,
           planID: 1,
+          premiun: 1,
         },
       },
     ];
