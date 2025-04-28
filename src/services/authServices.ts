@@ -53,6 +53,7 @@ export interface UserDocument extends Document {
   };
   active_account: boolean;
   planID: number;
+  premiun: boolean;
   typeID: number;
   ultimate_session: string;
 }
@@ -958,6 +959,7 @@ export class AuthServices {
             name: 1,
             typeID: 1,
             planID: 1,
+            premiun: 1,
             active_account: 1,
             metadata: 1,
             ultimate_session: 1,
@@ -989,6 +991,7 @@ export class AuthServices {
           }
         }
       }
+
       if (entity === "SubUser" && result && result.length > 0) {
         const hashPassword = await bcrypt.compare(
           password,
@@ -1050,7 +1053,7 @@ export class AuthServices {
               planID: result[0].planID,
               online: true,
               lastSession: result[0].auth_users.ultimate_session,
-              premiun: result[0].premiun,
+              premiun: user[0].premiun,
             },
           ];
 
@@ -1160,6 +1163,7 @@ export class AuthServices {
             planID: user[0].planID,
             online: true,
             lastSession: user[0].ultimate_session,
+            premiun: user[0].premiun,
           },
         ];
         if (entity === "Company") {
@@ -1234,7 +1238,7 @@ export class AuthServices {
         typeUser = userData.data?.[0].typeEntity;
       }
       // Determinar el modelo y verificar la existencia del token
-      console.log(typeUser);
+
       switch (typeUser) {
         case TypeEntity.COMPANY:
           entityModel = CompanyModel;

@@ -494,3 +494,11 @@ const bodyMailCategories = async (
     return { success: false, error: error };
   }
 };
+
+const senEmailCertificate = async (email: string, state: boolean) => {
+  try {
+  } catch (error) {
+    console.error("Failed to send email:", error);
+    return { success: false, error: error };
+  }
+};

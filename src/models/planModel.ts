@@ -47,6 +47,11 @@ const planSchema = new Schema<PlanI>(
       type: Boolean,
       required: true,
     },
+    default: {
+      type: Boolean,
+      required: true,
+      default: true,
+    },
   },
   {
     versionKey: false,

@@ -8,4 +8,5 @@ export interface PlanI {
   offersSales: number;
   subUsers: number;
   premium: boolean;
+  default: boolean;
 }
