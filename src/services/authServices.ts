@@ -37,6 +37,15 @@ import { Response } from "express";
 import { setToken } from "../utils/authStore";
 import UserModel from "../models/userModel";
 import { accessTokenExpiresIn, refreshTokenExpiresIn } from "../utils/Globals";
+import SessionModel from "../models/sessionModel";
+import {
+  decodeToken,
+  generateRefreshAccessToken,
+  generateToken,
+  verifyRefreshAccessToken,
+  verifyToken,
+} from "../utils/jwt.handle";
+import { decode } from "punycode";
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET as string;
@@ -927,7 +936,13 @@ export class AuthServices {
     }
   };
 
-  static LoginService = async (email: string, password: string) => {
+  static LoginService = async (
+    email: string,
+    password: string,
+    ipAgent: string,
+    userAgent: string,
+    browserId: string
+  ) => {
     try {
       const { error } = this.SchemaLogin.validate({ email, password });
       if (error) {
@@ -968,6 +983,7 @@ export class AuthServices {
       ];
       let entity;
       let result;
+
       let user: UserDocument[] = await User.aggregate(pipeline);
       entity = "User";
       if (!user || user.length == 0) {
@@ -1019,27 +1035,29 @@ export class AuthServices {
             result[0].auth_users.Uid
           );
 
-          const accessToken = jwt.sign(
-            {
-              uid: result[0].auth_users.Uid,
-              name: profileUser.data?.[0].name,
-              email: result[0].auth_users.email,
-              CompanyID: result[0].uid,
-              type: entity,
-              id: result[0].auth_users._id,
-              //  exp: this.ExpirationDate(12),
-            },
-            JWT_SECRET,
-            { expiresIn: accessTokenExpiresIn }
-          );
-
-          const refreshToken = jwt.sign(
-            { uid: result[0].auth_users.Uid },
-            JWT_REFRESH_SECRET,
-            { expiresIn: refreshTokenExpiresIn }
-          );
-
           // AQUI CONTINUAMOS ///////////////////////////////////////////
+          console.log(ipAgent);
+          console.log(browserId);
+          const dataAccessToken = {
+            uid: result[0].auth_users.Uid,
+            name: profileUser.data?.[0].name,
+            email: result[0].auth_users.email,
+            CompanyID: result[0].uid,
+            type: entity,
+            id: result[0].auth_users._id,
+            //  exp: this.ExpirationDate(12),
+          };
+
+          const dataRefreshToken = { uid: result[0].auth_users.Uid };
+
+          const sessionData = await this.createSession(
+            result[0].auth_users.Uid,
+            ipAgent,
+            userAgent,
+            browserId,
+            dataAccessToken,
+            dataRefreshToken
+          );
 
           const dataUser = [
             {
@@ -1062,22 +1080,20 @@ export class AuthServices {
             {
               $set: {
                 "auth_users.$.ultimate_session": new Date(),
-                "auth_users.$.refreshToken": refreshToken,
-                "auth_users.$.accessToken": accessToken,
                 "auth_users.$.online": true,
               },
             }
           );
 
-          setToken(accessToken);
-          setToken(refreshToken);
           return {
             success: true,
             code: 200,
             res: {
               msg: "Correcto",
-              accessToken,
-              refreshToken,
+              accessToken: sessionData.accessToken,
+              refreshToken: sessionData.refreshToken,
+              accessExpiresIn: sessionData.accessExpiresIn,
+              refreshExpiresIn: sessionData.refreshExpiresIn,
               dataUser,
             },
           };
@@ -1133,23 +1149,24 @@ export class AuthServices {
           };
         }
 
-        const accesstoken = jwt.sign(
-          {
-            uid: user[0].uid,
-            name: user[0].name,
-            email: user[0].email,
-            type: entity,
-            id: user[0]._id,
-            //    exp: this.ExpirationDate(12),
-          },
-          JWT_SECRET,
-          { expiresIn: accessTokenExpiresIn }
-        );
+        const dataAccessToken = {
+          uid: user[0].uid,
+          name: user[0].name,
+          email: user[0].email,
+          type: entity,
+          id: user[0]._id,
+          //    exp: this.ExpirationDate(12),
+        };
 
-        const refreshToken = jwt.sign(
-          { uid: user[0].uid },
-          JWT_REFRESH_SECRET,
-          { expiresIn: refreshTokenExpiresIn }
+        const dataRefreshToken = { uid: user[0].uid };
+
+        const sessionData = await this.createSession(
+          user[0].uid,
+          ipAgent,
+          userAgent,
+          browserId,
+          dataAccessToken,
+          dataRefreshToken
         );
 
         const dataUser = [
@@ -1172,8 +1189,6 @@ export class AuthServices {
             {
               $set: {
                 ultimate_session: new Date(),
-                refreshToken: refreshToken,
-                accessToken: accesstoken,
                 online: true,
               },
             }
@@ -1184,23 +1199,21 @@ export class AuthServices {
             {
               $set: {
                 ultimate_session: new Date(),
-                refreshToken: refreshToken,
-                accessToken: accesstoken,
                 online: true,
               },
             }
           );
         }
-        setToken(accesstoken);
-        setToken(refreshToken);
 
         return {
           success: true,
           code: 200,
           res: {
             msg: "Sesión iniciada correctamente",
-            accessToken: accesstoken,
-            refreshToken,
+            refreshToken: sessionData.refreshToken,
+            accessToken: sessionData.accessToken,
+            accessExpiresIn: sessionData.accessExpiresIn,
+            refreshExpiresIn: sessionData.refreshExpiresIn,
             dataUser,
           },
         };
@@ -1217,15 +1230,132 @@ export class AuthServices {
     }
   };
 
+  static createSession = async (
+    userId: string,
+    ipAgent: string,
+    userAgent: string,
+    browserId: string,
+    dataAccessToken: any,
+    dataRefreshToken: any
+  ) => {
+    try {
+      let accessExpiresIn;
+      let refreshExpiresIn;
+      let accessToken: any, refreshToken: any;
+      const sessionData = await SessionModel.findOne({
+        userId,
+        browserId,
+      });
+
+      if (!sessionData) {
+        accessToken = jwt.sign(dataAccessToken, JWT_SECRET, {
+          expiresIn: accessTokenExpiresIn,
+        });
+
+        refreshToken = jwt.sign(dataRefreshToken, JWT_REFRESH_SECRET, {
+          expiresIn: refreshTokenExpiresIn,
+        });
+        // Crear una nueva sesión si no existe
+        const newSession = await SessionModel.create({
+          userId,
+          ipAgent,
+          userAgent,
+          browserId,
+          accessToken,
+          refreshToken,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      } else {
+        let stateRefreshToken, stateAccessToken;
+        stateRefreshToken = verifyRefreshAccessToken(sessionData?.refreshToken);
+        stateAccessToken = await verifyToken(sessionData.accessToken);
+        if (stateRefreshToken) {
+          if (stateAccessToken) {
+            accessToken = sessionData.accessToken;
+            refreshToken = sessionData.refreshToken;
+          } else {
+            accessToken = await generateRefreshAccessToken(
+              sessionData.accessToken,
+              sessionData.refreshToken
+            );
+            refreshToken = sessionData.refreshToken;
+          }
+        } else {
+          refreshToken = generateToken(sessionData.refreshToken);
+          accessToken = await generateRefreshAccessToken(
+            sessionData.accessToken,
+            sessionData.refreshToken
+          );
+        }
+        // Actualizar la sesión existente con los nuevos tokens
+        const updateSession = await SessionModel.updateOne(
+          { userId: sessionData.userId, browserId: sessionData.browserId }, // Filtro
+          {
+            // Campos a actualizar
+            $set: {
+              accessToken,
+              refreshToken,
+              updatedAt: new Date(),
+            },
+          }
+        );
+      }
+      accessExpiresIn = decodeToken(accessToken);
+      refreshExpiresIn = decodeToken(refreshToken);
+      return {
+        accessToken,
+        refreshToken,
+        refreshExpiresIn,
+        accessExpiresIn,
+      };
+    } catch (error) {
+      console.error(error);
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error at Login",
+        },
+      };
+    }
+  };
+
   static async LogoutService(userID: string, refreshToken: string) {
     try {
-      if (!refreshToken) {
+      if (!refreshToken || !userID) {
         return {
           success: false,
           code: 400,
-          msg: "No refresh token provided",
+          error: {
+            msg: "Complete los parámetros requeridos",
+          },
         };
       }
+
+      const sessionData = await SessionModel.findOne({
+        userId: userID,
+        refreshToken,
+      });
+
+      if (!sessionData) {
+        return {
+          success: false,
+          code: 403,
+          error: {
+            msg: "No se encontro la session",
+          },
+        };
+      }
+
+      const response = await SessionModel.deleteOne({
+        userId: sessionData.userId,
+        refreshToken: sessionData.refreshToken,
+      });
+      console.log(response);
+
+      console.log(sessionData);
+      /*
       let typeUser, tokenExists, entityModel: Model<any>;
       const userData = await this.getDataBaseUser(userID);
 
@@ -1290,15 +1420,24 @@ export class AuthServices {
           { refreshToken: refreshToken },
           { $unset: { refreshToken: "", accessToken: "", online: false } }
         );
+      }*/
+      if (response.deletedCount > 0) {
+        return {
+          success: true,
+          code: 200,
+          res: {
+            msg: "Sesión cerrada correctamente",
+          },
+        };
+      } else {
+        return {
+          success: false,
+          code: 409,
+          error: {
+            msg: "No se ha podido eliminar de la base",
+          },
+        };
       }
-
-      return {
-        success: true,
-        code: 200,
-        res: {
-          msg: "Sesión cerrada correctamente",
-        },
-      };
     } catch (error) {
       console.error("Error en logoutService:", error);
       return {

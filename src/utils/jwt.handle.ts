@@ -198,6 +198,7 @@ const verifyRefreshAccessToken = (token: string) => {
 
 const decodeToken = (token: string) => {
   const decoded: any = jwt.decode(token);
+  console.log(decoded);
   if (decoded && decoded.exp) {
     const expiresIn = decoded.exp - Math.floor(Date.now() / 1000); // Segundos restantes
     return expiresIn;

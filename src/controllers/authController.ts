@@ -11,6 +11,7 @@ import {
 } from "../utils/jwt.handle";
 import { io } from "../server"; // Importamos el objeto `io` de Socket.IO
 import { alternativeAccessTokenExpiresIn } from "../utils/Globals";
+import { Console } from "console";
 
 const getNameController = async (req: Request, res: Response) => {
   // Obtener el parámetro de la consulta
@@ -277,19 +278,23 @@ const ValidateCodeController = async (req: Request, res: Response) => {
 
 const LoginController = async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
-    const responseUser = await AuthServices.LoginService(email, password);
+    const { email, password, browserId } = req.body;
+    const userAgent = req.headers["user-agent"] || "";
+    const ipAgent: string = req.ip ?? "0.0.0.0";
+
+    const responseUser = await AuthServices.LoginService(
+      email,
+      password,
+      ipAgent,
+      userAgent,
+      browserId
+    );
 
     if (!responseUser.success) {
       return res.status(responseUser.code).send(responseUser.error);
     } else {
-      // const roomName = "roomLogin" + responseUser.res?.dataUser[0].uid;
-      const accesToken = responseUser.res?.accessToken || "";
-      const accessExpiresIn =
-        decodeToken(accesToken) || alternativeAccessTokenExpiresIn;
-      const refreshToken = responseUser.res?.refreshToken || "";
-      const refreshExpiresIn =
-        decodeToken(refreshToken) || alternativeAccessTokenExpiresIn;
+      const accessExpiresIn = responseUser.res?.accessExpiresIn;
+      const refreshExpiresIn = responseUser.res?.refreshExpiresIn;
       return res.status(responseUser.code).send({
         ...responseUser,
         res: { ...responseUser.res, accessExpiresIn, refreshExpiresIn },
