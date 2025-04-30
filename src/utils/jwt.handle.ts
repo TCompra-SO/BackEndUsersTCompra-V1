@@ -11,6 +11,7 @@ import { pipeline } from "stream";
 import { TypeEntity } from "../types/globalTypes";
 import UserModel from "../models/userModel";
 import { accessTokenExpiresIn, refreshTokenExpiresIn } from "./Globals";
+import SessionModel from "../models/sessionModel";
 
 const JWT_SECRET = process.env.JWT_SECRET || "token.01010101";
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "refresh.01010101";
@@ -27,14 +28,12 @@ const generateToken = async (prevRefreshToken: string) => {
       },
     };
 
-  const userData = await AuthServices.getDataBaseUser(decoded.uid);
+  const sessionData = await SessionModel.findOne({
+    userId: decoded.uid,
+    refreshToken: prevRefreshToken,
+  });
 
-  if (
-    prevRefreshToken !==
-    (userData.data?.[0].auth_users && userData.data?.[0].auth_users.refreshToken
-      ? userData.data?.[0].auth_users.refreshToken
-      : userData.data?.[0].refreshToken)
-  ) {
+  if (prevRefreshToken !== sessionData?.refreshToken) {
     return {
       success: false,
       code: 401,
@@ -44,7 +43,6 @@ const generateToken = async (prevRefreshToken: string) => {
     };
   }
 
-  const typeEntity = userData.data?.[0].typeEntity;
   const accessToken = sign({ uid: decoded.uid }, JWT_SECRET, {
     expiresIn: accessTokenExpiresIn,
   });
@@ -52,26 +50,33 @@ const generateToken = async (prevRefreshToken: string) => {
     expiresIn: refreshTokenExpiresIn,
   });
 
-  if (userData.data?.[0].auth_users) {
-    await CompanyModel.updateOne(
-      { "auth_users.Uid": userData.data[0].auth_users.Uid }, // Filtrar por Uid dentro del array
+  if (sessionData) {
+    const response = await SessionModel.updateOne(
+      { userId: sessionData.userId, refreshToken: prevRefreshToken }, // Filtrar por Uid dentro del array
       {
         $set: {
-          "auth_users.$.accessToken": accessToken,
-          "auth_users.$.refreshToken": refreshToken,
+          accessToken,
+          refreshToken,
         },
       } // Actualizar accessToken
     );
-  } else if (typeEntity === TypeEntity.COMPANY) {
-    await CompanyModel.updateOne(
-      { uid: decoded.uid }, // Filtrar por uid
-      { $set: { accessToken: accessToken, refreshToken } } // Actualizar accessToken
-    );
+    if (response.modifiedCount < 1) {
+      return {
+        success: false,
+        code: 407,
+        error: {
+          msg: "No se pudo actualizar el Token en la base de datos",
+        },
+      };
+    }
   } else {
-    await UserModel.updateOne(
-      { uid: decoded.uid }, // Filtrar por uid
-      { $set: { accessToken: accessToken, refreshToken } } // Actualizar accessToken
-    );
+    return {
+      success: false,
+      code: 403,
+      error: {
+        msg: "No se encontro la sesion",
+      },
+    };
   }
 
   return {
@@ -133,13 +138,12 @@ const generateRefreshAccessToken = async (
     if (decoded.valid && decoded.uid) {
       const userData = await AuthServices.getDataBaseUser(decoded.uid);
 
-      if (
-        refreshToken !==
-        (userData.data?.[0].auth_users &&
-        userData.data?.[0].auth_users.refreshToken
-          ? userData.data?.[0].auth_users.refreshToken
-          : userData.data?.[0].refreshToken)
-      ) {
+      const sessionData = await SessionModel.findOne({
+        userId: decoded.uid,
+        refreshToken,
+      });
+
+      if (refreshToken !== sessionData?.refreshToken) {
         // userData.data?.[0].auth_users.refreshToken
         return {
           success: false,
@@ -156,23 +160,21 @@ const generateRefreshAccessToken = async (
         expiresIn: accessTokenExpiresIn,
       });
 
-      const typeEntity = userData.data?.[0].typeEntity;
+      if (sessionData) {
+        const response = await SessionModel.updateOne(
+          { userId: sessionData.userId, refreshToken }, // Filtrar por Uid dentro del array
+          { $set: { accessToken: newAccessToken } } // Actualizar accessToken
+        );
 
-      if (userData.data?.[0].auth_users) {
-        await CompanyModel.updateOne(
-          { "auth_users.Uid": userData.data[0].auth_users.Uid }, // Filtrar por Uid dentro del array
-          { $set: { "auth_users.$.accessToken": newAccessToken } } // Actualizar accessToken
-        );
-      } else if (typeEntity === TypeEntity.COMPANY) {
-        await CompanyModel.updateOne(
-          { uid: decoded.uid }, // Filtrar por uid
-          { $set: { accessToken: newAccessToken } } // Actualizar accessToken
-        );
-      } else {
-        await UserModel.updateOne(
-          { uid: decoded.uid }, // Filtrar por uid
-          { $set: { accessToken: newAccessToken } } // Actualizar accessToken
-        );
+        if (response.modifiedCount < 1) {
+          return {
+            success: false,
+            code: 403,
+            error: {
+              msg: "No se ha podido actualizar el token en la BD",
+            },
+          };
+        }
       }
       return {
         success: true,
@@ -198,7 +200,7 @@ const verifyRefreshAccessToken = (token: string) => {
 
 const decodeToken = (token: string) => {
   const decoded: any = jwt.decode(token);
-  console.log(decoded);
+
   if (decoded && decoded.exp) {
     const expiresIn = decoded.exp - Math.floor(Date.now() / 1000); // Segundos restantes
     return expiresIn;

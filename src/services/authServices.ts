@@ -1355,7 +1355,7 @@ export class AuthServices {
       console.log(response);
 
       console.log(sessionData);
-      /*
+
       let typeUser, tokenExists, entityModel: Model<any>;
       const userData = await this.getDataBaseUser(userID);
 
@@ -1382,45 +1382,26 @@ export class AuthServices {
         default:
           return {
             success: false,
-            code: 400,
+            code: 407,
             msg: "Tipo de usuario no reconocido",
           };
       }
 
-      // Buscar el refreshToken en la entidad correcta
-      if (typeUser === TypeEntity.SUBUSER) {
-        tokenExists = await entityModel.findOne({
-          "auth_users.refreshToken": refreshToken,
-        });
-      } else {
-        tokenExists = await entityModel.findOne({ refreshToken: refreshToken });
-      }
-
-      if (!tokenExists) {
-        return {
-          success: false,
-          code: 401,
-          msg: "Refresh token inválido",
-        };
-      }
-
       if (typeUser === TypeEntity.SUBUSER) {
         await CompanyModel.updateOne(
-          { "auth_users.refreshToken": refreshToken },
+          { "auth_users.Uid": userID },
           {
-            $unset: {
-              "auth_users.$.refreshToken": "",
-              "auth_users.$.accessToken": "",
+            $set: {
               "auth_users.$.online": false,
             },
           } // Solo borra el refreshToken
         );
       } else {
         await entityModel.updateOne(
-          { refreshToken: refreshToken },
-          { $unset: { refreshToken: "", accessToken: "", online: false } }
+          { uid: userID },
+          { $set: { online: false } }
         );
-      }*/
+      }
       if (response.deletedCount > 0) {
         return {
           success: true,
