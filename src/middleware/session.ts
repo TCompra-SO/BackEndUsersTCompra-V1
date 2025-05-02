@@ -3,7 +3,6 @@ import { verifyToken } from "../utils/jwt.handle";
 import { RequestExt } from "./../interfaces/req-ext";
 
 const checkJwt = async (req: RequestExt, res: Response, next: NextFunction) => {
- 
   try {
     const jwtByUser = req.headers.authorization || null;
     if (!jwtByUser) {
@@ -27,22 +26,21 @@ const checkJwt = async (req: RequestExt, res: Response, next: NextFunction) => {
       });
     }
 
-    const isUser = (await verifyToken(jwt)) as { uid: string }; // Decodificar token
+    const { valid, expired, decoded } = await verifyToken(jwt);
 
-    if (!isUser) {
+    if (!valid || !decoded) {
       return res.status(401).send({
         success: false,
         code: 401,
         error: {
-          msg: "NO_TIENES_UN_JWT_VALIDO",
+          msg: expired ? "TOKEN_EXPIRADO" : "NO_TIENES_UN_JWT_VALIDO",
         },
       });
-    } else {
-      req.user = isUser; // Guardamos los datos decodificados
-      req.token = jwt; // ✅ Guardamos el token en `req.token`
-
-      next();
     }
+
+    req.user = decoded; // ✅ Solo si decoded no es null
+    req.token = jwt;
+    next();
   } catch (e) {
     res.status(400).send({
       success: false,

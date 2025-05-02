@@ -3,6 +3,7 @@ import {
   sign,
   TokenExpiredError,
   verify,
+  decode,
 } from "jsonwebtoken";
 import jwt from "jsonwebtoken";
 import { AuthServices } from "../services/authServices";
@@ -24,7 +25,7 @@ const generateToken = async (prevRefreshToken: string) => {
       success: false,
       code: 401,
       error: {
-        msg: "El Refresh Token es invalido",
+        msg: "El Refresh Token es invalidossss",
       },
     };
 
@@ -91,10 +92,15 @@ const generateToken = async (prevRefreshToken: string) => {
 
 const verifyToken = async (token: string) => {
   try {
-    return verify(token, JWT_SECRET) as { uid: string };
-  } catch (error) {
+    const decoded = verify(token, JWT_SECRET) as { uid: string };
+    return { valid: true, expired: false, decoded };
+  } catch (error: any) {
+    if (error instanceof TokenExpiredError) {
+      return { valid: false, expired: true, decoded: null };
+    }
+
     console.error("Error al verificar access token:", error);
-    return null;
+    return { valid: false, expired: false, decoded: null };
   }
 };
 
@@ -112,10 +118,19 @@ function validateAccessToken(accessToken: string): {
     const now = Math.floor(Date.now() / 1000); // Current time in seconds
     const expired = decoded.exp ? decoded.exp < now : false;
 
-    return { valid: true, expired, uid: decoded.uid };
+    return {
+      valid: true,
+      expired,
+      uid: typeof decoded.uid === "string" ? decoded.uid : null,
+    };
   } catch (error) {
     if (error instanceof JsonWebTokenError) {
-      return { valid: false, expired: false, uid: null, error };
+      return {
+        valid: false,
+        expired: false,
+        uid: null,
+        error,
+      };
     } else {
       return {
         valid: false,
@@ -156,9 +171,9 @@ const generateRefreshAccessToken = async (
           },
         };
       }
-      const decodedRefreshToken = verify(refreshToken, JWT_REFRESH_SECRET) as {
+      /* const decodedRefreshToken = verify(refreshToken, JWT_REFRESH_SECRET) as {
         uid: string;
-      };
+      };*/
       const newAccessToken = sign({ uid: decoded.uid }, JWT_SECRET, {
         expiresIn: accessTokenExpiresIn,
       });
@@ -192,25 +207,37 @@ const generateRefreshAccessToken = async (
   }
 };
 
-const verifyRefreshAccessToken = (token: string) => {
+const verifyRefreshAccessToken = (
+  token: string
+): { uid: string; expired?: boolean } | null => {
   try {
+    // Verifica normalmente primero
     return verify(token, JWT_REFRESH_SECRET) as { uid: string };
-  } catch (error) {
+  } catch (error: any) {
+    if (error instanceof TokenExpiredError) {
+      // El token está expirado: decodifica manualmente para obtener el uid
+      const decoded = decode(token) as { uid: string } | null;
+      if (decoded && decoded.uid) {
+        return { uid: decoded.uid, expired: true }; // indicamos que está expirado
+      }
+    }
+
+    // Otros errores (token mal formado, clave incorrecta, etc.)
     console.error("Error al verificar refresh token:", error);
     return null;
   }
 };
 
-const decodeToken = (token: string) => {
+const decodeToken = (token: string): number => {
   const decoded: any = jwt.decode(token);
 
   if (decoded && decoded.exp) {
-    const expiresIn = decoded.exp - Math.floor(Date.now() / 1000); // Segundos restantes
-    return expiresIn;
+    const expiresIn = decoded.exp - Math.floor(Date.now() / 1000);
+    return Math.max(0, expiresIn); // Nunca negativo
   }
-  return null;
-};
 
+  return 0; // Token inválido o sin expiración
+};
 export {
   generateToken,
   verifyToken,

@@ -1246,7 +1246,7 @@ export class AuthServices {
         userId,
         browserId,
       });
-
+      console.log("creation");
       if (!sessionData) {
         accessToken = jwt.sign(dataAccessToken, JWT_SECRET, {
           expiresIn: accessTokenExpiresIn,
@@ -1255,6 +1255,9 @@ export class AuthServices {
         refreshToken = jwt.sign(dataRefreshToken, JWT_REFRESH_SECRET, {
           expiresIn: refreshTokenExpiresIn,
         });
+        console.log("=========================================");
+        console.log("accessToken: " + accessToken);
+        console.log("refreshToken: " + refreshToken);
         // Crear una nueva sesión si no existe
         const newSession = await SessionModel.create({
           userId,
@@ -1269,24 +1272,34 @@ export class AuthServices {
       } else {
         let stateRefreshToken, stateAccessToken;
         stateRefreshToken = verifyRefreshAccessToken(sessionData?.refreshToken);
+        console.log("============================================");
         stateAccessToken = await verifyToken(sessionData.accessToken);
+        console.log(stateAccessToken.expired);
         if (stateRefreshToken) {
-          if (stateAccessToken) {
+          if (stateAccessToken.expired) {
             accessToken = sessionData.accessToken;
             refreshToken = sessionData.refreshToken;
           } else {
-            accessToken = await generateRefreshAccessToken(
+            const tokenResult = await generateRefreshAccessToken(
               sessionData.accessToken,
               sessionData.refreshToken
             );
+            accessToken = tokenResult.accessToken;
             refreshToken = sessionData.refreshToken;
           }
         } else {
-          refreshToken = generateToken(sessionData.refreshToken);
-          accessToken = await generateRefreshAccessToken(
+          console.log("token refresh" + sessionData.refreshToken);
+
+          const newRefresh = await generateToken(sessionData.refreshToken);
+          refreshToken = newRefresh.res?.refreshToken;
+
+          console.log("entramos" + refreshToken);
+
+          const newAccess = await generateRefreshAccessToken(
             sessionData.accessToken,
             sessionData.refreshToken
           );
+          accessToken = newAccess.accessToken;
         }
         // Actualizar la sesión existente con los nuevos tokens
         const updateSession = await SessionModel.updateOne(
