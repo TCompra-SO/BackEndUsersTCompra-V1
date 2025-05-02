@@ -1939,6 +1939,7 @@ export class AuthServices {
               categories: entityData.data.categories,
               planID: entityData.data.planID,
               premiun: entityData.data.premiun,
+              active_account: entityData.data.active_account,
             },
           ];
           break;
@@ -1968,6 +1969,7 @@ export class AuthServices {
               categories: entityData.data.categories,
               planID: entityData.data.planID,
               premiun: entityData.data.premiun,
+              active_account: entityData.data.active_account,
             },
           ];
           break;
@@ -2005,6 +2007,7 @@ export class AuthServices {
               categories: dataCompany.data?.categories,
               planID: entityData.data.planID,
               premiun: entityData.data.premiun,
+              active_account: entityData.data.active_account,
             },
           ];
           break;
@@ -2317,7 +2320,6 @@ export class AuthServices {
       // Mapear resultados relevantes
       const matchedCompanies = results.map((result) => result.item);
 
-      await sendEmailCategories();
       return {
         success: true,
         code: 200,
@@ -2406,6 +2408,36 @@ export class AuthServices {
           msg: "Error al buscar usuarios",
         },
       };
+    }
+  };
+
+  static deleteExpiredSessions = async () => {
+    const sessions = await SessionModel.find();
+    console.log(sessions);
+    for (const session of sessions) {
+      const token = session.refreshToken;
+
+      try {
+        // Solo decodificamos para obtener el `exp` sin verificar la firma
+        const decoded = jwt.decode(token);
+
+        if (!decoded || typeof decoded !== "object" || !decoded.exp) {
+          // Token malformado o sin exp: eliminar por seguridad
+          await SessionModel.deleteOne({ _id: session._id });
+          continue;
+        }
+
+        const now = Math.floor(Date.now() / 1000); // Tiempo actual en segundos
+
+        if (decoded.exp < now) {
+          // Token expirado: eliminar
+          await SessionModel.deleteOne({ _id: session._id });
+        }
+      } catch (err) {
+        console.error("Error al procesar token:", err);
+        // Si da error al decodificar, mejor eliminar por seguridad
+        await SessionModel.deleteOne({ _id: session._id });
+      }
     }
   };
 }

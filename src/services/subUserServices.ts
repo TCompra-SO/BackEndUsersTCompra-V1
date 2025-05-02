@@ -24,6 +24,7 @@ import { ResourceCountersI } from "../interfaces/resourceCounters";
 import { ResourceCountersService } from "./resourceCountersServices";
 import { ResourceCountersModel } from "../models/resourceCountersModel";
 import Fuse from "fuse.js";
+import SessionModel from "../models/sessionModel";
 export class subUserServices {
   static SchemaRegister = Joi.object({
     dni: Joi.string().min(8).max(12).required(),
@@ -462,6 +463,10 @@ export class subUserServices {
             msg: "Error al actualizar el estado del subusuario",
           },
         };
+      }
+
+      if (!status) {
+        await SessionModel.deleteMany({ userId: uid });
       }
 
       return {

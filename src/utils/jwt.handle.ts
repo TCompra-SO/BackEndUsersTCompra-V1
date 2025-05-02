@@ -143,7 +143,10 @@ const generateRefreshAccessToken = async (
         refreshToken,
       });
 
-      if (refreshToken !== sessionData?.refreshToken) {
+      if (
+        refreshToken !== sessionData?.refreshToken ||
+        accessToken !== sessionData?.accessToken
+      ) {
         // userData.data?.[0].auth_users.refreshToken
         return {
           success: false,

@@ -1,3 +1,4 @@
+import { AuthServices } from "../services/authServices";
 import { sendEmailCategories } from "./NodeMailer";
 import cron from "node-cron";
 
@@ -7,6 +8,14 @@ cron.schedule("0 1 * * *", async () => {
     console.log("Enviando Correos de ultimos Rubros...");
     await sendEmailCategories(); // Llama a la función para actualizar los estados
     console.log("Correos enviados correctamente.");
+  } catch (error) {
+    console.error("Error al actualizar los estados vencidos:", error);
+  }
+  // se eliminan sesiones expiradas
+  try {
+    console.log("Eliminando sessiones vencidas...");
+    await AuthServices.deleteExpiredSessions(); // Llama a la función para actualizar los estados
+    console.log("sesiones eliminadas correctamente.");
   } catch (error) {
     console.error("Error al actualizar los estados vencidos:", error);
   }

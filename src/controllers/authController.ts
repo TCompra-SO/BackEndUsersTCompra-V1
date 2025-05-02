@@ -362,7 +362,7 @@ const RefreshTokenController = async (req: Request, res: Response) => {
 const refreshAccessToken = async (req: Request, res: Response) => {
   try {
     const { accessToken, refreshToken } = req.body;
-    console.log(accessToken);
+
     if (!accessToken || !refreshToken) {
       return res
         .status(400)
