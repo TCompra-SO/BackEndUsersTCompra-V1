@@ -230,10 +230,10 @@ const verifyRefreshAccessToken = (
 
 const decodeToken = (token: string): number => {
   const decoded: any = jwt.decode(token);
-
+  console.log(decoded);
   if (decoded && decoded.exp) {
     const expiresIn = decoded.exp - Math.floor(Date.now() / 1000);
-    return Math.max(0, expiresIn); // Nunca negativo
+    return Math.max(expiresIn); // Nunca negativo
   }
 
   return 0; // Token inválido o sin expiración
