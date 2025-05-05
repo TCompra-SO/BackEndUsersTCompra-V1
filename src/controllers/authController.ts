@@ -11,7 +11,7 @@ import {
 } from "../utils/jwt.handle";
 import { io } from "../server"; // Importamos el objeto `io` de Socket.IO
 import { alternativeAccessTokenExpiresIn } from "../utils/Globals";
-import { Console } from "console";
+import { Console, error } from "console";
 
 const getNameController = async (req: Request, res: Response) => {
   // Obtener el parámetro de la consulta
@@ -369,12 +369,15 @@ const refreshAccessToken = async (req: Request, res: Response) => {
         .json({ success: false, msg: "No hay refresh token" });
     }
 
-    const result = await generateRefreshAccessToken(accessToken, refreshToken);
-
+    const result: any = await generateRefreshAccessToken(
+      accessToken,
+      refreshToken
+    );
+    console.log(result);
     if (!result.success) {
       return res
-        .status(401)
-        .json({ success: false, msg: "Refresh token inválido o expirado" });
+        .status(result.code)
+        .send({ success: result.success, msg: result.error });
     }
 
     const expiresIn = result.accessToken

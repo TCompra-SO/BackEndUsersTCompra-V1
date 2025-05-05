@@ -13,6 +13,7 @@ import { TypeEntity } from "../types/globalTypes";
 import UserModel from "../models/userModel";
 import { accessTokenExpiresIn, refreshTokenExpiresIn } from "./Globals";
 import SessionModel from "../models/sessionModel";
+import { error } from "console";
 
 const JWT_SECRET = process.env.JWT_SECRET || "token.01010101";
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "refresh.01010101";
@@ -25,7 +26,7 @@ const generateToken = async (prevRefreshToken: string) => {
       success: false,
       code: 401,
       error: {
-        msg: "El Refresh Token es invalidossss",
+        msg: "El Refresh Token es invalido",
       },
     };
 
@@ -157,20 +158,37 @@ const generateRefreshAccessToken = async (
         userId: decoded.uid,
         refreshToken,
       });
+      if (!sessionData) {
+        return {
+          success: false,
+          code: 409,
+          error: {
+            msg: "No se encontraron datos, verifique el RefreshToken",
+          },
+        };
+      }
+      const refreshTokenVerify = verifyRefreshAccessToken(refreshToken);
 
-      if (
-        refreshToken !== sessionData?.refreshToken ||
-        accessToken !== sessionData?.accessToken
-      ) {
+      if (refreshTokenVerify?.expired) {
+        return {
+          success: false,
+          code: 410,
+          error: {
+            msg: "El RefreshToken ha expirado",
+          },
+        };
+      }
+      if (accessToken !== sessionData?.accessToken) {
         // userData.data?.[0].auth_users.refreshToken
         return {
           success: false,
           code: 400,
           error: {
-            msg: "El Refresh Token es invalido",
+            msg: "El Access Token es invalido",
           },
         };
       }
+
       /* const decodedRefreshToken = verify(refreshToken, JWT_REFRESH_SECRET) as {
         uid: string;
       };*/
@@ -199,7 +217,13 @@ const generateRefreshAccessToken = async (
         accessToken: newAccessToken,
       };
     } else {
-      throw new Error(decoded.error?.message);
+      return {
+        success: false,
+        code: 401,
+        error: {
+          msg: "Access Token invalido",
+        },
+      };
     }
   } catch (error) {
     console.error("Error al generar nuevo access token:", error);
@@ -223,14 +247,14 @@ const verifyRefreshAccessToken = (
     }
 
     // Otros errores (token mal formado, clave incorrecta, etc.)
-    console.error("Error al verificar refresh token:", error);
+    // console.error("Error al verificar refresh token:", error);
     return null;
   }
 };
 
 const decodeToken = (token: string): number => {
   const decoded: any = jwt.decode(token);
-  console.log(decoded);
+
   if (decoded && decoded.exp) {
     const expiresIn = decoded.exp - Math.floor(Date.now() / 1000);
     return Math.max(expiresIn); // Nunca negativo
