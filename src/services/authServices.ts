@@ -17,6 +17,7 @@ import {
   sendEmail,
   sendEmailCategories,
   sendEmailRecovery,
+  sendEmailWelcome,
 } from "../utils/NodeMailer";
 import jwt from "jsonwebtoken";
 import { error } from "console";
@@ -918,6 +919,9 @@ export class AuthServices {
         };
       }
 
+      const nameUser = user[0].name;
+
+      sendEmailWelcome(email, nameUser);
       return {
         success: true,
         code: 200,

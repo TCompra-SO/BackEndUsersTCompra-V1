@@ -373,7 +373,7 @@ const refreshAccessToken = async (req: Request, res: Response) => {
       accessToken,
       refreshToken
     );
-    console.log(result);
+
     if (!result.success) {
       return res
         .status(result.code)

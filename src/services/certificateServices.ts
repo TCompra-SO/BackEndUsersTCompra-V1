@@ -16,6 +16,7 @@ import { ResourceCountersModel } from "../models/resourceCountersModel";
 import { CertificationType, OrderType } from "../types/globalTypes";
 import { SortOrder } from "mongoose";
 import Fuse from "fuse.js";
+import { sendEmailCertificate } from "../utils/NodeMailer";
 
 dotenv.config();
 
@@ -564,6 +565,19 @@ export class CertificateService {
             }
           );
         }
+        const entityID: any = certificationData?.sendByentityID;
+
+        const email = (await AuthServices.getDataBaseUser(entityID)).data?.[0]
+          .email;
+
+        if (state === CertificationState.CERTIFIED) {
+          sendEmailCertificate(email, true);
+        }
+
+        if (state === CertificationState.REJECTED) {
+          sendEmailCertificate(email, false);
+        }
+        //senEmailCertificate()
         return {
           success: true,
           code: 200,
