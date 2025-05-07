@@ -1039,9 +1039,8 @@ export class AuthServices {
             result[0].auth_users.Uid
           );
 
-          // AQUI CONTINUAMOS ///////////////////////////////////////////
-          console.log(ipAgent);
-          console.log(browserId);
+          // AQUI ARMAMOS EL TOKEN ///////////////////////////////////////////
+
           const dataAccessToken = {
             uid: result[0].auth_users.Uid,
             name: profileUser.data?.[0].name,
@@ -1251,7 +1250,7 @@ export class AuthServices {
         userId,
         browserId,
       });
-      console.log("creation");
+
       if (!sessionData) {
         accessToken = jwt.sign(dataAccessToken, JWT_SECRET, {
           expiresIn: accessTokenExpiresIn,
@@ -1260,9 +1259,7 @@ export class AuthServices {
         refreshToken = jwt.sign(dataRefreshToken, JWT_REFRESH_SECRET, {
           expiresIn: refreshTokenExpiresIn,
         });
-        console.log("=============11111============================");
-        console.log("accessToken: " + accessToken);
-        console.log("refreshToken: " + refreshToken);
+
         // Crear una nueva sesión si no existe
         const newSession = await SessionModel.create({
           userId,
@@ -1277,12 +1274,9 @@ export class AuthServices {
       } else {
         let stateRefreshToken, stateAccessToken;
         stateRefreshToken = verifyRefreshAccessToken(sessionData?.refreshToken);
-        console.log("=================222===========================");
-        console.log("refreshToken:" + decodeToken(sessionData.refreshToken));
-        console.log("accessToken:" + decodeToken(sessionData.accessToken));
+
         stateAccessToken = await verifyToken(sessionData.accessToken);
-        console.log(stateAccessToken.expired);
-        console.log(stateAccessToken);
+
         if (!stateRefreshToken?.expired) {
           if (!stateAccessToken.expired) {
             const tokenResult = await generateRefreshAccessToken(
@@ -1292,7 +1286,6 @@ export class AuthServices {
             accessToken = tokenResult.accessToken;
             refreshToken = sessionData.refreshToken;
           } else {
-            console.log("entre al exp");
             const tokenResult = await generateRefreshAccessToken(
               sessionData.accessToken,
               sessionData.refreshToken
@@ -1301,12 +1294,9 @@ export class AuthServices {
             refreshToken = sessionData.refreshToken;
           }
         } else {
-          console.log("token refresh" + sessionData.refreshToken);
-
           const newRefresh = await generateToken(sessionData.refreshToken);
           refreshToken = newRefresh.res?.refreshToken;
 
-          console.log("entramos" + refreshToken);
           // Actualizamos con el nuevo Token
           await SessionModel.updateOne(
             { userId: sessionData.userId, browserId: sessionData.browserId }, // Filtro
@@ -1322,14 +1312,12 @@ export class AuthServices {
             userId,
             browserId,
           });
-          console.log(sessionData);
+
           const newAccess = await generateRefreshAccessToken(
             sessionData.accessToken,
             sessionData.refreshToken
           );
 
-          console.log("se verifica el access" + newAccess);
-          console.log(newAccess);
           accessToken = newAccess.accessToken;
         }
         // Actualizar la sesión existente con los nuevos tokens
@@ -1346,8 +1334,6 @@ export class AuthServices {
         );
       }
 
-      console.log("accessToken: " + accessToken);
-      console.log("refreshToken: " + refreshToken);
       accessExpiresIn = decodeToken(accessToken);
       refreshExpiresIn = decodeToken(refreshToken);
       return {
