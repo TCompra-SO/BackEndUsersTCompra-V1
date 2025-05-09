@@ -62,7 +62,7 @@ export interface UserDocument extends Document {
     profile_complete?: boolean;
   };
   active_account: boolean;
-  planID: number;
+  planID: string;
   premiun: boolean;
   typeID: number;
   ultimate_session: string;
@@ -91,7 +91,7 @@ export class AuthServices {
     specialtyID: Joi.string(),
     about_me: Joi.string().allow("").optional(),
     categories: Joi.array().items(Joi.number()).max(3),
-    planID: Joi.number(),
+    planID: Joi.string(),
   });
 
   static SchemaProfileUser = Joi.object({
@@ -101,7 +101,7 @@ export class AuthServices {
     countryID: Joi.number().required(),
     cityID: Joi.number().required(),
     categories: Joi.array().items(Joi.number()).max(3),
-    planID: Joi.number(),
+    planID: Joi.string(),
   });
 
   static SchemaLogin = Joi.object({
