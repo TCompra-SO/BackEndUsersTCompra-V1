@@ -19,17 +19,72 @@ export const sendEmail = async (email: string, code: string) => {
     subject: "Verification Code - TCompraPeru.com",
     text: `Tu código de verificación es: ${code}`,
     html: `
-    <html>
+        <html lang="es">
+  <head>
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="author" content="Tcompra.com">
+
+        <link href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&amp;display=swap" rel="stylesheet">
+        <title>Código de Verificación</title>
+    </head>
       <body>
-        <div style="background-color: #D9D9D9; padding: 20px; text-align: center; font-family: Arial, sans-serif; border-radius: 15px;">
-        <img src="https://img.freepik.com/vector-gratis/usuario-feliz-dando-revision-positiva-servicio-linea_74855-20137.jpg?w=826&t=st=1714004141~exp=1714004741~hmac=9c47701176b3973edbc3808b165eb529bce009b85e5939bf7a3fd9a76440ea44" alt="Promotional Image" style="width: 100%; max-width: 250px; height: auto; border-radius: 100%;">
-          <h1 style="color: #5d3f92;">Verification Code</h1>
-          <p style="font-size: 18px; color: #6a1b9a;">¡Gracias por registrarte!</p>
-          <div style="margin: 20px; margin-right: 23vw; margin-left: 23vw; padding: 0.1%; background-color: #6D23F5; border-radius: 60px;">
+        <table align="center" width="100%" style="max-width:800px;" cellpadding="0" cellspacing="0">
+                <tbody>
+                    <tr>
+                        <td style="background: #510839;padding: 30px;text-align: center;border-radius: 1rem 1rem 0 0;">
+                            <img src="https://ci3.googleusercontent.com/meips/ADKq_NY9FQjeiXMhx-R6CJjtEYZDxA1LG_aDEkBK1TJkYou3v-CWnl9JPLGGFU2N9MzoQ3Hd6tcs-x4lpppddMJyWnxUH2AEN8VtIO98AWxdvFtPw4lRdxSO5E6ZAulNDspPrx5fd_1KVRrtrQ=s0-d-e1-ft#https://res.cloudinary.com/dlxlveta2/image/upload/v1732549505/logo-white_qbdapd.png" alt="Logo Tcompra.com" height="80px">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background: #f7e9f1;color: #510839;;padding: 30px;text-align: center;">
+                            <img src="https://res.cloudinary.com/dlxlveta2/image/upload/v1732549502/contrasena_yhk8rc.png" style="width: 44px;">
+                            <h1 style="margin: 0;font-size: 30px;line-height: 1;">Código de Verificación</h1>
+                            <div style="font-size: 16px;margin: 10px 0 15px 0;">¡Gracias por registrarte!</div>
+                            <div style="margin: 20px; margin-right: 23vw; margin-left: 23vw; padding: 0.1%; background-color: #BC1373; border-radius: 60px;">
             <p style="font-size: 32px; color: #f4e7ff;"><b>${code}</b></p>
           </div>
-          <p style="color: #4a148c;">Por favor, ingresa este código para verificar tu cuenta.</p>
-        </div>
+                           <div style="font-size: 16px;margin: 10px 0 15px 0;">Por favor, ingresa este código para verificar tu cuenta.</div>
+                        </td>
+                    </tr>
+                    <tr>
+                       <td align="center" style="background:#bc1373;color:#fff;padding:30px;border-radius:0 0 1rem 1rem">
+                  <table style="margin-bottom:10px" cellpadding="0" cellspacing="0">
+                      <tbody><tr>
+                          <td style="padding:0 3px" align="center"><a href="https://www.facebook.com/Tcompra/" style="text-decoration:none" target="_blank" data-saferedirecturl="https://www.google.com/url?q=https://www.facebook.com/Tcompra/&amp;source=gmail&amp;ust=1746629452809000&amp;usg=AOvVaw1ROAJk-rmCd6YDVCxjqSob"><div style="background:#fff;border-radius:50px;color:#bc1373;line-height:0;padding:10px"><img src="https://ci3.googleusercontent.com/meips/ADKq_NZdGd9ZhUOITJUlH2CBpVZfFpgg9EuQYqRYtsfTdW7PPqSjwARQFs1TK2wcPqsfEj9J2i9tcCF0DrabiAJplIay6Wo-JFGxb-Jpcmr2RAo9dTkeY5EiAMMNWCceqs0kRyVsuc4M2CA=s0-d-e1-ft#https://res.cloudinary.com/dlxlveta2/image/upload/v1732549504/facebook_nmomk4.png" height="15" class="CToWUd" data-bit="iit"></div></a></td>
+                          <td style="padding:0 3px" align="center"><a href="https://www.instagram.com/tcompralatam/" style="text-decoration:none" target="_blank" data-saferedirecturl="https://www.google.com/url?q=https://www.instagram.com/tcompralatam/&amp;source=gmail&amp;ust=1746629452809000&amp;usg=AOvVaw1WQbccIgWEWU-SSnJoF0n7"><div style="background:#fff;border-radius:50px;color:#bc1373;line-height:0;padding:10px"><img src="https://ci3.googleusercontent.com/meips/ADKq_NYaT7EookfIJCK9taIgSPvac04egI5gNZx5hyxzq0siZXSNhbmIVVLGJIRgedl0KKZaCSwUuUY8gpJiTT-DJDVAft7SRF2UkmQMK9bp0nXOr-8OiaRX3cEhZEBqNXNeI0VmuisOUWDq=s0-d-e1-ft#https://res.cloudinary.com/dlxlveta2/image/upload/v1732549504/instagram_eigfod.png" height="15" class="CToWUd" data-bit="iit"></div></a></td>
+                          <td style="padding:0 3px" align="center"><a href="https://www.youtube.com/channel/UCMllmt4Yz6googZOS9qPlLA" style="text-decoration:none" target="_blank" data-saferedirecturl="https://www.google.com/url?q=https://www.youtube.com/channel/UCMllmt4Yz6googZOS9qPlLA&amp;source=gmail&amp;ust=1746629452809000&amp;usg=AOvVaw2KUZI2MDiwrjVA83rr91Gs"><div style="background:#fff;border-radius:50px;color:#bc1373;line-height:0;padding:10px"><img src="https://ci3.googleusercontent.com/meips/ADKq_NaDZ-MBe0H-e6v0ty0hqaZDHu6plbSw6CLtKP1IcYASD_GlnvRJBtMY8FOXV7FvGumao5HYl_OwG1qrdKad8a06z17ltkxBtF9dLe5LHo9Ws0ssR4WVDWAVvMZvD2KnSkTDjTxY_Q=s0-d-e1-ft#https://res.cloudinary.com/dlxlveta2/image/upload/v1732549508/youtube_t1hgc1.png" height="15" class="CToWUd" data-bit="iit"></div></a></td>
+                          <td style="padding:0 3px" align="center"><a href="https://www.linkedin.com/company/tcompra" style="text-decoration:none" target="_blank" data-saferedirecturl="https://www.google.com/url?q=https://www.linkedin.com/company/tcompra&amp;source=gmail&amp;ust=1746629452809000&amp;usg=AOvVaw12HHpn98-q1aKX4BRPwgPP"><div style="background:#fff;border-radius:50px;color:#bc1373;line-height:0;padding:10px"><img src="https://ci3.googleusercontent.com/meips/ADKq_NavxFeK0w3Px4YhZxTGHRR025-uNH2wsJ8n6-B8htWnpE-O4DPRCfb-XLrrYH0f6732qM9KWADtKcvmXTA-VuhwkQrs2zvRi---p8VCnqI5JGpuLE6ikC3m7oCq5D48Q_KvWBshp4w=s0-d-e1-ft#https://res.cloudinary.com/dlxlveta2/image/upload/v1732549505/linkedin_sdirhr.png" height="15" class="CToWUd" data-bit="iit"></div></a></td>
+                      </tr>
+                  </tbody></table>
+                  <table style="width:100%" cellpadding="0" cellspacing="0">
+                     <tbody>
+    <tr>
+        <td style="width:33.33%">
+            <img src="https://ci3.googleusercontent.com/meips/ADKq_NZLBpktJmK5P0YBWVut89mylUJ7dr9QMc0LyDqRjiXcMv6mfj4WQ3zXkcUyRxjmCOc6mkkaZyAQrGsGfQ42_63ZTYm0wt7dJts3HfBMoobt_bZwDwL2mtK79pRTOhI67o5L6lQmFxQ9=s0-d-e1-ft#https://res.cloudinary.com/dlxlveta2/image/upload/v1732549503/copyright_vdex1e.png" height="16" style="vertical-align:middle;margin-right:5px" class="CToWUd" data-bit="iit">
+            <b style="font-weight:600;color:#fff">2024 Tcompra.com</b>
+        </td>
+        <td style="width:33.33%;text-align:center">
+            <a href="https://tcompra.com/" style="color:#fff;text-decoration:none" target="_blank" data-saferedirecturl="https://www.google.com/url?q=https://tcompra.com/&amp;source=gmail&amp;ust=1746629452809000&amp;usg=AOvVaw0mz_gtdPvZvrRF8t0F1-O8">
+                <img src="https://ci3.googleusercontent.com/meips/ADKq_Nbo2FTXszANEnn7oeHY2B8eoNpP7CfuHCF2Hzrzo_X6Uj_wZjWP5sP098eKe5a2JAaCk8P8pAcBmxO7ls8Ka18zj6GVr-q3z2X-WxGuOZ91DwHeZogPNzyg8Wn7z019XY4DgTA=s0-d-e1-ft#https://res.cloudinary.com/dlxlveta2/image/upload/v1732549503/earth_dqzho0.png" height="16" style="vertical-align:middle;margin-right:5px" class="CToWUd" data-bit="iit">
+                <b style="font-weight:600">tcompra.com</b>
+            </a>
+        </td>
+        <td style="width:33.33%;text-align:right">
+            <a style="text-decoration:none">
+                <img src="https://ci3.googleusercontent.com/meips/ADKq_Nb7qp6Efih9lQMGLJ2hMVMlFkfpF4cC4_8jgF4eJATM5lYzX_8Mu9IveIl8n7zKzusFOYWLEtidcvD24K1yvgtp2NgOC7hJOJs5Qwv3fBBQDYBJkkWjereqLjc-fDQQnJfrjPd7=s0-d-e1-ft#https://res.cloudinary.com/dlxlveta2/image/upload/v1732549503/correo_ltrwmr.png" height="16" style="vertical-align:middle;margin-right:5px" class="CToWUd" data-bit="iit">
+                <b style="font-weight:600;color:white">info@tcompra.com</b>
+            </a>
+        </td>
+    </tr>
+</tbody></table>
+              </td>
+                    </tr>
+                </tbody>
+            </table>
+            
+       
       </body>
     </html>
   `,
