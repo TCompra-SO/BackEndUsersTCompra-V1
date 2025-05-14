@@ -16,6 +16,6 @@ export const chatBotController = async (req: Request, res: Response) => {
     console.error(error);
     res
       .status(500)
-      .json({ error: "Error procesando la solicitud del chatbot" });
+      .json({ error: "Error procesando la solicitud del chatbot" + error });
   }
 };
