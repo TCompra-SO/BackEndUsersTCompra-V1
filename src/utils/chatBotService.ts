@@ -38,7 +38,7 @@ Evita comenzar las respuestas con "segun el tutorial o guia del usuario"
     },
     {
       headers: {
-        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        Authorization: `Bearer ${process.env.GROQ_API}`,
         "Content-Type": "application/json",
       },
     }
