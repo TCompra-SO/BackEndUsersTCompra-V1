@@ -6,6 +6,7 @@ import {
   getLastRecordsController,
   getUtilDataController,
 } from "../controllers/ultilDataController";
+import { chatBotController } from "../controllers/chatBotController";
 export class UtilRouter {
   private static instance: UtilRouter;
   private router: Router;
@@ -17,6 +18,7 @@ export class UtilRouter {
     this.router.get("/userRoles", listUserRoles);
     this.router.get("/utilData/:namedata", getUtilDataController);
     this.router.post("/getLastRecords", getLastRecordsController);
+    this.router.post("/chatBot", chatBotController);
   }
 
   static getRouter(): Router {
