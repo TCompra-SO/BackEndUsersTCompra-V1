@@ -88,24 +88,64 @@ Una vez el usuario realize los cambios debera hacer click en el boton "Guardar".
 ## CAMBIAR CONTRASEÑA
 Para actualizar su contraseña de acceso al sistema, siga estos pasos:
 Acceda a su perfil:
-Inicie sesión en la aplicación
-Seleccione la opción "Mi Perfil" en el menú principal
-Dentro de su perfil, busque el apartado denominado "Contraseña"
-Complete los campos requeridos:
-Nueva contraseña
-Confirmar contraseña
-Finalice el proceso:
-Verifique que ambas contraseñas coincidan
-Presione el botón "Guardar" para confirmar los cambios
+1. Inicie sesión en la aplicación
+2. Seleccione la opción "Mi Perfil" en el menú principal
+3. Dentro de su perfil, busque el apartado denominado "Contraseña"
+4. Complete los campos requeridos:
+5. Nueva contraseña
+6. Confirmar contraseña
+7. Finalice el proceso:
+8. Verifique que ambas contraseñas coincidan
+9. Presione el botón "Guardar" para confirmar los cambios
+## CREAR REQUERIMIENTO
+Para crear un nuevo requerimiento primero debes estar logeado, dentro de la aplicacion podras ver en la parte inferior derecha iconos, el icono que tiene el signo "+" es para agregar un nuevo requerimiento.
+Para crear un nuevo requerimiento sigue estos pasos:
+1. haz click en el icono "+" (nuevo requerimiento)
+2. se abrira una ventana emergente, elegir el tipo de requerimiento (Bienes, Servicios, Liquidaciones)
+3. Llenar los campos necesarios y hacer click en "Guardar"
+4. si todo esta correcto le saldra un mensaje indicando que su requerimiento ha sido creado con exito.
+
+## HACER UNA OFERTA
+Para hacer una oferta, primero debes estar logeado, dentro de la aplicacion.
+Para realizar una oferta sigue los siguientes pasos:
+1. Ve a la ventana principal o home de la aplicacion.
+2. Ahi encontraras el listado de requerimientos clasificados por Bienes, Servicios y Liquidaciones
+3. Selecciona el Requerimiento de interes.
+4. En la columna "Acción" haz click en "Ver".
+5. Una vez dentro llena los campos necesarios para Ofertar y haz click en "Ofertar".
+6. Si todo esta correcto le saldra un mensaje indicando que su Oferta se ha creado con exito.
+
+## SELECCIONAR O ELEGIR UNA OFERTA
+Para seleccionar o elegir una oferta, primero debes estar logeado, dentro de la aplicacion.
+Para seleccionar o elegir una oferta sigue los siguientes pasos:
+1. Ve al panel de control.
+2. en el panel izquiero ubicate en el menu "mis Requerimientos" y elige entre Bienes, Servicios y Liquidaciones.
+3. Ahi encontraras el listado de los requerimientos realizados.
+4. Ubicate en el requerimiento de interes y haz click en el campo de la columna "Ofertas".
+5. se te mostrara una ventana emergente con el listado de ofertas de ese requerimiento.
+6. Selecciona la oferta que desees y haz click en el icono que tiene 3 puntos.
+7. se desplegara dos opciones, haz click en "Seleccionar Oferta".
+8. Si todo esta correcto se enviara un email con la Orden de compra al proveedor.
+
+## VER TUS OFERTAS REALIZADAS
+Para ver tus ofertas realizadas, primero debes estar logeado, dentro de la aplicacion.
+Para ver tus ofertas realizadas sigue los siguientes pasos:
+1. Ve al panel de control
+2. en el panel Izquierdo ubicate en el menu "Mis Ofertas" y elige entre Bienes, Servicios y Liquidaciones.
+3. Ahi encontraras el listado de las ofertas realizadas.
+4. en esta seccion podras realizar acciones como: Cancelar Oferta, Culminar, Detalle de Oferta, Ir al Chat.
+
+
 
 ## PANEL DE CONTROL
 En el panel de control encontraras dos secciones, un panel izquierdo con los siguientes menus:
 1. Mi Perfil
 2. Mis Requerimientos
+    En esta seccion podras visualizar tus requerimientos, hacer una busqueda y poder filtrarlos deacuerdo a tus necesidades.
     2.1 Bienes
     2.2 Servicios
     2.3 Liquidaciones
-En esta seccion podras visualizar tus requerimientos, hacer una busqueda y poder filtrarlos deacuerdo a tus necesidades.
+
 3. Mis Ofertas
     3.1 Bienes
     3.2 Servicios
