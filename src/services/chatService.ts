@@ -11,6 +11,7 @@ import Fuse from "fuse.js";
 export class ChatService {
   static createChat = async (
     userId: string,
+    recUserId: string,
     requerimentId: string,
     title: string,
     type: RequirementType
@@ -50,26 +51,39 @@ export class ChatService {
         console.error("Error desconocido:", error);
       }
     }
-    const result = await ChatModel.findOne({
-      userId: userId,
-      chatPartnerId: chatPartnerId,
+    const result: any = await ChatModel.findOne({
+      userId: userId, // inicia el mensaje
+      chatPartnerId: recUserId,
       requerimentId: requerimentId,
     });
-    if (result) {
+    const result2: any = await ChatModel.findOne({
+      userId: userId, // inicia el mensaje
+      chatPartnerId: recUserId,
+      requerimentId: requerimentId,
+    });
+    let userChat: any;
+    if (result || result2) {
+      if (result) {
+        userChat = result.uid;
+      } else {
+        userChat = result2.uid;
+      }
+
       return {
         success: false,
         code: 400,
         error: {
           msg: "ya tienes una conversación iniciada",
-          uid: result.uid,
+          uid: userChat.uid,
         },
       };
     }
+
     try {
       const newChat = new ChatModel({
         userId,
         requerimentId,
-        chatPartnerId,
+        chatPartnerId: recUserId,
         title,
         lastDate: new Date(), // Fecha en string
       });

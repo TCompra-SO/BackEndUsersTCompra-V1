@@ -8,9 +8,10 @@ import { TypeMessage } from "../types/globalTypes";
 export const createChatController = async (req: RequestExt, res: Response) => {
   // const { uid } = req.user as JwtPayload;
   try {
-    const { userId, requerimentId, title, type } = req.body;
+    const { userId, recUserId, requerimentId, title, type } = req.body;
     const responseUser = await ChatService.createChat(
       userId,
+      recUserId,
       requerimentId,
       title,
       type
