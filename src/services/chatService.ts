@@ -37,6 +37,7 @@ export class ChatService {
 
     try {
       requerimentData = await axios.get(`${API_POINT}${endpoint}`);
+
       chatPartnerId = requerimentData.data.data[0].userID;
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -57,11 +58,13 @@ export class ChatService {
       requerimentId: requerimentId,
     });
     const result2: any = await ChatModel.findOne({
-      userId: userId, // inicia el mensaje
-      chatPartnerId: recUserId,
+      userId: recUserId, // inicia el mensaje
+      chatPartnerId: userId,
       requerimentId: requerimentId,
     });
+
     let userChat: any;
+
     if (result || result2) {
       if (result) {
         userChat = result.uid;
@@ -74,7 +77,7 @@ export class ChatService {
         code: 400,
         error: {
           msg: "ya tienes una conversación iniciada",
-          uid: userChat.uid,
+          uid: userChat,
         },
       };
     }
