@@ -19,6 +19,7 @@ import {
   RefreshTokenController,
   LogoutController,
   refreshAccessToken,
+  checkIfIsSystemAdminController,
 } from "../controllers/authController";
 import { checkJwt } from "../middleware/session";
 
@@ -50,6 +51,10 @@ export class AuthRouter {
     this.router.get("/getAuthSubUser/:uid", getAuthSubUserController);
     this.router.get("/getBaseDataUser/:uid", getBaseDataUserController);
     this.router.get("/searchCompany/:query", SearchCompanyController);
+    this.router.get(
+      "/checkIfIsSystemAdmin/:uid",
+      checkIfIsSystemAdminController
+    );
   }
 
   static getRouter(): Router {
