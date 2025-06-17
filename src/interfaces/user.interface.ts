@@ -27,4 +27,5 @@ export interface UserI {
   accessToken?: string;
   online?: boolean;
   premiun?: boolean;
+  isSystemAdmin?: boolean;
 }

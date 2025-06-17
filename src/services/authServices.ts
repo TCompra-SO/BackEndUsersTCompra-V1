@@ -1973,6 +1973,7 @@ export class AuthServices {
               planID: entityData.data.planID,
               premiun: entityData.data.premiun,
               active_account: entityData.data.active_account,
+              isSystemAdmin: entityData.data.isSystemAdmin,
             },
           ];
           break;
@@ -2003,6 +2004,7 @@ export class AuthServices {
               planID: entityData.data.planID,
               premiun: entityData.data.premiun,
               active_account: entityData.data.active_account,
+              isSystemAdmin: entityData.data.isSystemAdmin,
             },
           ];
           break;

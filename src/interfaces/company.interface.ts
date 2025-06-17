@@ -36,4 +36,5 @@ export interface CompanyI {
   accessToken?: string;
   online?: boolean;
   premiun?: boolean;
+  isSystemAdmin?: boolean;
 }

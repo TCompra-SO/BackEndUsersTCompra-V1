@@ -125,6 +125,10 @@ const userSchema = new Schema<UserI>(
       type: Boolean,
       required: false,
     },
+    isSystemAdmin: {
+      type: Boolean,
+      required: false,
+    },
   },
   {
     versionKey: false,

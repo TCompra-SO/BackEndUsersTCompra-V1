@@ -167,6 +167,10 @@ const CompanySchema = new Schema<CompanyI>(
       type: Boolean,
       required: false,
     },
+    isSystemAdmin: {
+      type: Boolean,
+      required: false,
+    },
   },
   {
     versionKey: false,
