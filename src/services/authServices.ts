@@ -1973,6 +1973,7 @@ export class AuthServices {
               planID: entityData.data.planID,
               premiun: entityData.data.premiun,
               active_account: entityData.data.active_account,
+              isSystemAdmin: entityData.data.isSystemAdmin,
             },
           ];
           break;
@@ -2003,6 +2004,7 @@ export class AuthServices {
               planID: entityData.data.planID,
               premiun: entityData.data.premiun,
               active_account: entityData.data.active_account,
+              isSystemAdmin: entityData.data.isSystemAdmin,
             },
           ];
           break;
@@ -2067,6 +2069,36 @@ export class AuthServices {
         code: 500,
         error: {
           msg: "Error con el servidor" + error,
+        },
+      };
+    }
+  };
+
+  static checkIfIsSystemAdmin = async (uid: string) => {
+    try {
+      let entityData = await Company.findOne({ uid }).select("isSystemAdmin");
+      if (!entityData)
+        entityData = await User.findOne({ uid }).select("isSystemAdmin");
+      if (!entityData)
+        return {
+          success: false,
+          code: 404,
+          error: {
+            msg: "No se encontró el Usuario",
+          },
+        };
+      return {
+        success: true,
+        code: 200,
+        data: entityData,
+      };
+    } catch (error) {
+      console.log(error);
+      return {
+        success: false,
+        code: 500,
+        error: {
+          msg: "Error con el servidor",
         },
       };
     }

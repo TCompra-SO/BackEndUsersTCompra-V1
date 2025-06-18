@@ -135,6 +135,27 @@ const getBaseDataUserController = async (req: Request, res: Response) => {
   }
 };
 
+const checkIfIsSystemAdminController = async (req: Request, res: Response) => {
+  const { uid } = req.params;
+  try {
+    const responseUser = await AuthServices.checkIfIsSystemAdmin(uid);
+    if (responseUser.success) {
+      res.status(200).send({
+        success: true,
+        data: responseUser.data,
+      });
+    } else {
+      res.status(responseUser.code).send(responseUser.error);
+    }
+  } catch (error) {
+    console.log("Error en checkIfIsSystemAdminController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
 const registerController = async ({ body }: Request, res: Response) => {
   const { email, password, typeID, dni, ruc } = body;
   try {
@@ -492,4 +513,5 @@ export {
   SearchCompanyController,
   RefreshTokenController,
   refreshAccessToken,
+  checkIfIsSystemAdminController,
 };
