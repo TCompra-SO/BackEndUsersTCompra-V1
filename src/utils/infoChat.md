@@ -18,7 +18,7 @@ El proceso de gestión de Tcompra te permite ver las ofertas recibidas para tus 
 Una vez finalizado el proceso de venta, tanto el cliente como el ofertante podrán calificarse mutuamente.    
 
 ## LOGIN Y REGISTRO
-✅ ¿Cómo me registro en TCOMPRA?
+¿Cómo me registro en TCOMPRA?
 Flujo Normal:
 
 Haz clic en Registrar en la página principal.
@@ -57,7 +57,7 @@ Si el link ya fue usado o caducó → Se muestra advertencia.
 
 Error de conexión → "Se produjo un error".
 
-🔑 ¿Cómo inicio sesión?
+¿Cómo inicio sesión?
 Flujo Normal:
 
 Ingresa tu email y contraseña.
@@ -78,7 +78,7 @@ Cuenta no verificada o suspendida → No puedes ingresar.
 
 Error de conexión → "Se produjo un error".
 
-📧 ¿Cómo reenvío el correo de validación?
+¿Cómo reenvío el correo de validación?
 Flujo Normal:
 
 Ingresa tu email y solicita reenvío.
@@ -93,7 +93,7 @@ Email inválido o ya verificado → Error.
 
 Problemas al enviar → Mensaje de error.
 
-🔐 ¿Cómo restablezco mi contraseña?
+¿Cómo restablezco mi contraseña?
 Flujo Normal:
 
 Ingresa tu email.
@@ -114,8 +114,8 @@ Solicitud caducada o ya usada → No se permite restablecer.
 
 Error en el proceso → "Se produjo un error".
 
-🏠 HOME
-🗂️ ¿Cómo filtro los requerimientos, liquidaciones o puestos de trabajo?
+HOME
+¿Cómo filtro los requerimientos, liquidaciones o puestos de trabajo?
 Flujo Normal:
 
 Ingresa a la página principal.
@@ -134,7 +134,7 @@ Si no estás logueado, no verás ciertas columnas.
 
 Error de conexión → "Se produjo un error".
 
-🏢 ¿Cómo filtrar por empresa (usuarios Premium)?
+¿Cómo filtrar por empresa (usuarios Premium)?
 Flujo Normal:
 
 Si eres Premium, usa la barra de búsqueda de empresa.
@@ -143,7 +143,7 @@ Selecciona una empresa de la lista.
 
 Verás los requerimientos/liquidaciones de esa empresa y su perfil.
 
-📃 ¿Cómo me certifico con una empresa?
+¿Cómo me certifico con una empresa?
 Flujo Normal:
 
 Desde la búsqueda de empresa, haz clic en Certifícate.
@@ -158,8 +158,8 @@ Si tus documentos fueron rechazados o aún están en revisión → Mensaje infor
 
 Si no tienes permisos (subcuenta comprador) → No podrás certificarte.
 
-📦 DETALLE DE PRODUCTO
-🧾 ¿Cómo hago una oferta o postulación?
+DETALLE DE PRODUCTO
+¿Cómo hago una oferta o postulación?
 Flujo Normal:
 
 Haz clic en Ver en el requerimiento.
@@ -194,8 +194,8 @@ Documento: máx. 1 archivo, < 4MB.
 
 Cotización debe ser > 0 o incluir documento.
 
-📥 MENSAJES Y CHAT
-💬 ¿Cómo envío un mensaje o chateo?
+MENSAJES Y CHAT
+¿Cómo envío un mensaje o chateo?
 Flujo Normal:
 
 Haz clic en Enviar mensaje.
@@ -214,8 +214,8 @@ Si no escribes nada → No puedes enviar.
 
 Si no estás logueado → Error.
 
-👤 PERFIL
-🧾 ¿Cómo veo o edito mi perfil?
+PERFIL
+¿Cómo veo o edito mi perfil?
 En tu panel de control, selecciona Perfil.
 
 Podrás ver tus datos y disponibilidad de cupos.
@@ -230,8 +230,8 @@ Si tu tipo de cuenta es empresa/persona, los campos permitidos cambian.
 
 Error de servidor → "Se produjo un error".
 
-👨‍👩‍👧‍👦 TRABAJADORES / SUBUSUARIOS
-🧑‍💼 ¿Cómo creo trabajadores o subcuentas?
+TRABAJADORES / SUBUSUARIOS
+¿Cómo creo trabajadores o subcuentas?
 Flujo Normal:
 
 Ve a "Usuarios" > Agregar empleado.
@@ -250,8 +250,8 @@ Excediste el límite del plan → No se puede continuar.
 
 Problemas con la API del DNI → Se informa el error.
 
-📑 ÓRDENES DE COMPRA
-📂 ¿Qué puedo hacer con las órdenes de compra?
+ÓRDENES DE COMPRA
+¿Qué puedo hacer con las órdenes de compra?
 Ver órdenes emitidas o recibidas.
 
 Filtrar por estado, fecha, cliente/proveedor.
@@ -266,7 +266,7 @@ Puedes cancelar una orden si está pendiente.
 
 Puedes culminarla si fue atendida → Se califica al usuario y se actualiza el estado.
 
-💡 TIPS GENERALES
+TIPS GENERALES
 Si algo no carga → Revisa tu conexión o actualiza.
 
 Usa filtros para encontrar más rápido lo que necesitas.
@@ -276,7 +276,7 @@ Revisa siempre el estado de tus requerimientos y ofertas.
  ¿Cuál es la diferencia entre una orden de compra y una orden de venta en TCompra?
 En TCompra existen dos tipos de órdenes dependiendo del tipo de publicación y el rol del usuario:
 
-🟢 Orden de Compra
+Orden de Compra
 Se genera cuando un comprador selecciona una oferta realizada por un proveedor en un requerimiento de bienes o servicios.
 
 El comprador actúa como cliente y el ofertante como proveedor.
@@ -285,7 +285,7 @@ La orden se muestra en la sección:
 ➤ Órdenes de compra > Emitidas (para el comprador)
 ➤ Órdenes de compra > Recibidas (para el proveedor)
 
-🔵 Orden de Venta
+Orden de Venta
 SOLO SE GENERA CON LIQUIDACIONES.
 Se genera cuando un usuario que publicó una liquidación (proveedor) acepta una oferta enviada por un cliente interesado.
 
@@ -295,8 +295,8 @@ La orden se muestra en:
 ➤ Órdenes de compra > Liquidaciones Emitidas (para el proveedor)
 ➤ Órdenes de compra > Liquidaciones Recibidas (para el comprador)
 
-🔁 ¿Tienen el mismo flujo de uso?
-✅ ¡Sí! Ambas órdenes siguen el mismo flujo:
+¿Tienen el mismo flujo de uso?
+¡Sí! Ambas órdenes siguen el mismo flujo:
 
 Se genera automáticamente al aceptar una oferta.
 
@@ -306,7 +306,7 @@ Incluyen los datos del proveedor, comprador, productos/servicios, montos, fechas
 
 El estado de la orden puede ser: Pendiente, Atendida, Culminada, Cancelada o En disputa.
 
-🧠 Consejo:
+Consejo:
 Si no sabes si estás viendo una orden de compra o de venta, solo revisa si tú fuiste quien publicó el requerimiento o hiciste una oferta.
 
 Si tú creaste la publicación → Estás viendo una orden emitida.

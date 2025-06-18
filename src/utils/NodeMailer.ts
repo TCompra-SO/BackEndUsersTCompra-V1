@@ -446,9 +446,9 @@ const bodyMailCategories = async (
       subTitle =
         "Estas son las últimas Liquidaciones publicados en tus rubros.";
     } else {
-      title = "Últimos Requerimientos en tus Rubros";
+      title = "Últimos Requerimientos en tus Rubros de Bienes y Servicios";
       subTitle =
-        "Estos son los últimos Requerimientos publicados en tus rubros.";
+        "Estos son los últimos Requerimientos publicados en tus rubros de Bienes y Servicios.";
     }
     const urlFront = process.env.URL_FRONTEND;
 
@@ -496,7 +496,7 @@ const bodyMailCategories = async (
         <meta name="author" content="Tcompra.com">
 
         <link href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&amp;display=swap" rel="stylesheet">
-        <title>Ultimos Requerimientos</title>
+        <title>Ultimos Requerimientos en Bienes y Servicios</title>
     </head>
   <body style ="background:#f7e9f1">
    <table align="center" width="100%" style="max-width:800px;" cellpadding="0" cellspacing="0">
