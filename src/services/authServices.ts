@@ -658,7 +658,7 @@ export class AuthServices {
       /// PROFILE
 
       const now = getNow();
-      const expireIn = expireInEspecificMinutes(1);
+      const expireIn = expireInEspecificMinutes(2);
 
       const code = this.VerificationNumber();
       // encriptamos codigo
