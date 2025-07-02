@@ -11,6 +11,7 @@ export const getCategories = () => {
       return {
         ...category,
         parentName: parent ? parent.value : null,
+        parentIcon: parent ? parent.Icon : null,
       };
     });
 
