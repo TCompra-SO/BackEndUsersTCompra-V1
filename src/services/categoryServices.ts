@@ -1,11 +1,22 @@
-import { categories } from "../utils/Categories";
+import { categories, parentCategories } from "../utils/Categories";
 
 export const getCategories = () => {
   try {
-    // Devolver las categorías como resultado exitoso
+    // Unimos categories con parentCategories agregando parentName
+    const categoriesWithParentName = categories.map((category) => {
+      const parent = parentCategories.find(
+        (parentCategory) => parentCategory.id === category.parentId
+      );
+
+      return {
+        ...category,
+        parentName: parent ? parent.value : null,
+      };
+    });
+
     return {
       success: true,
-      data: categories,
+      data: categoriesWithParentName,
     };
   } catch (error) {
     console.error("Error al obtener las categorías:", error);
