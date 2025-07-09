@@ -12,6 +12,11 @@ import {
 import { io } from "../server"; // Importamos el objeto `io` de Socket.IO
 import { alternativeAccessTokenExpiresIn } from "../utils/Globals";
 import { Console, error } from "console";
+import {
+  accessTokenName,
+  getCookieConfig,
+  refreshTokenName,
+} from "../utils/cookies.handle";
 
 const getNameController = async (req: Request, res: Response) => {
   // Obtener el parámetro de la consulta
@@ -316,10 +321,22 @@ const LoginController = async (req: Request, res: Response) => {
     } else {
       const accessExpiresIn = responseUser.res?.accessExpiresIn;
       const refreshExpiresIn = responseUser.res?.refreshExpiresIn;
-      return res.status(responseUser.code).send({
-        ...responseUser,
-        res: { ...responseUser.res, accessExpiresIn, refreshExpiresIn },
-      });
+      return res
+        .status(responseUser.code)
+        .cookie(
+          accessTokenName,
+          responseUser.res?.accessToken,
+          getCookieConfig((accessExpiresIn ?? 0) * 1000)
+        )
+        .cookie(
+          refreshTokenName,
+          responseUser.res?.refreshToken,
+          getCookieConfig((refreshExpiresIn ?? 0) * 1000)
+        )
+        .send({
+          ...responseUser,
+          res: { ...responseUser.res, accessExpiresIn, refreshExpiresIn },
+        });
     }
   } catch (error: any) {
     return res.status(500).send({
@@ -331,22 +348,27 @@ const LoginController = async (req: Request, res: Response) => {
 
 const LogoutController = async (req: Request, res: Response) => {
   try {
-    const { userId, refreshToken } = req.body;
+    const { refreshToken } = req.cookies;
+    const { userId } = req.body;
 
     // Llamamos al servicio de logout
     const response = await AuthServices.LogoutService(userId, refreshToken);
 
-    return res.status(response.code).json(response);
+    return res
+      .status(response.code)
+      .clearCookie(accessTokenName, getCookieConfig())
+      .clearCookie(refreshTokenName, getCookieConfig())
+      .send(response);
   } catch (error) {
     return res
       .status(500)
-      .json({ success: false, msg: "Error en el servidor" });
+      .send({ success: false, msg: "Error en el servidor" });
   }
 };
 
 const RefreshTokenController = async (req: Request, res: Response) => {
   try {
-    const { refreshToken } = req.body;
+    const { refreshToken } = req.cookies;
 
     if (!refreshToken) {
       return res
@@ -364,15 +386,28 @@ const RefreshTokenController = async (req: Request, res: Response) => {
         ? decodeToken(newAccessToken.res?.refreshToken)
         : alternativeAccessTokenExpiresIn;
 
-      return res.status(200).send({
-        success: true,
-        accessToken: newAccessToken.res?.accessToken,
-        accessExpiresIn,
-        refreshToken: newAccessToken.res?.refreshToken,
-        refreshExpiresIn,
-      });
+      return res
+        .status(200)
+        .cookie(
+          accessTokenName,
+          newAccessToken.res?.accessToken,
+          getCookieConfig(accessExpiresIn * 1000)
+        )
+        .cookie(
+          refreshTokenName,
+          newAccessToken.res?.refreshToken,
+          getCookieConfig(refreshExpiresIn * 1000)
+        )
+        .send({
+          success: true,
+          accessToken: newAccessToken.res?.accessToken,
+          accessExpiresIn,
+          refreshToken: newAccessToken.res?.refreshToken,
+          refreshExpiresIn,
+        });
     } else return res.status(newAccessToken.code).send(newAccessToken.error);
   } catch (error) {
+    console.log(error);
     return res.status(500).send({
       success: false,
       msg: "Error al refrescar el token",
@@ -382,12 +417,12 @@ const RefreshTokenController = async (req: Request, res: Response) => {
 
 const refreshAccessToken = async (req: Request, res: Response) => {
   try {
-    const { accessToken, refreshToken } = req.body;
+    const { accessToken, refreshToken } = req.cookies;
 
     if (!accessToken || !refreshToken) {
       return res
         .status(400)
-        .json({ success: false, msg: "No hay refresh token" });
+        .send({ success: false, msg: "No hay refresh token" });
     }
 
     const result: any = await generateRefreshAccessToken(
@@ -405,16 +440,22 @@ const refreshAccessToken = async (req: Request, res: Response) => {
       ? decodeToken(result.accessToken)
       : alternativeAccessTokenExpiresIn;
 
-    return res.json({
-      success: true,
-      accessToken: result.accessToken,
-      expiresIn,
-    });
+    return res
+      .cookie(
+        accessTokenName,
+        result.accessToken,
+        getCookieConfig(expiresIn * 1000)
+      )
+      .send({
+        success: true,
+        accessToken: result.accessToken,
+        expiresIn,
+      });
   } catch (error) {
     console.error("Error en refreshAccessToken:", error);
     return res
       .status(500)
-      .json({ success: false, msg: "Error interno del servidor" });
+      .send({ success: false, msg: "Error interno del servidor" });
   }
 };
 

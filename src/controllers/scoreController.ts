@@ -2,8 +2,6 @@ import { Request, Response, response } from "express";
 import { ScoreService } from "../services/scoreServices";
 import { io } from "../server";
 import { RequestExt } from "../interfaces/req-ext";
-import { JwtPayload } from "jsonwebtoken";
-import { getToken } from "../utils/authStore";
 import { AuthServices } from "../services/authServices";
 const registerScoreController = async (req: RequestExt, res: Response) => {
   const {

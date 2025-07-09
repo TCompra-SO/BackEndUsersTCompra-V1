@@ -21,6 +21,7 @@ import {
 import multer from "multer";
 import { getSentRequestsByEntityController } from "../controllers/certificateController";
 import { saveNotificationMiddleware } from "../middleware/notification";
+import { checkJwt } from "../middleware/session";
 
 export class CertificateRouter {
   private static instance: CertificateRouter;
@@ -68,6 +69,7 @@ export class CertificateRouter {
     this.router.get("/getRequiredDocuments/:companyID", getRequiredDocuments);
     this.router.get(
       "/getCertificates/:companyID/:page/:pageSize",
+      checkJwt,
       getCertificatesController
     );
     this.router.get(

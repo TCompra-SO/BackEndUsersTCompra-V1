@@ -2,6 +2,7 @@ import express, { Express } from "express";
 import "dotenv/config";
 import cors from "cors";
 import bodyParser from "body-parser";
+import cookieParser from "cookie-parser";
 import { RootRouter } from "./routes/RootRouter";
 
 export class App {
@@ -10,9 +11,15 @@ export class App {
   static getInstance() {
     if (!App.instance) {
       App.instance = express();
+      App.instance.use(cookieParser());
       App.instance.use(bodyParser.urlencoded({ extended: false }));
       App.instance.use(bodyParser.json());
-      App.instance.use(cors());
+      App.instance.use(
+        cors({
+          origin: "http://localhost:3000",
+          credentials: true,
+        })
+      );
       App.instance.use(RootRouter.getRouter());
     }
     return App.instance;
