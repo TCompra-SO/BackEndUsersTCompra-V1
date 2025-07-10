@@ -23,12 +23,12 @@ export class ImageService {
     try {
       console.log("Subiendo archivo desde ruta:", filePath);
 
-      const dataUser = AuthServices.getDataBaseUser(uid);
-      if ((await dataUser).success === true) {
+      const dataUser = await AuthServices.getDataBaseUser(uid);
+      if (dataUser.success === true) {
         console.log("usuario encontrado");
         const result = await cloudinary.v2.uploader.upload(filePath, {
           folder: "avatars", // Carpeta donde se guardan los avatares en Cloudinary
-          public_id: (await dataUser).data?.[0].uid, // ID único basado en tiempo o nombre personalizado
+          public_id: dataUser.data?.[0].uid, // ID único basado en tiempo o nombre personalizado
           resource_type: "image", // Asegura que es una imagen
           type: "upload", // Acceso público
           overwrite: true, // Si ya existe, sobrescribe el archivo
@@ -39,9 +39,9 @@ export class ImageService {
         console.log("Imagen subida exitosamente:", publicUrl);
 
         if (result && result.secure_url) {
-          if ((await dataUser).data?.[0].typeEntity === "Company") {
+          if (dataUser.data?.[0].typeEntity === "Company") {
             const result = await CompanyModel.updateOne(
-              { uid: (await dataUser).data?.[0].uid },
+              { uid: dataUser.data?.[0].uid },
               { avatar: publicUrl }
             );
             if (result.acknowledged && result.modifiedCount > 0) {
@@ -61,7 +61,7 @@ export class ImageService {
             }
           } else {
             const result = await UserModel.updateOne(
-              { uid: (await dataUser).data?.[0].uid },
+              { uid: dataUser.data?.[0].uid },
               { avatar: publicUrl }
             );
             if (result.acknowledged && result.modifiedCount > 0) {

@@ -152,8 +152,6 @@ const generateRefreshAccessToken = async (
     // const decoded = verify(accessToken, JWT_SECRET) as { uid: string };
 
     if (decoded.valid && decoded.uid) {
-      const userData = await AuthServices.getDataBaseUser(decoded.uid);
-
       const sessionData = await SessionModel.findOne({
         userId: decoded.uid,
         refreshToken,

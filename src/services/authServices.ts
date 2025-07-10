@@ -1953,7 +1953,6 @@ export class AuthServices {
           customerScore = scores.data?.customerScore ?? 0;
           sellerCount = scores.data?.sellerCount ?? 0;
           sellerScore = scores.data?.sellerScore ?? 0;
-
           data = [
             {
               uid: entityData.data.uid,
@@ -2019,12 +2018,12 @@ export class AuthServices {
           let dataCompany: any = await this.getEntityService(
             entityData.data.uid
           );
-          scores = ScoreService.getScoreCount(entityData.data.uid);
+          scores = await ScoreService.getScoreCount(entityData.data.uid);
 
-          customerCount = (await scores).data?.customerCount;
-          customerScore = (await scores).data?.customerScore;
-          sellerCount = (await scores).data?.sellerCount;
-          sellerScore = (await scores).data?.sellerScore;
+          customerCount = scores.data?.customerCount;
+          customerScore = scores.data?.customerScore;
+          sellerCount = scores.data?.sellerCount;
+          sellerScore = scores.data?.sellerScore;
           data = [
             {
               uid: entityData.data.uid,
