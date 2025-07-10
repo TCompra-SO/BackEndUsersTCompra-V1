@@ -319,24 +319,33 @@ const LoginController = async (req: Request, res: Response) => {
     if (!responseUser.success) {
       return res.status(responseUser.code).send(responseUser.error);
     } else {
-      const accessExpiresIn = responseUser.res?.accessExpiresIn;
-      const refreshExpiresIn = responseUser.res?.refreshExpiresIn;
-      return res
-        .status(responseUser.code)
-        .cookie(
-          accessTokenName,
-          responseUser.res?.accessToken,
-          getCookieConfig((accessExpiresIn ?? 0) * 1000)
-        )
-        .cookie(
-          refreshTokenName,
-          responseUser.res?.refreshToken,
-          getCookieConfig((refreshExpiresIn ?? 0) * 1000)
-        )
-        .send({
-          ...responseUser,
-          res: { ...responseUser.res, accessExpiresIn, refreshExpiresIn },
-        });
+      if (responseUser.res) {
+        const {
+          accessExpiresIn,
+          refreshExpiresIn,
+          accessToken,
+          refreshToken,
+          ...rest
+        } = responseUser.res;
+        return res
+          .status(responseUser.code)
+          .cookie(
+            accessTokenName,
+            accessToken,
+            getCookieConfig((accessExpiresIn ?? 0) * 1000)
+          )
+          .cookie(
+            refreshTokenName,
+            refreshToken,
+            getCookieConfig((refreshExpiresIn ?? 0) * 1000)
+          )
+          .send({
+            ...responseUser,
+            res: { ...rest, accessExpiresIn, refreshExpiresIn },
+          });
+      } else {
+        throw new Error("No existe campo res en respuesta de login");
+      }
     }
   } catch (error: any) {
     return res.status(500).send({
@@ -400,9 +409,7 @@ const RefreshTokenController = async (req: Request, res: Response) => {
         )
         .send({
           success: true,
-          accessToken: newAccessToken.res?.accessToken,
           accessExpiresIn,
-          refreshToken: newAccessToken.res?.refreshToken,
           refreshExpiresIn,
         });
     } else return res.status(newAccessToken.code).send(newAccessToken.error);
@@ -448,7 +455,6 @@ const refreshAccessToken = async (req: Request, res: Response) => {
       )
       .send({
         success: true,
-        accessToken: result.accessToken,
         expiresIn,
       });
   } catch (error) {

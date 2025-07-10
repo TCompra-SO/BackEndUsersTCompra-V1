@@ -16,7 +16,7 @@ export class App {
       App.instance.use(bodyParser.json());
       App.instance.use(
         cors({
-          origin: "http://localhost:3000",
+          origin: process.env.URL_FRONTEND,
           credentials: true,
         })
       );
