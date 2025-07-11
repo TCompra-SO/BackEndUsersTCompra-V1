@@ -14,6 +14,7 @@ import dotenv from "dotenv";
 import axios from "axios";
 import { getToken } from "../utils/authStore";
 import { JwtPayload } from "jsonwebtoken";
+import { secretInternalName } from "../utils/Globals";
 
 export class ScoreService {
   static registerScore = async (
@@ -287,6 +288,7 @@ export class ScoreService {
               headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${token}`,
+                [secretInternalName]: process.env.INTERNAL_SECRET,
               },
             });
           } catch (error) {
@@ -528,6 +530,7 @@ export class ScoreService {
               headers: {
                 Authorization: `Bearer ${token}`,
                 "Content-Type": "application/json",
+                [secretInternalName]: process.env.INTERNAL_SECRET,
               },
             });
           } catch (error) {

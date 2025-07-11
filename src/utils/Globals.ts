@@ -7,3 +7,7 @@ export const userRoomName = "roomLogin";
 export const accessTokenExpiresIn = "2h";
 export const refreshTokenExpiresIn = "7d";
 export const alternativeAccessTokenExpiresIn = 3600;
+export const accessTokenName = "AC-TC-T";
+export const refreshTokenName = "RF-TC-T";
+export const csrfTokenName = "TC-CS-T";
+export const secretInternalName = "x-internal-auth";

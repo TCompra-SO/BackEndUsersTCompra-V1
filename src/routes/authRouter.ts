@@ -20,6 +20,7 @@ import {
   LogoutController,
   refreshAccessToken,
   checkIfIsSystemAdminController,
+  getCsrfTokenController,
 } from "../controllers/authController";
 import { checkJwt } from "../middleware/session";
 
@@ -55,6 +56,7 @@ export class AuthRouter {
       "/checkIfIsSystemAdmin/:uid",
       checkIfIsSystemAdminController
     );
+    this.router.get("/getCsrfToken", getCsrfTokenController);
   }
 
   static getRouter(): Router {

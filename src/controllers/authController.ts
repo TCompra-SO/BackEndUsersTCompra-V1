@@ -10,13 +10,15 @@ import {
   verifyToken,
 } from "../utils/jwt.handle";
 import { io } from "../server"; // Importamos el objeto `io` de Socket.IO
-import { alternativeAccessTokenExpiresIn } from "../utils/Globals";
-import { Console, error } from "console";
 import {
   accessTokenName,
-  getCookieConfig,
+  alternativeAccessTokenExpiresIn,
+  csrfTokenName,
   refreshTokenName,
-} from "../utils/cookies.handle";
+} from "../utils/Globals";
+import { Console, error } from "console";
+import { getCookieConfig, getCsrfCookieConfig } from "../utils/cookies.handle";
+import crypto from "crypto";
 
 const getNameController = async (req: Request, res: Response) => {
   // Obtener el parámetro de la consulta
@@ -367,6 +369,7 @@ const LogoutController = async (req: Request, res: Response) => {
       .status(response.code)
       .clearCookie(accessTokenName, getCookieConfig())
       .clearCookie(refreshTokenName, getCookieConfig())
+      .clearCookie(csrfTokenName, getCsrfCookieConfig())
       .send(response);
   } catch (error) {
     return res
@@ -540,6 +543,20 @@ const SearchCompanyController = async (req: Request, res: Response) => {
   }
 };
 
+const getCsrfTokenController = async (req: Request, res: Response) => {
+  try {
+    const csrfToken = crypto.randomBytes(32).toString("hex");
+    res.cookie(csrfTokenName, csrfToken, getCsrfCookieConfig());
+    res.json({ csrfToken });
+  } catch (error) {
+    console.log("Error en getCsrfTokenController", error);
+    res.status(500).send({
+      success: false,
+      msg: "Error interno del servidor.",
+    });
+  }
+};
+
 export {
   registerController,
   UpdateprofileCompanyController,
@@ -561,4 +578,5 @@ export {
   RefreshTokenController,
   refreshAccessToken,
   checkIfIsSystemAdminController,
+  getCsrfTokenController,
 };
