@@ -1,19 +1,12 @@
-import { configDotenv } from "dotenv";
 import CompanyModel from "../models/companyModel";
 import UserModel from "../models/userModel";
 import { AuthServices } from "./authServices";
-import { Console, error } from "console";
-import { ScoreI } from "../interfaces/score.interface";
-import { array } from "joi";
-import mongoose, { Mongoose } from "mongoose";
-import dbConnect from "../database/mongo";
+import mongoose from "mongoose";
 import ScoreClientModel from "../models/scoreClient";
 import ScoreProviderModel from "../models/scoreProvider";
 import { CollectionType, TypeScore, TypeSocket } from "../types/globalTypes";
 import dotenv from "dotenv";
 import axios from "axios";
-import { getToken } from "../utils/authStore";
-import { JwtPayload } from "jsonwebtoken";
 import { secretInternalName } from "../utils/Globals";
 
 export class ScoreService {

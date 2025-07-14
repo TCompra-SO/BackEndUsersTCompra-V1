@@ -1,8 +1,8 @@
-import { Request, Response, response } from "express";
+import { Request, Response } from "express";
 import { ScoreService } from "../services/scoreServices";
 import { io } from "../server";
 import { RequestExt } from "../interfaces/req-ext";
-import { AuthServices } from "../services/authServices";
+import SessionModel from "../models/sessionModel";
 const registerScoreController = async (req: RequestExt, res: Response) => {
   const {
     typeScore,
@@ -15,17 +15,14 @@ const registerScoreController = async (req: RequestExt, res: Response) => {
     type,
   } = req.body;
   try {
-    const { user } = req; // Extraemos `user` y `body` de la request
-    //const { uid: userUID } = user as JwtPayload; // Obtenemos `uid` del usuario autenticado
-
-    const datatoken = await AuthServices.getDataBaseUser(uidUser);
-    //const dataus = await AuthServices.getDataBaseUser(uidUser);
     let token;
 
-    if (datatoken.data?.[0].auth_users) {
-      token = datatoken.data?.[0].auth_users.accessToken;
-    } else {
-      token = datatoken.data?.[0].accessToken;
+    // Asumiendo que el accesstoken es el mismo en cualquier sesión del usuario
+    const sessionData = await SessionModel.findOne({
+      userId: uidUser,
+    });
+    if (sessionData) {
+      token = sessionData.accessToken;
     }
 
     const responseUser = await ScoreService.registerScore(

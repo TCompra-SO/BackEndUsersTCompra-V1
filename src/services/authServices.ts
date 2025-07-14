@@ -15,27 +15,15 @@ import { expireInEspecificMinutes, getNow } from "../utils/DateTools";
 import bcrypt from "bcrypt";
 import {
   sendEmail,
-  sendEmailCategories,
   sendEmailRecovery,
   sendEmailWelcome,
 } from "../utils/NodeMailer";
 import jwt from "jsonwebtoken";
-import { error } from "console";
-import { matchesGlob } from "path";
-import { AuthUserI } from "./../interfaces/authUser.interface";
-import { getSubUserController } from "../controllers/subUserController";
 import { subUserServices } from "./subUserServices";
-import { pipeline } from "stream";
-import { configDotenv } from "dotenv";
 import { ScoreService } from "./scoreServices";
-import { ScoreI } from "./../interfaces/score.interface";
-import { TypeEntity, TypeOrder } from "../types/globalTypes";
+import { TypeEntity } from "../types/globalTypes";
 import CompanyModel from "../models/companyModel";
-import mongoose, { Model } from "mongoose";
-import { ResourceCountersService } from "./resourceCountersServices";
-import { ResourceCountersI } from "../interfaces/resourceCounters";
-import { Response } from "express";
-import { setToken } from "../utils/authStore";
+import { Model } from "mongoose";
 import UserModel from "../models/userModel";
 import { accessTokenExpiresIn, refreshTokenExpiresIn } from "../utils/Globals";
 import SessionModel from "../models/sessionModel";
@@ -46,7 +34,6 @@ import {
   verifyRefreshAccessToken,
   verifyToken,
 } from "../utils/jwt.handle";
-import { decode } from "punycode";
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET as string;
@@ -1564,7 +1551,6 @@ export class AuthServices {
       } else if (typeEntity === TypeEntity.USER) {
         await User.findOneAndUpdate({ email }, updateQuery);
       } else {
-        console.log("voy a cambiar");
         await CompanyModel.updateOne(
           { uid: entityID, "auth_users.email": email }, // Filtra por email dentro del array
           { $set: { "auth_users.$.password": newPassword } } // Actualiza solo el password del usuario encontrado
