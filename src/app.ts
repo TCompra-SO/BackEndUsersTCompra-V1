@@ -10,6 +10,7 @@ const allowedOrigins = [
   process.env.API_PRODUCTS,
   process.env.API_SERVICES,
   process.env.API_LIQUIDATIONS,
+  process.env.API_USER,
 ];
 
 export class App {
