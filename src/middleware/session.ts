@@ -24,7 +24,7 @@ const checkJwt = async (req: RequestExt, res: Response, next: NextFunction) => {
 
     if (!isTrusted) {
       // Double Submit Cookie
-      const csrfCookieToken = req.cookies[csrfTokenName];
+      const csrfCookieToken = req.cookies?.[csrfTokenName];
       const csrfHeaderToken = req.get(csrfTokenName);
       if (!csrfCookieToken || !csrfHeaderToken) {
         return res.status(401).send({

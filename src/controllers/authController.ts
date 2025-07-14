@@ -359,7 +359,7 @@ const LoginController = async (req: Request, res: Response) => {
 
 const LogoutController = async (req: Request, res: Response) => {
   try {
-    const { refreshToken } = req.cookies;
+    const refreshToken = req.cookies?.[refreshTokenName];
     const { userId } = req.body;
 
     // Llamamos al servicio de logout
@@ -380,7 +380,7 @@ const LogoutController = async (req: Request, res: Response) => {
 
 const RefreshTokenController = async (req: Request, res: Response) => {
   try {
-    const { refreshToken } = req.cookies;
+    const refreshToken = req.cookies?.[refreshTokenName];
 
     if (!refreshToken) {
       return res
@@ -427,7 +427,8 @@ const RefreshTokenController = async (req: Request, res: Response) => {
 
 const refreshAccessToken = async (req: Request, res: Response) => {
   try {
-    const { accessToken, refreshToken } = req.cookies;
+    const accessToken = req.cookies?.[accessTokenName];
+    const refreshToken = req.cookies?.[refreshTokenName];
 
     if (!accessToken || !refreshToken) {
       return res
