@@ -27,6 +27,7 @@ export function getCsrfCookieConfig() {
           httpOnly: false,
           secure: true,
           sameSite: "none",
+          domain: ".tcompra.com",
         }
       : { httpOnly: false, secure: false, sameSite: "lax" };
   return config;
