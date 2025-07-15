@@ -17,19 +17,22 @@ export class App {
 
       const allowedOrigins = [
         process.env.URL_FRONTEND,
+        process.env.URL_FRONTEND_WWW,
         process.env.API_PRODUCTS,
         process.env.API_SERVICES,
         process.env.API_LIQUIDATIONS,
+        process.env.API_USER,
       ];
 
       App.instance.use(
         cors({
           origin: (origin, callback) => {
-            if (!origin) return callback(null, true); // Permitir postman/local
-            if (allowedOrigins.includes(origin)) {
+            console.log("Request origin:", origin);
+            if (!origin || allowedOrigins.includes(origin)) {
               callback(null, true);
             } else {
-              callback(new Error("Not allowed by CORS: " + origin));
+              console.error("Blocked by CORS:", origin);
+              callback(new Error("Not allowed by CORS"));
             }
           },
           credentials: true,
