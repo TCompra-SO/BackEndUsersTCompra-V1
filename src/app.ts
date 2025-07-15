@@ -14,9 +14,32 @@ export class App {
       App.instance.use(cookieParser());
       App.instance.use(bodyParser.urlencoded({ extended: false }));
       App.instance.use(bodyParser.json());
+
+      const allowedOrigins = [
+        "https://tcompra.com",
+        "https://apiproducts.tcompra.com",
+        "https://apiservices.tcompra.com",
+        "https://apiliquidations.tcompra.com",
+        "https://apiusers.tcompra.com",
+      ];
+      /*
       App.instance.use(
         cors({
           origin: process.env.URL_FRONTEND,
+          credentials: true,
+        })
+      );*/
+
+      App.instance.use(
+        cors({
+          origin: (origin, callback) => {
+            if (!origin) return callback(null, true); // Permitir postman/local
+            if (allowedOrigins.includes(origin)) {
+              callback(null, true);
+            } else {
+              callback(new Error("Not allowed by CORS: " + origin));
+            }
+          },
           credentials: true,
         })
       );

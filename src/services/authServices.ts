@@ -1372,9 +1372,7 @@ export class AuthServices {
         userId: sessionData.userId,
         refreshToken: sessionData.refreshToken,
       });
-      console.log(response);
-
-      console.log(sessionData);
+      
 
       let typeUser, tokenExists, entityModel: Model<any>;
       const userData = await this.getDataBaseUser(userID);
