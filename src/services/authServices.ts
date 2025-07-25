@@ -1372,7 +1372,6 @@ export class AuthServices {
         userId: sessionData.userId,
         refreshToken: sessionData.refreshToken,
       });
-      
 
       let typeUser, tokenExists, entityModel: Model<any>;
       const userData = await this.getDataBaseUser(userID);
@@ -2357,7 +2356,7 @@ export class AuthServices {
 
       // Configuración de Fuse.js
       const fuseOptions = {
-        keys: ["name"], // Campo a buscar
+        keys: ["name", "document"], // Campo a buscar
         threshold: 0.3, // Más estricto pero permite errores tipográficos menores
       };
       const fuse = new Fuse(normalizedCompanies, fuseOptions);
