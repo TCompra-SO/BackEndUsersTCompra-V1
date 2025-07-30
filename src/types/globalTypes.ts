@@ -50,6 +50,7 @@ export enum NotificationAction {
   VIEW_OFFER = 26,
   DOWNLOAD_PURCHASE_ORDER = 12,
   VIEW_CAT_LAST_REQUIREMENTS = 41,
+  CULMINATE = 4,
 }
 
 export enum RequirementType {
