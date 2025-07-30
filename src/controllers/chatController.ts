@@ -222,6 +222,7 @@ export const readMessages = async (req: RequestExt, res: Response) => {
         //messageData: responseUser.data,
         res: responseUser.res,
         numUnreadMessages: numUnreadMessages,
+        userReceiving,
         type: TypeMessage.READ,
       });
       //cambiar el Socket debe enviar los datos al Usuario Receptor
