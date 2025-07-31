@@ -416,16 +416,17 @@ export class ChatService {
           receiverUser = chatData.data?.userId;
           fieldRead = "unReadUser";
         }
-
-        await ChatModel.updateOne(
-          { uid: chatId },
-          {
-            $inc: {
-              numUnreadMessages: -messagesToUpdate.length,
-              [fieldRead]: -messagesToUpdate.length,
-            },
-          }
-        );
+        if (chatData.data?.[fieldRead] > 0) {
+          await ChatModel.updateOne(
+            { uid: chatId },
+            {
+              $inc: {
+                numUnreadMessages: -messagesToUpdate.length,
+                [fieldRead]: -messagesToUpdate.length,
+              },
+            }
+          );
+        }
 
         return {
           success: true,
@@ -436,48 +437,50 @@ export class ChatService {
             msg: "mensajes marcados como leidos",
           },
         };
-      }
-      while (count < messageIds.length) {
-        const messageData = await this.getMessage(messageIds[count]);
-        const read = messageData.data?.read;
-        if (messageData.data?.chatId !== chatId) {
-          return {
-            success: false,
-            code: 400,
-            error: {
-              msg: "chatId no valido",
-            },
-          };
-        }
-        if (!read) {
-          const updateResult = await MessageModel.updateOne(
-            { uid: messageData.data?.uid },
-            { $set: { read: true } }
-          );
-          if (updateResult.modifiedCount > 0) {
-            messages.push({ messageId: messageIds[count], read: true });
-          }
-
-          await ChatModel.updateOne(
-            { uid: chatId },
-            {
-              $inc: {
-                numUnreadMessages: -1,
+      } else {
+        //EN LA LOGICA DE LA APP AQUI YA NO ENTRA
+        while (count < messageIds.length) {
+          const messageData = await this.getMessage(messageIds[count]);
+          const read = messageData.data?.read;
+          if (messageData.data?.chatId !== chatId) {
+            return {
+              success: false,
+              code: 400,
+              error: {
+                msg: "chatId no valido",
               },
+            };
+          }
+          if (!read) {
+            const updateResult = await MessageModel.updateOne(
+              { uid: messageData.data?.uid },
+              { $set: { read: true } }
+            );
+            if (updateResult.modifiedCount > 0) {
+              messages.push({ messageId: messageIds[count], read: true });
             }
-          );
-        }
-        count++;
-      }
 
-      return {
-        success: true,
-        code: 200,
-        data: messages,
-        res: {
-          msg: "Mensajes leídos con éxito",
-        },
-      };
+            await ChatModel.updateOne(
+              { uid: chatId },
+              {
+                $inc: {
+                  numUnreadMessages: -1,
+                },
+              }
+            );
+          }
+          count++;
+        }
+
+        return {
+          success: true,
+          code: 200,
+          data: messages,
+          res: {
+            msg: "Mensajes leídos con éxito",
+          },
+        };
+      }
     } catch (error) {
       console.error(error);
       return {
