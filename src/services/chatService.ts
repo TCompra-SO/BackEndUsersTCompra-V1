@@ -416,13 +416,25 @@ export class ChatService {
           receiverUser = chatData.data?.userId;
           fieldRead = "unReadUser";
         }
-        if (chatData.data?.[fieldRead] > 0) {
+        const totalRead = chatData.data?.[fieldRead] - messagesToUpdate.length;
+
+        if (totalRead >= 0) {
           await ChatModel.updateOne(
             { uid: chatId },
             {
               $inc: {
                 numUnreadMessages: -messagesToUpdate.length,
                 [fieldRead]: -messagesToUpdate.length,
+              },
+            }
+          );
+        } else {
+          await ChatModel.updateOne(
+            { uid: chatId },
+            {
+              $inc: {
+                numUnreadMessages: 0,
+                [fieldRead]: 0,
               },
             }
           );
@@ -2081,7 +2093,7 @@ export class ChatService {
           },
         },
 
-        // 🧠 Mostrar nombre y avatar del otro participante
+        //Mostrar nombre y avatar del otro participante
         {
           $addFields: {
             userName: {
@@ -2159,7 +2171,12 @@ export class ChatService {
       const result = await ChatModel.aggregate([
         {
           $match: {
-            $or: [{ userId }, { chatPartnerId: userId }],
+            $or: [
+              { userId },
+              {
+                chatPartnerId: userId,
+              },
+            ],
             // Excluye si el usuario tiene archive.state == true
             archive: {
               $not: {
@@ -2189,6 +2206,7 @@ export class ChatService {
           },
         },
       ]);
+
       return {
         success: true,
         code: 200,
@@ -2199,7 +2217,7 @@ export class ChatService {
         success: false,
         code: 500,
         error: {
-          msg: "Error al archivar el chat",
+          msg: "Error al hacer la consulta",
         },
       };
     }
@@ -2224,7 +2242,7 @@ export class ChatService {
         success: false,
         code: 500,
         error: {
-          msg: "Error al archivar el chat",
+          msg: "Error al hacer la consulta",
         },
       };
     }
@@ -2297,7 +2315,7 @@ export class ChatService {
         success: false,
         code: 500,
         error: {
-          msg: "Error al archivar el chat",
+          msg: "Error al hacer la consulta",
         },
       };
     }
