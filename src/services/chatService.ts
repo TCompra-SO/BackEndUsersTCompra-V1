@@ -445,6 +445,7 @@ export class ChatService {
           code: 200,
           data: messagesToUpdate,
           res: {
+            startMessageId: messageIds[0],
             endMessageId: endMessageId,
             msg: "mensajes marcados como leidos",
           },
