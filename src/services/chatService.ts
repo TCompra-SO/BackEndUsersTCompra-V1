@@ -89,6 +89,7 @@ export class ChatService {
         chatPartnerId: recUserId,
         title,
         lastDate: new Date(), // Fecha en string
+        type,
       });
       await newChat.save();
       return {
