@@ -205,3 +205,18 @@ export const readNotification = async (notificationId: string) => {
     };
   }
 };
+
+export const createNotification = async (notificationData: BaseNotificationI) => {
+  try {
+    
+  } catch (error) {
+    console.error("Error al crear notificación:", error);
+    return {
+      success: false,
+      code: 500,
+      error: {
+        msg: "Error al crear la notificación",
+      },
+    };
+  }
+}

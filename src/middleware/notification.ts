@@ -19,7 +19,6 @@ export const saveNotificationMiddleware = (
 ) => {
   const originalSend = res.send.bind(res);
   let notificationSaved = false;
-
   res.send = function (body: any) {
     try {
       if (
