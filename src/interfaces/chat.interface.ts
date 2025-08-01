@@ -1,3 +1,5 @@
+import { RequirementType } from "../types/globalTypes";
+
 export interface ChatI {
   uid: string;
   userImage?: string;
@@ -13,6 +15,7 @@ export interface ChatI {
   unReadPartner: number;
   archive?: archiveI[];
   createdAt: Date;
+  type: RequirementType;
 }
 
 interface archiveI {

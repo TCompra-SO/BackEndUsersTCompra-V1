@@ -55,6 +55,10 @@ const chatSchema = new Schema<ChatI>(
       type: Date,
       default: Date.now,
     },
+    type: {
+      type: Number,
+      required: true,
+    },
   },
   { timestamps: true }
 );
