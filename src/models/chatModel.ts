@@ -42,10 +42,12 @@ const chatSchema = new Schema<ChatI>(
     unReadUser: {
       type: Number,
       default: 0,
+      min: 0,
     },
     unReadPartner: {
       type: Number,
       default: 0,
+      min: 0,
     },
     archive: {
       type: [{ userId: String, state: Boolean }],
