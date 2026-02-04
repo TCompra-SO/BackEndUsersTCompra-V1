@@ -23,4 +23,6 @@ export interface ResourceCountersI {
   numDeleteOffersProducts: number;
   numDeleteOffersServices: number;
   numDeleteOffersLiquidations: number;
+  lastNumPurchaseOrder: number;
+  lastNumSellOrder: number;
 }

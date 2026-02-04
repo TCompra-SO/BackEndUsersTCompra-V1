@@ -35,7 +35,7 @@ export class App {
             }
           },
           credentials: true,
-        })
+        }),
       );
       App.instance.use(RootRouter.getRouter());
     }

@@ -64,7 +64,7 @@ const ResourceCountersSchema = new Schema<ResourceCountersI>(
       type: Number,
       default: 0,
     },
-    
+
     numSubUsers: {
       type: Number,
       default: 0,
@@ -81,15 +81,23 @@ const ResourceCountersSchema = new Schema<ResourceCountersI>(
       type: Number,
       default: 0,
     },
+    lastNumPurchaseOrder: {
+      type: Number,
+      default: 0,
+    },
+    lastNumSellOrder: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     versionKey: false,
     timestamps: true,
-  }
+  },
 );
 
 // Create the model
 export const ResourceCountersModel = mongoose.model<ResourceCountersI>(
   "ResourceCounters",
-  ResourceCountersSchema
+  ResourceCountersSchema,
 );

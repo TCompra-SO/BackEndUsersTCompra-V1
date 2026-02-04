@@ -1,6 +1,5 @@
 import moment from "moment";
-import "moment/locale/es"; // Importa el idioma español
-moment.locale("es"); // Establece el idioma a español
+
 import Joi, { string } from "joi";
 import User from "../models/userModel";
 import Company from "../models/companyModel";
@@ -105,7 +104,7 @@ export class AuthServices {
 
   static getNameReniec = async (
     dni?: string,
-    ruc?: string
+    ruc?: string,
   ): Promise<{
     success: boolean;
     code?: number;
@@ -235,7 +234,7 @@ export class AuthServices {
     password: string,
     typeID: number,
     dni?: string,
-    ruc?: string
+    ruc?: string,
   ) => {
     try {
       const emailToVerifyPipeline = (emailField: string) => [
@@ -264,10 +263,10 @@ export class AuthServices {
       const checkEmailExists = async () => {
         const userEmail = await User.aggregate(emailToVerifyPipeline("email"));
         const companyEmail = await Company.aggregate(
-          emailToVerifyPipeline("email")
+          emailToVerifyPipeline("email"),
         );
         const companyAuthUsersEmail = await Company.aggregate(
-          emailToVerifyPipeline("auth_users.email")
+          emailToVerifyPipeline("auth_users.email"),
         );
 
         return (
@@ -465,7 +464,7 @@ export class AuthServices {
             active_account: true,
           },
         }, // Campos a actualizar
-        { new: true, runValidators: true } // Devuelve el documento actualizado y ejecuta validaciones
+        { new: true, runValidators: true }, // Devuelve el documento actualizado y ejecuta validaciones
       );
 
       if (!updatedProfileCompany) {
@@ -543,7 +542,7 @@ export class AuthServices {
             active_account: true,
           },
         }, // Campos a actualizar
-        { new: true, runValidators: true } // Devuelve el documento actualizado y ejecuta validaciones
+        { new: true, runValidators: true }, // Devuelve el documento actualizado y ejecuta validaciones
       );
 
       if (!updatedProfileUser) {
@@ -577,7 +576,7 @@ export class AuthServices {
 
   static SendCodeService = async (
     email: string,
-    type: "repassword" | "identity_verified"
+    type: "repassword" | "identity_verified",
   ) => {
     try {
       const UserPipeline = [
@@ -677,7 +676,7 @@ export class AuthServices {
           code: 409,
           error: {
             msg: `Genera nuevamente ${moment(
-              user[0].metadata?.expireIn
+              user[0].metadata?.expireIn,
             ).fromNow()}`,
           },
         };
@@ -701,7 +700,7 @@ export class AuthServices {
               {
                 "metadata.code": hashCode,
                 "metadata.expireIn": expireIn,
-              }
+              },
             );
           } else {
             await Company.findOneAndUpdate(
@@ -709,7 +708,7 @@ export class AuthServices {
               {
                 "metadata.code": hashCode,
                 "metadata.expireIn": expireIn,
-              }
+              },
             );
           }
 
@@ -759,7 +758,7 @@ export class AuthServices {
           {
             "metadata.code": hashCode,
             "metadata.expireIn": expireIn,
-          }
+          },
         );
       else
         await Company.findOneAndUpdate(
@@ -767,7 +766,7 @@ export class AuthServices {
           {
             "metadata.code": hashCode,
             "metadata.expireIn": expireIn,
-          }
+          },
         );
 
       return {
@@ -792,7 +791,7 @@ export class AuthServices {
   static ValidateCodeService = async (
     email: string,
     code: string,
-    type: "repassword" | "identity_verified"
+    type: "repassword" | "identity_verified",
   ) => {
     try {
       const iniUserPipeline = [
@@ -932,7 +931,7 @@ export class AuthServices {
     password: string,
     ipAgent: string,
     userAgent: string,
-    browserId: string
+    browserId: string,
   ) => {
     try {
       const { error } = this.SchemaLogin.validate({ email, password });
@@ -1002,7 +1001,7 @@ export class AuthServices {
       if (entity === "SubUser" && result && result.length > 0) {
         const hashPassword = await bcrypt.compare(
           password,
-          result[0].auth_users.password
+          result[0].auth_users.password,
         );
         if (!result[0].auth_users.active_account) {
           return {
@@ -1023,7 +1022,7 @@ export class AuthServices {
           };
         } else {
           let profileUser = await subUserServices.getProfileSubUser(
-            result[0].auth_users.Uid
+            result[0].auth_users.Uid,
           );
 
           // AQUI ARMAMOS EL TOKEN ///////////////////////////////////////////
@@ -1046,7 +1045,7 @@ export class AuthServices {
             userAgent,
             browserId,
             dataAccessToken,
-            dataRefreshToken
+            dataRefreshToken,
           );
 
           const dataUser = [
@@ -1072,7 +1071,7 @@ export class AuthServices {
                 "auth_users.$.ultimate_session": new Date(),
                 "auth_users.$.online": true,
               },
-            }
+            },
           );
 
           return {
@@ -1156,7 +1155,7 @@ export class AuthServices {
           userAgent,
           browserId,
           dataAccessToken,
-          dataRefreshToken
+          dataRefreshToken,
         );
 
         const dataUser = [
@@ -1181,7 +1180,7 @@ export class AuthServices {
                 ultimate_session: new Date(),
                 online: true,
               },
-            }
+            },
           );
         } else {
           await User.updateOne(
@@ -1191,7 +1190,7 @@ export class AuthServices {
                 ultimate_session: new Date(),
                 online: true,
               },
-            }
+            },
           );
         }
 
@@ -1226,7 +1225,7 @@ export class AuthServices {
     userAgent: string,
     browserId: string,
     dataAccessToken: any,
-    dataRefreshToken: any
+    dataRefreshToken: any,
   ) => {
     try {
       let accessExpiresIn;
@@ -1268,14 +1267,14 @@ export class AuthServices {
           if (!stateAccessToken.expired) {
             const tokenResult = await generateRefreshAccessToken(
               sessionData.accessToken,
-              sessionData.refreshToken
+              sessionData.refreshToken,
             );
             accessToken = tokenResult.accessToken;
             refreshToken = sessionData.refreshToken;
           } else {
             const tokenResult = await generateRefreshAccessToken(
               sessionData.accessToken,
-              sessionData.refreshToken
+              sessionData.refreshToken,
             );
             accessToken = tokenResult.accessToken;
             refreshToken = sessionData.refreshToken;
@@ -1293,7 +1292,7 @@ export class AuthServices {
                 refreshToken,
                 updatedAt: new Date(),
               },
-            }
+            },
           );
           sessionData = await SessionModel.findOne({
             userId,
@@ -1302,7 +1301,7 @@ export class AuthServices {
 
           const newAccess = await generateRefreshAccessToken(
             sessionData.accessToken,
-            sessionData.refreshToken
+            sessionData.refreshToken,
           );
 
           accessToken = newAccess.accessToken;
@@ -1317,7 +1316,7 @@ export class AuthServices {
               refreshToken,
               updatedAt: new Date(),
             },
-          }
+          },
         );
       }
 
@@ -1411,12 +1410,12 @@ export class AuthServices {
             $set: {
               "auth_users.$.online": false,
             },
-          } // Solo borra el refreshToken
+          }, // Solo borra el refreshToken
         );
       } else {
         await entityModel.updateOne(
           { uid: userID },
-          { $set: { online: false } }
+          { $set: { online: false } },
         );
       }
       if (response.deletedCount > 0) {
@@ -1490,7 +1489,7 @@ export class AuthServices {
   static NewPasswordService = async (
     email: string,
     password: string,
-    entityID: string
+    entityID: string,
   ) => {
     try {
       const userData = await this.getDataBaseUser(entityID);
@@ -1504,7 +1503,7 @@ export class AuthServices {
         if (!user) {
           user = await CompanyModel.findOne(
             { uid: userData.data?.[0].uid, "auth_users.email": email }, // Filtra por uid y email dentro de auth_users
-            { auth_users: { $elemMatch: { email: email } }, uid: 1, _id: 0 }
+            { auth_users: { $elemMatch: { email: email } }, uid: 1, _id: 0 },
           ).lean();
 
           if (user?.auth_users[0]) {
@@ -1550,7 +1549,7 @@ export class AuthServices {
       } else {
         await CompanyModel.updateOne(
           { uid: entityID, "auth_users.email": email }, // Filtra por email dentro del array
-          { $set: { "auth_users.$.password": newPassword } } // Actualiza solo el password del usuario encontrado
+          { $set: { "auth_users.$.password": newPassword } }, // Actualiza solo el password del usuario encontrado
         );
       }
 
@@ -1636,7 +1635,7 @@ export class AuthServices {
           code: 409,
           error: {
             msg: `Genera nuevamente ${moment(
-              user[0].metadata?.expireIn
+              user[0].metadata?.expireIn,
             ).fromNow()}`,
           },
         };
@@ -1688,7 +1687,7 @@ export class AuthServices {
   static RecoveryPassword = async (
     email: string,
     code: string,
-    password: string
+    password: string,
   ) => {
     try {
       const iniUserPipeline = [
@@ -1831,6 +1830,12 @@ export class AuthServices {
             },
             numSellingOrdersClient: {
               $ifNull: ["$resourceData.numSellingOrdersClient", 0],
+            },
+            lastNumPurchaseOrder: {
+              $ifNull: ["$resourceData.lastNumPurchaseOrder", 0],
+            },
+            lastNumSellOrder: {
+              $ifNull: ["$resourceData.lastNumSellOrder", 0],
             },
             numSubUsers: { $ifNull: ["$resourceData.numSubUsers", 0] },
             numSentApprovedCertifications: {
@@ -1999,7 +2004,7 @@ export class AuthServices {
           authUsers.typeEntity = entityData.data.typeEntity;
 
           let dataCompany: any = await this.getEntityService(
-            entityData.data.uid
+            entityData.data.uid,
           );
           scores = await ScoreService.getScoreCount(entityData.data.uid);
 
@@ -2173,7 +2178,7 @@ export class AuthServices {
     // Validar los datos
     const SchemaCompany = this.SchemaProfileCompany.fork(
       ["countryID"],
-      (field) => field.optional()
+      (field) => field.optional(),
     );
     const { error } = SchemaCompany.validate(data);
     if (error) {
@@ -2214,7 +2219,7 @@ export class AuthServices {
             categories,
           },
         }, // Campos a actualizar
-        { new: true, runValidators: true } // Devuelve el documento actualizado y ejecuta validaciones
+        { new: true, runValidators: true }, // Devuelve el documento actualizado y ejecuta validaciones
       );
 
       if (!updatedProfileCompany) {
@@ -2251,7 +2256,7 @@ export class AuthServices {
 
     // Validar los datos
     const SchemaUser = this.SchemaProfileUser.fork(["countryID"], (field) =>
-      field.optional()
+      field.optional(),
     );
 
     const { error } = SchemaUser.validate(data);
@@ -2288,7 +2293,7 @@ export class AuthServices {
             phone,
           },
         }, // Campos a actualizar
-        { new: true, runValidators: true } // Devuelve el documento actualizado y ejecuta validaciones
+        { new: true, runValidators: true }, // Devuelve el documento actualizado y ejecuta validaciones
       );
 
       if (!updatedProfileUser) {
@@ -2336,7 +2341,7 @@ export class AuthServices {
       // Consulta inicial más amplia en MongoDB (menos estricta)
       const resultData = await CompanyModel.find(
         {},
-        { uid: 1, name: 1, document: 1, image: "$avatar", _id: 0 }
+        { uid: 1, name: 1, document: 1, image: "$avatar", _id: 0 },
       ).limit(20);
 
       if (resultData.length === 0) {
@@ -2437,7 +2442,7 @@ export class AuthServices {
           email: 1,
           categories: 1,
           _id: 0, // opcional: oculta el campo _id
-        }
+        },
       );
 
       return {
