@@ -31,6 +31,7 @@ export const getUtilData = (type: UtilDataType) => {
   }
 };
 
+/*
 export const getLastRecords = async (entityID: string, rubros: [number]) => {
   try {
     const productsCollection = mongoose.connection.collection("products");
@@ -339,6 +340,323 @@ export const getLastRecords = async (entityID: string, rubros: [number]) => {
         entityID,
         requeriments: requeriments,
         liquidations: liquidations,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      code: 500,
+      error: {
+        msg: "Ha ocurrido un error en el Servidor",
+      },
+    };
+  }
+};
+*/
+
+export const getLastRecords = async (entityID: string, rubros: number[]) => {
+  try {
+    const productsCollection = mongoose.connection.collection("products");
+    const servicesCollection = mongoose.connection.collection("services");
+    const liquidationsCollection =
+      mongoose.connection.collection("liquidations");
+
+    let products: any[] = [];
+    let services: any[] = [];
+    let liquidations: any[] = [];
+
+    const now = new Date();
+
+    // 📅 Inicio y fin del día
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+
+    const todayEnd = new Date(now);
+    todayEnd.setHours(23, 59, 59, 999);
+
+    // =========================
+    // 🔥 PRODUCTOS
+    // =========================
+    let cont = 0;
+
+    while (cont < rubros.length) {
+      products[cont] = await productsCollection
+        .aggregate([
+          {
+            $match: {
+              entityID: { $ne: entityID },
+              categoryID: rubros[cont],
+              stateID: 1,
+
+              // 📅 SOLO CREADOS HOY
+              createdAt: {
+                $gte: todayStart,
+                $lte: todayEnd,
+              },
+
+              // ✅ SOLO VIGENTES
+              $or: [
+                { completion_date: { $gte: now } },
+                { completion_date: { $exists: false } },
+              ],
+            },
+          },
+          { $sort: { createdAt: -1 } },
+          { $limit: 3 },
+          {
+            $lookup: {
+              from: "companys",
+              localField: "entityID",
+              foreignField: "uid",
+              as: "companyData",
+            },
+          },
+          {
+            $lookup: {
+              from: "users",
+              localField: "entityID",
+              foreignField: "uid",
+              as: "userData",
+            },
+          },
+          {
+            $addFields: {
+              entityName: {
+                $cond: {
+                  if: { $gt: [{ $size: "$companyData" }, 0] },
+                  then: { $arrayElemAt: ["$companyData.name", 0] },
+                  else: { $arrayElemAt: ["$userData.name", 0] },
+                },
+              },
+              entityID: {
+                $cond: {
+                  if: { $gt: [{ $size: "$companyData" }, 0] },
+                  then: { $arrayElemAt: ["$companyData.uid", 0] },
+                  else: { $arrayElemAt: ["$userData.uid", 0] },
+                },
+              },
+            },
+          },
+          {
+            $project: {
+              uid: 1,
+              name: 1,
+              createdAt: 1,
+              entityID: 1,
+              entityName: 1,
+              categoryID: 1,
+              completion_date: 1,
+            },
+          },
+        ])
+        .toArray();
+
+      // marcar tipo
+      products[cont]?.forEach((item: any) => {
+        item.type = RequirementType.GOOD;
+      });
+
+      cont++;
+    }
+
+    // =========================
+    // 🔥 SERVICIOS
+    // =========================
+    cont = 0;
+
+    while (cont < rubros.length) {
+      services[cont] = await servicesCollection
+        .aggregate([
+          {
+            $match: {
+              entityID: { $ne: entityID },
+              categoryID: rubros[cont],
+              stateID: 1,
+
+              createdAt: {
+                $gte: todayStart,
+                $lte: todayEnd,
+              },
+
+              $or: [
+                { completion_date: { $gte: now } },
+                { completion_date: { $exists: false } },
+              ],
+            },
+          },
+          { $sort: { createdAt: -1 } },
+          { $limit: 3 },
+          {
+            $lookup: {
+              from: "companys",
+              localField: "entityID",
+              foreignField: "uid",
+              as: "companyData",
+            },
+          },
+          {
+            $lookup: {
+              from: "users",
+              localField: "entityID",
+              foreignField: "uid",
+              as: "userData",
+            },
+          },
+          {
+            $addFields: {
+              entityName: {
+                $cond: {
+                  if: { $gt: [{ $size: "$companyData" }, 0] },
+                  then: { $arrayElemAt: ["$companyData.name", 0] },
+                  else: { $arrayElemAt: ["$userData.name", 0] },
+                },
+              },
+              entityID: {
+                $cond: {
+                  if: { $gt: [{ $size: "$companyData" }, 0] },
+                  then: { $arrayElemAt: ["$companyData.uid", 0] },
+                  else: { $arrayElemAt: ["$userData.uid", 0] },
+                },
+              },
+            },
+          },
+          {
+            $project: {
+              uid: 1,
+              name: 1,
+              createdAt: 1,
+              entityID: 1,
+              entityName: 1,
+              categoryID: 1,
+              completion_date: 1,
+            },
+          },
+        ])
+        .toArray();
+
+      services[cont]?.forEach((item: any) => {
+        item.type = RequirementType.SERVICE;
+      });
+
+      cont++;
+    }
+
+    // =========================
+    // 🔀 MERGE POR CATEGORÍA
+    // =========================
+    const requeriments = services.map((servGroup, index) => {
+      const prodGroup = products[index] || [];
+      const merged = [...servGroup, ...prodGroup];
+
+      return merged.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+    });
+
+    // =========================
+    // 🏷️ CATEGORÍAS
+    // =========================
+    const category = rubros.map((id) =>
+      categories.find((r: any) => r.id === id),
+    );
+
+    requeriments.forEach((grupo: any) => {
+      grupo.forEach((item: any) => {
+        const match = category.find((c: any) => c?.id === item.categoryID);
+        item.categoryName = match?.value || "Desconocido";
+      });
+    });
+
+    // =========================
+    // 🔥 LIQUIDACIONES
+    // =========================
+    cont = 0;
+
+    while (cont < rubros.length) {
+      liquidations[cont] = await liquidationsCollection
+        .aggregate([
+          {
+            $match: {
+              entityID: { $ne: entityID },
+              categoryID: rubros[cont],
+              stateID: 1,
+
+              createdAt: {
+                $gte: todayStart,
+                $lte: todayEnd,
+              },
+
+              $or: [
+                { completion_date: { $gte: now } },
+                { completion_date: { $exists: false } },
+              ],
+            },
+          },
+          { $sort: { createdAt: -1 } },
+          { $limit: 3 },
+          {
+            $lookup: {
+              from: "companys",
+              localField: "entityID",
+              foreignField: "uid",
+              as: "companyData",
+            },
+          },
+          {
+            $lookup: {
+              from: "users",
+              localField: "entityID",
+              foreignField: "uid",
+              as: "userData",
+            },
+          },
+          {
+            $addFields: {
+              entityName: {
+                $cond: {
+                  if: { $gt: [{ $size: "$companyData" }, 0] },
+                  then: { $arrayElemAt: ["$companyData.name", 0] },
+                  else: { $arrayElemAt: ["$userData.name", 0] },
+                },
+              },
+              entityID: {
+                $cond: {
+                  if: { $gt: [{ $size: "$companyData" }, 0] },
+                  then: { $arrayElemAt: ["$companyData.uid", 0] },
+                  else: { $arrayElemAt: ["$userData.uid", 0] },
+                },
+              },
+            },
+          },
+          {
+            $project: {
+              uid: 1,
+              name: 1,
+              createdAt: 1,
+              entityID: 1,
+              entityName: 1,
+              categoryID: 1,
+              completion_date: 1,
+            },
+          },
+        ])
+        .toArray();
+
+      liquidations[cont]?.forEach((item: any) => {
+        item.type = RequirementType.SALE;
+      });
+
+      cont++;
+    }
+
+    return {
+      success: true,
+      code: 200,
+      data: {
+        entityID,
+        requeriments,
+        liquidations,
       },
     };
   } catch (error) {
