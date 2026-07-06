@@ -132,18 +132,21 @@ export class AuthServices {
 
     try {
       if (dni) {
-        const apiUrl = `https://api.apis.net.pe/v2/reniec/dni?numero=${dni}`;
+        //  const apiUrl = `https://api.apis.net.pe/v2/reniec/dni?numero=${dni}`;
+        //api.decolecta.com/v1/reniec/dni?numero
+        const apiUrl = `https://api.decolecta.com/v1/reniec/dni?numero=${dni}`;
 
         const response = await axios.get(apiUrl, config);
 
         // Verifica si los datos existen y están correctos
         if (
           response.data &&
-          response.data.nombres &&
-          response.data.apellidoPaterno &&
-          response.data.apellidoMaterno
+          response.data.first_name &&
+          response.data.first_last_name &&
+          response.data.second_last_name
         ) {
-          fullName = `${response.data.nombres} ${response.data.apellidoPaterno} ${response.data.apellidoMaterno}`;
+          //fullName = `${response.data.nombres} ${response.data.apellidoPaterno} ${response.data.apellidoMaterno}`;
+          fullName = `${response.data.first_name} ${response.data.first_last_name} ${response.data.second_last_name}`;
           return {
             success: true,
             data: fullName,
@@ -158,12 +161,14 @@ export class AuthServices {
           };
         }
       } else if (ruc) {
-        const apiUrl = `https://api.apis.net.pe/v2/sunat/ruc/full?numero=${ruc}`;
+        //const apiUrl = `https://api.apis.net.pe/v2/sunat/ruc/full?numero=${ruc}`;
+        // https://api.decolecta.com/v1/sunat/ruc?numero=20601030013
+        const apiUrl = `https://api.decolecta.com/v1/sunat/ruc?numero=${ruc}`;
         const response = await axios.get(apiUrl, config);
 
         // Verifica si los datos existen y están correctos
-        if (response.data && response.data.razonSocial) {
-          fullName = response.data.razonSocial;
+        if (response.data && response.data.razon_social) {
+          fullName = response.data.razon_social;
           return {
             success: true,
             data: fullName,
