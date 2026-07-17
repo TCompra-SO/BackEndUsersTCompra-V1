@@ -913,11 +913,50 @@ export class AuthServices {
       const nameUser = user[0].name;
 
       sendEmailWelcome(email, nameUser);
+
+      //GENERAMOS LOGIN
+      const dataAccessToken = {
+        uid: user[0].uid,
+        name: user[0].name,
+        email: user[0].email,
+        type: userType === UserType.User ? "User" : "Company",
+        id: user[0]._id,
+      };
+
+      const dataRefreshToken = {
+        uid: user[0].uid,
+      };
+
+      const sessionData = await this.createSession(
+        user[0].uid,
+        "",
+        "",
+        email,
+        dataAccessToken,
+        dataRefreshToken,
+      );
+
       return {
         success: true,
         code: 200,
         res: {
           msg: "Usuario verificado",
+          accessToken: sessionData.accessToken,
+          refreshToken: sessionData.refreshToken,
+          accessExpiresIn: sessionData.accessExpiresIn,
+          refreshExpiresIn: sessionData.refreshExpiresIn,
+          dataUser: [
+            {
+              uid: user[0].uid,
+              name: user[0].name,
+              email: user[0].email,
+              type: userType === UserType.User ? "User" : "Company",
+              typeID: user[0].typeID,
+              planID: user[0].planID,
+              premium: user[0].premium,
+              lastSession: user[0].lastSession,
+            },
+          ],
         },
       };
     } catch (error) {

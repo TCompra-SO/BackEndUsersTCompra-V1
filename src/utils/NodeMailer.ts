@@ -43,7 +43,7 @@ export const sendEmail = async (email: string, code: string) => {
                             <h1 style="margin: 0;font-size: 30px;line-height: 1;">Código de Verificación</h1>
                             <div style="font-size: 16px;margin: 10px 0 15px 0;">¡Gracias por registrarte!</div>
                             <div style="margin: 20px; margin-right: 23vw; margin-left: 23vw; padding: 0.1%; background-color: #BC1373; border-radius: 60px;">
-            <p style="font-size: 32px; color: #f4e7ff;"><b>${code}</b></p>
+            <p style="font-size: 32px; color: #f4e7ff; word-break: auto-phrase; padding: 0px 10px;"><b>${code}</b></p>
           </div>
                            <div style="font-size: 16px;margin: 10px 0 15px 0;">Por favor, ingresa este código para verificar tu cuenta.</div>
                         </td>
@@ -280,7 +280,7 @@ export const sendEmailCategories = async () => {
               subEmail,
               categoryName,
               newsRequeriments,
-              RequirementType.GOOD
+              RequirementType.GOOD,
             );
 
             //ENVIAMOS LIQUIDACIONES
@@ -288,7 +288,7 @@ export const sendEmailCategories = async () => {
               subEmail,
               categoryLiquidationName,
               newsLiquidations,
-              RequirementType.SALE
+              RequirementType.SALE,
             );
           }
 
@@ -297,7 +297,7 @@ export const sendEmailCategories = async () => {
             email,
             categoryName,
             newsRequeriments,
-            RequirementType.GOOD
+            RequirementType.GOOD,
           );
 
           // ENVIAMOS LIQUIDACIONES A LA EMPRESA PRINCIPAL
@@ -305,7 +305,7 @@ export const sendEmailCategories = async () => {
             email,
             categoryLiquidationName,
             newsLiquidations,
-            RequirementType.SALE
+            RequirementType.SALE,
           );
           categoryName = [];
           newsRequeriments = [];
@@ -318,14 +318,14 @@ export const sendEmailCategories = async () => {
             email,
             categoryName,
             newsRequeriments,
-            RequirementType.GOOD
+            RequirementType.GOOD,
           );
 
           bodyMailCategories(
             email,
             categoryLiquidationName,
             newsLiquidations,
-            RequirementType.SALE
+            RequirementType.SALE,
           );
 
           categoryName = [];
@@ -409,14 +409,14 @@ export const sendEmailCategories = async () => {
           email,
           categoryName,
           newsRequeriments,
-          RequirementType.GOOD
+          RequirementType.GOOD,
         );
 
         bodyMailCategories(
           email,
           categoryLiquidationName,
           newsLiquidations,
-          RequirementType.SALE
+          RequirementType.SALE,
         );
         categoryName = [];
         newsRequeriments = [];
@@ -436,7 +436,7 @@ const bodyMailCategories = async (
   email: string,
   categories: string[],
   newsRequeriments: string[][],
-  type: number
+  type: number,
 ) => {
   try {
     let title = "";

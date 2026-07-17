@@ -30,7 +30,7 @@ cloudinary.config({
 export class CertificateService {
   static uploadCertificates = async (
     fileData: { filePath: string; name: string }[],
-    companyID: string
+    companyID: string,
   ) => {
     try {
       // Obtener datos del usuario asociado a la empresa
@@ -74,7 +74,7 @@ export class CertificateService {
             folder: "certificates", // Carpeta donde se guardan los documentos en Cloudinary
             public_id: `${userUid}_${Date.now()}_${cleanDocumentName}`.slice(
               0,
-              120
+              120,
             ), // ID único basado en tiempo y nombre limpio
             resource_type: "raw", // Usar "raw" para documentos no imagen
             overwrite: true, // Sobrescribe si ya existe
@@ -140,7 +140,7 @@ export class CertificateService {
   static getCertificates = async (
     companyID: string,
     page: number,
-    pageSize: number
+    pageSize: number,
   ) => {
     try {
       const resultData = await CertificateModel.find({ companyID })
@@ -204,7 +204,7 @@ export class CertificateService {
     userID: string,
     companyID: string,
     certificateIDs: [string],
-    resend?: boolean
+    resend?: boolean,
   ) => {
     try {
       const userData = await AuthServices.getDataBaseUser(userID);
@@ -314,7 +314,7 @@ export class CertificateService {
 
   static copyCertificateToFolder = async (
     url: string,
-    targetFolder: string
+    targetFolder: string,
   ) => {
     try {
       // Extraer el public_id del archivo a partir de la URL
@@ -342,7 +342,7 @@ export class CertificateService {
   // Función para extraer el public_id de una URL de Cloudinary
   static extractPublicIdFromUrl = async (url: string) => {
     const matches = url.match(
-      /\/v[0-9]+\/([^/]+)\/([^/.]+)\.(?:jpg|jpeg|png|pdf|docx|etc)/
+      /\/v[0-9]+\/([^/]+)\/([^/.]+)\.(?:jpg|jpeg|png|pdf|docx|etc)/,
     );
     return matches ? `${matches[1]}/${matches[2]}` : null;
   };
@@ -369,7 +369,7 @@ export class CertificateService {
       const updatedCertificate = await CertificateModel.findOneAndUpdate(
         { uid }, // Busca por el UID
         updateOptions, // Establece los datos que se actualizarán
-        { new: true } // Devuelve el documento actualizado
+        { new: true }, // Devuelve el documento actualizado
       );
 
       if (!updatedCertificate) {
@@ -400,7 +400,7 @@ export class CertificateService {
   };
 
   static createCertificateRequest = async (
-    data: Omit<CertificateRequestI, "uid">
+    data: Omit<CertificateRequestI, "uid">,
   ) => {
     try {
       const newRequest = new CertificateRequestModel(data);
@@ -429,7 +429,7 @@ export class CertificateService {
       const updatedRequest = await CertificateRequestModel.findOneAndUpdate(
         { uid }, // Buscar por UID
         { $set: updateData }, // Actualizar los campos proporcionados en updateData
-        { new: true } // Devolver el documento actualizado
+        { new: true }, // Devolver el documento actualizado
       );
 
       if (!updatedRequest) {
@@ -461,12 +461,12 @@ export class CertificateService {
   static updateSentCertificateStatus = async (
     certificateRequestID: string,
     certificateID: string,
-    state: CertificationState
+    state: CertificationState,
   ) => {
     try {
       const updatedState = await CertificateRequestModel.updateOne(
         { uid: certificateRequestID, "certificates.uid": certificateID }, // Buscar el documento que tiene el certificado con ese UID
-        { $set: { "certificates.$.state": state } } // Actualizar el campo "state" del certificado
+        { $set: { "certificates.$.state": state } }, // Actualizar el campo "state" del certificado
       );
 
       if (updatedState.modifiedCount > 0) {
@@ -500,7 +500,7 @@ export class CertificateService {
   static updateCertifyState = async (
     certificateRequestID: string,
     state: CertificationState,
-    note?: string
+    note?: string,
   ) => {
     try {
       if (state === CertificationState.REJECTED) {
@@ -521,7 +521,7 @@ export class CertificateService {
       const updateState = await CertificateRequestModel.findOneAndUpdate(
         { uid: certificateRequestID },
         { $set: { state: state, note: note } },
-        { new: true }
+        { new: true },
       );
 
       if (updateState) {
@@ -535,7 +535,7 @@ export class CertificateService {
               $inc: { numReceivedApprovedCertifications: 1 },
               $set: { updateDate: new Date() },
             },
-            { upsert: true }
+            { upsert: true },
           );
           await ResourceCountersModel.updateOne(
             { uid: certificationData?.sendByentityID },
@@ -543,7 +543,7 @@ export class CertificateService {
               $inc: { numSentApprovedCertifications: 1 },
               $set: { updateDate: new Date() },
             },
-            { upsert: true }
+            { upsert: true },
           );
         } else if (
           certificationData?.state !== state &&
@@ -554,7 +554,7 @@ export class CertificateService {
             {
               $inc: { numReceivedApprovedCertifications: -1 },
               $set: { updateDate: new Date() },
-            }
+            },
           );
 
           await ResourceCountersModel.updateOne(
@@ -562,7 +562,7 @@ export class CertificateService {
             {
               $inc: { numSentApprovedCertifications: -1 },
               $set: { updateDate: new Date() },
-            }
+            },
           );
         }
         const entityID: any = certificationData?.sendByentityID;
@@ -609,7 +609,7 @@ export class CertificateService {
   static getReceivedRequestsByEntity = async (
     companyID: string,
     page: number,
-    pageSize: number
+    pageSize: number,
   ) => {
     try {
       if (!page || page < 1) page = 1;
@@ -685,7 +685,7 @@ export class CertificateService {
   static getSentRequestsByEntity = async (
     companyID: string,
     page: number,
-    pageSize: number
+    pageSize: number,
   ) => {
     if (!page || page < 1) page = 1;
     if (!pageSize || pageSize < 1) pageSize = 10;
@@ -759,7 +759,7 @@ export class CertificateService {
     pageSize: number,
     keyWords: string,
     orderType: OrderType,
-    fieldName: string
+    fieldName: string,
   ) => {
     try {
       page = !page || page < 1 ? 1 : page;
@@ -1012,7 +1012,7 @@ export class CertificateService {
 
         // Ejecutar el pipeline sin el filtro de palabras clave
         const allResults = await CertificateRequestModel.aggregate(
-          pipelineWithoutKeyWords
+          pipelineWithoutKeyWords,
         );
 
         // Configurar Fuse.js para la búsqueda difusa en múltiples campos, incluyendo los certificados
@@ -1091,7 +1091,7 @@ export class CertificateService {
     pageSize: number,
     keyWords: string,
     orderType: OrderType,
-    fieldName: string
+    fieldName: string,
   ) => {
     try {
       page = !page || page < 1 ? 1 : page;
@@ -1285,7 +1285,7 @@ export class CertificateService {
 
         // Ejecutar el pipeline sin el filtro de palabras clave
         const allResults = await CertificateRequestModel.aggregate(
-          pipelineWithoutKeyWords
+          pipelineWithoutKeyWords,
         );
 
         // Configurar Fuse.js para la búsqueda difusa en múltiples campos, incluyendo los certificados
@@ -1369,7 +1369,7 @@ export class CertificateService {
         const createPipeline = (
           idField: string,
           companyPrefix: string,
-          type?: CertificationType
+          type?: CertificationType,
         ) => [
           {
             $match: { uid: uid },
@@ -1406,11 +1406,10 @@ export class CertificateService {
           const senderPipeline = createPipeline(
             "sendByentityID",
             "sender",
-            type
+            type,
           );
-          const senderData = await CertificateRequestModel.aggregate(
-            senderPipeline
-          );
+          const senderData =
+            await CertificateRequestModel.aggregate(senderPipeline);
           return {
             success: true,
             code: 200,
@@ -1420,11 +1419,10 @@ export class CertificateService {
           const receiverPipeline = createPipeline(
             "receiverEntityID",
             "receiver",
-            type
+            type,
           );
-          const receiverData = await CertificateRequestModel.aggregate(
-            receiverPipeline
-          );
+          const receiverData =
+            await CertificateRequestModel.aggregate(receiverPipeline);
           return {
             success: true,
             code: 200,
@@ -1434,12 +1432,10 @@ export class CertificateService {
 
         const senderPipeline = createPipeline("sendByentityID", "sender");
         const receiverPipeline = createPipeline("receiverEntityID", "receiver");
-        const senderData = await CertificateRequestModel.aggregate(
-          senderPipeline
-        );
-        const receiverData = await CertificateRequestModel.aggregate(
-          receiverPipeline
-        );
+        const senderData =
+          await CertificateRequestModel.aggregate(senderPipeline);
+        const receiverData =
+          await CertificateRequestModel.aggregate(receiverPipeline);
 
         const mergedData = senderData.map((sender) => {
           const receiver = receiverData.find((r) => r.uid === sender.uid) || {};
@@ -1466,7 +1462,7 @@ export class CertificateService {
 
   static transformCertificateRequest = (
     certRequest: any,
-    type: CertificationType
+    type: CertificationType,
   ) => {
     try {
       const fieldName =
@@ -1493,7 +1489,7 @@ export class CertificateService {
     pageSize: number,
     keyWords: string,
     orderType: OrderType,
-    fieldName: string
+    fieldName: string,
   ) => {
     try {
       page = !page || page < 1 ? 1 : page;
@@ -1558,7 +1554,7 @@ export class CertificateService {
 
         // Ejecutar el pipeline sin el filtro de palabras clave
         const allResults = await CertificateModel.aggregate(
-          pipelineWithoutKeyWords
+          pipelineWithoutKeyWords,
         );
 
         // Configurar Fuse.js para la búsqueda difusa
@@ -1680,7 +1676,7 @@ export class CertificateService {
 
   static resendCertify = async (
     certificateRequesID: string,
-    certificateIDs: [string]
+    certificateIDs: [string],
   ) => {
     try {
       const resultData = await CertificateRequestModel.findOne({
@@ -1746,7 +1742,7 @@ export class CertificateService {
               certificates: resultCerts, // Nuevo array de certificados
             },
           },
-          { new: true }
+          { new: true },
         );
 
         if (!updatedRequest) {
@@ -1790,13 +1786,13 @@ export class CertificateService {
 
   static updateRequireddDocuments = async (
     companyID: string,
-    requiredDocuments: string
+    requiredDocuments: string,
   ) => {
     try {
       // Actualizar los documentos requeridos para la compañía especificada
       const updateData = await CompanyModel.updateOne(
         { uid: companyID }, // Filtro: Buscar por el ID de la compañía
-        { $set: { requiredDocuments } } // Actualización: Establecer los nuevos documentos requeridos
+        { $set: { requiredDocuments } }, // Actualización: Establecer los nuevos documentos requeridos
       );
 
       if (updateData.matchedCount === 0) {
@@ -1834,7 +1830,7 @@ export class CertificateService {
       // Buscar la compañía por su ID utilizando findOne
       const company = await CompanyModel.findOne(
         { uid: companyID }, // Filtro por companyID
-        "uid name requiredDocuments"
+        "uid name requiredDocuments",
       );
 
       // Si no se encuentra la compañía

@@ -41,7 +41,7 @@ const fileFilter = (req: Request, file: Express.Multer.File, cb: any) => {
   } else {
     cb(
       new Error("Formato de archivo no permitido. Solo se permiten PDF"),
-      false
+      false,
     );
   }
 };
@@ -59,7 +59,7 @@ export const upload = multer({
 // Controlador de la carga de certificados
 export const uploadCertificateController = async (
   req: Request,
-  res: Response
+  res: Response,
 ) => {
   try {
     const { companyID } = req.body;
@@ -90,7 +90,7 @@ export const uploadCertificateController = async (
 
     const responseUser = await CertificateService.uploadCertificates(
       filePaths,
-      companyID
+      companyID,
     );
 
     // Eliminar archivos temporales
@@ -127,7 +127,7 @@ export const uploadCertificateController = async (
 
 export const getCertificatesController = async (
   req: RequestExt,
-  res: Response
+  res: Response,
 ) => {
   const { companyID, page, pageSize } = req.params;
   try {
@@ -144,7 +144,7 @@ export const getCertificatesController = async (
     const responseUser = await CertificateService.getCertificates(
       companyID,
       Number(page),
-      Number(pageSize)
+      Number(pageSize),
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
@@ -161,7 +161,7 @@ export const getCertificatesController = async (
 };
 export const searchCertificatesController = async (
   req: Request,
-  res: Response
+  res: Response,
 ) => {
   const { userId, page, pageSize, fieldName, orderType, keyWords } = req.body;
   try {
@@ -171,7 +171,7 @@ export const searchCertificatesController = async (
       Number(pageSize),
       keyWords,
       orderType,
-      fieldName
+      fieldName,
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
@@ -189,7 +189,7 @@ export const searchCertificatesController = async (
 
 export const searchSentRequestCertificationController = async (
   req: Request,
-  res: Response
+  res: Response,
 ) => {
   const { userId, page, pageSize, fieldName, orderType, keyWords } = req.body;
   try {
@@ -199,7 +199,7 @@ export const searchSentRequestCertificationController = async (
       Number(pageSize),
       keyWords,
       orderType,
-      fieldName
+      fieldName,
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
@@ -217,7 +217,7 @@ export const searchSentRequestCertificationController = async (
 
 export const searchReceivedRequestCertificationController = async (
   req: Request,
-  res: Response
+  res: Response,
 ) => {
   const { userId, page, pageSize, fieldName, orderType, keyWords } = req.body;
   try {
@@ -228,7 +228,7 @@ export const searchReceivedRequestCertificationController = async (
         Number(pageSize),
         keyWords,
         orderType,
-        fieldName
+        fieldName,
       );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
@@ -246,13 +246,13 @@ export const searchReceivedRequestCertificationController = async (
 
 export const getCertificateRequestController = async (
   req: Request,
-  res: Response
+  res: Response,
 ) => {
   const { type, uid } = req.params;
   try {
     const responseUser = await CertificateService.getCertificateRequest(
       uid,
-      Number(type)
+      Number(type),
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
@@ -269,13 +269,12 @@ export const getCertificateRequestController = async (
 };
 export const getCertificateByIdController = async (
   req: Request,
-  res: Response
+  res: Response,
 ) => {
   const { certificateID } = req.params;
   try {
-    const responseUser = await CertificateService.getCertificateById(
-      certificateID
-    );
+    const responseUser =
+      await CertificateService.getCertificateById(certificateID);
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser.data);
     } else {
@@ -292,14 +291,14 @@ export const getCertificateByIdController = async (
 
 export const sendCertificationController = async (
   req: Request,
-  res: Response
+  res: Response,
 ) => {
   const { userID, companyID, certificateIDs, note } = req.body;
   try {
     const responseUser = await CertificateService.sendCertification(
       userID,
       companyID,
-      certificateIDs
+      certificateIDs,
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
@@ -316,7 +315,7 @@ export const sendCertificationController = async (
               data: [
                 CertificateService.transformCertificateRequest(
                   certificateRequest.data[0],
-                  CertificationType.SENT
+                  CertificationType.SENT,
                 ),
               ],
             },
@@ -329,7 +328,7 @@ export const sendCertificationController = async (
               data: [
                 CertificateService.transformCertificateRequest(
                   certificateRequest.data[0],
-                  CertificationType.RECEIVED
+                  CertificationType.RECEIVED,
                 ),
               ],
             },
@@ -353,14 +352,14 @@ export const sendCertificationController = async (
 
 export const updateSentCertificateStatusController = async (
   req: Request,
-  res: Response
+  res: Response,
 ) => {
   const { certificateRequestID, certificateID, state } = req.body;
   try {
     const responseUser = await CertificateService.updateSentCertificateStatus(
       certificateRequestID,
       certificateID,
-      state
+      state,
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser.res);
@@ -378,7 +377,7 @@ export const updateSentCertificateStatusController = async (
 
 export const updateCertifyStateController = async (
   req: Request,
-  res: Response
+  res: Response,
 ) => {
   const { certificateID, state, note } = req.body;
 
@@ -386,15 +385,14 @@ export const updateCertifyStateController = async (
     const responseUser = await CertificateService.updateCertifyState(
       certificateID,
       state,
-      note
+      note,
     );
     if (responseUser.success && responseUser.res) {
       const { data, ...rest } = responseUser.res;
       res.status(responseUser.code).send(rest);
 
-      const certificateRequest = await CertificateService.getCertificateRequest(
-        certificateID
-      );
+      const certificateRequest =
+        await CertificateService.getCertificateRequest(certificateID);
       if (
         certificateRequest.success &&
         certificateRequest.data &&
@@ -407,14 +405,14 @@ export const updateCertifyStateController = async (
               data: [
                 CertificateService.transformCertificateRequest(
                   certificateRequest.data[0],
-                  CertificationType.SENT
+                  CertificationType.SENT,
                 ),
               ],
             },
             typeSocket: TypeSocket.UPDATE,
             key: data.uid,
             userId: data.receiverEntityID,
-          }
+          },
         );
         io.to(`${CertificateRooms.SENT}${data.sendByentityID}`).emit(
           "updateRoom",
@@ -423,14 +421,14 @@ export const updateCertifyStateController = async (
               data: [
                 CertificateService.transformCertificateRequest(
                   certificateRequest.data[0],
-                  CertificationType.RECEIVED
+                  CertificationType.RECEIVED,
                 ),
               ],
             },
             typeSocket: TypeSocket.UPDATE,
             key: data.uid,
             userId: data.sendByentityID,
-          }
+          },
         );
       }
     } else {
@@ -447,14 +445,14 @@ export const updateCertifyStateController = async (
 
 export const getReceivedRequestsByEntityController = async (
   req: Request,
-  res: Response
+  res: Response,
 ) => {
   const { companyID, page, pageSize } = req.params;
   try {
     const responseUser = await CertificateService.getReceivedRequestsByEntity(
       companyID,
       Number(page),
-      Number(pageSize)
+      Number(pageSize),
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
@@ -472,14 +470,14 @@ export const getReceivedRequestsByEntityController = async (
 
 export const getSentRequestsByEntityController = async (
   req: Request,
-  res: Response
+  res: Response,
 ) => {
   const { companyID, page, pageSize } = req.params;
   try {
     const responseUser = await CertificateService.getSentRequestsByEntity(
       companyID,
       Number(page),
-      Number(pageSize)
+      Number(pageSize),
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
@@ -497,18 +495,17 @@ export const getSentRequestsByEntityController = async (
 
 export const deleteCertificateController = async (
   req: Request,
-  res: Response
+  res: Response,
 ) => {
   const { certificateID } = req.params;
   try {
-    const responseUser = await CertificateService.deleteCertificateByID(
-      certificateID
-    );
+    const responseUser =
+      await CertificateService.deleteCertificateByID(certificateID);
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser.res);
       if (responseUser.data)
         io.to(
-          `${CertificateRooms.DOCUMENT}${responseUser.data.companyID}`
+          `${CertificateRooms.DOCUMENT}${responseUser.data.companyID}`,
         ).emit("updateRoom", {
           dataPack: { data: [responseUser.data] },
           typeSocket: TypeSocket.DELETE,
@@ -532,7 +529,7 @@ export const resendCertifyController = async (req: Request, res: Response) => {
   try {
     const responseUser = await CertificateService.resendCertify(
       certificateRequestID,
-      certificateIDs
+      certificateIDs,
     );
     if (responseUser.success && responseUser.res) {
       const { data, ...rest } = responseUser.res;
@@ -553,14 +550,14 @@ export const resendCertifyController = async (req: Request, res: Response) => {
                 data: [
                   CertificateService.transformCertificateRequest(
                     certificateRequest.data[0],
-                    CertificationType.SENT
+                    CertificationType.SENT,
                   ),
                 ],
               },
               typeSocket: TypeSocket.UPDATE,
               key: data.uid,
               userId: data.receiverEntityID,
-            }
+            },
           );
           io.to(`${CertificateRooms.SENT}${data.sendByentityID}`).emit(
             "updateRoom",
@@ -569,14 +566,14 @@ export const resendCertifyController = async (req: Request, res: Response) => {
                 data: [
                   CertificateService.transformCertificateRequest(
                     certificateRequest.data[0],
-                    CertificationType.RECEIVED
+                    CertificationType.RECEIVED,
                   ),
                 ],
               },
               typeSocket: TypeSocket.UPDATE,
               key: data.uid,
               userId: data.sendByentityID,
-            }
+            },
           );
         }
       }
@@ -594,13 +591,13 @@ export const resendCertifyController = async (req: Request, res: Response) => {
 
 export const updateRequiredDocumentsController = async (
   req: Request,
-  res: Response
+  res: Response,
 ) => {
   const { companyID, requiredDocuments } = req.body;
   try {
     const responseUser = await CertificateService.updateRequireddDocuments(
       companyID,
-      requiredDocuments
+      requiredDocuments,
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser.res);
@@ -619,9 +616,9 @@ export const updateRequiredDocumentsController = async (
 export const getRequiredDocuments = async (req: Request, res: Response) => {
   try {
     const { companyID } = req.params;
-    const responseUser = await CertificateService.getRequiredDocuments(
-      companyID
-    );
+    const responseUser =
+      await CertificateService.getRequiredDocuments(companyID);
+
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser.data);
     } else {
@@ -638,13 +635,13 @@ export const getRequiredDocuments = async (req: Request, res: Response) => {
 
 export const verifyCertificationController = async (
   req: Request,
-  res: Response
+  res: Response,
 ) => {
   const { userID, CompanyID } = req.params;
   try {
     const responseUser = await CertificateService.verifyCertification(
       userID,
-      CompanyID
+      CompanyID,
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);

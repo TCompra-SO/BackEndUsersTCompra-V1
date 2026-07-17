@@ -12,7 +12,7 @@ export const createChatController = async (req: RequestExt, res: Response) => {
       recUserId,
       requerimentId,
       title,
-      type
+      type,
     );
 
     if (responseUser.success) {
@@ -54,7 +54,7 @@ export const createMessage = async (req: RequestExt, res: Response) => {
     const responseUser = await ChatService.createMessage(
       chatId,
       userId,
-      message
+      message,
     );
 
     if (responseUser.success) {
@@ -73,24 +73,24 @@ export const createMessage = async (req: RequestExt, res: Response) => {
       }
       let unReadreivingUser = await ChatService.getCountUnReadByUser(
         receivingUser,
-        chatId
+        chatId,
       );
       const requerimentId: any = chatData.data?.requerimentId;
       const chatDataInfo: any = await ChatService.getChatInfo(
         receivingUser,
         userId,
-        requerimentId
+        requerimentId,
       );
 
       const chatDataUser: any = await ChatService.getChatInfo(
         userId,
         receivingUser,
-        requerimentId
+        requerimentId,
       );
       const numUnReads = await ChatService.getCountMessageUnRead(receivingUser);
 
       const archiveEntry = chatData.data?.archive?.find(
-        (a) => a.userId?.toString() === userId?.toString()
+        (a) => a.userId?.toString() === userId?.toString(),
       );
       const state = archiveEntry?.state ?? null;
 
@@ -135,7 +135,7 @@ export const getMessages = async (req: RequestExt, res: Response) => {
     const responseUser = await ChatService.getMessages(
       chatId,
       Number(page),
-      Number(pageSize)
+      Number(pageSize),
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
@@ -157,7 +157,7 @@ export const getMessagesBefore = async (req: RequestExt, res: Response) => {
     const responseUser = await ChatService.getMessagesBefore(
       chatId,
       messageId,
-      Number(pageSize)
+      Number(pageSize),
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
@@ -197,7 +197,7 @@ export const readMessages = async (req: RequestExt, res: Response) => {
     const responseUser = await ChatService.readMessages(
       messagesIds,
       chatId,
-      userId
+      userId,
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
@@ -216,7 +216,7 @@ export const readMessages = async (req: RequestExt, res: Response) => {
       const chatDataInfo = await ChatService.getChatInfo(
         userReceiving,
         userId,
-        requerimentId
+        requerimentId,
       );
       io.to(roomName).emit("updateChat", {
         //messageData: responseUser.data,
@@ -250,14 +250,14 @@ export const readMessages = async (req: RequestExt, res: Response) => {
 
 export const getChatUsersDataController = async (
   req: RequestExt,
-  res: Response
+  res: Response,
 ) => {
   try {
     const { userId, page, pageSize } = req.body;
     const responseUser = await ChatService.getChatUsersData(
       userId,
       Number(page),
-      Number(pageSize)
+      Number(pageSize),
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
@@ -275,14 +275,14 @@ export const getChatUsersDataController = async (
 
 export const getChatUsersDataBeforeController = async (
   req: RequestExt,
-  res: Response
+  res: Response,
 ) => {
   try {
     const { userId, chatId, pageSize } = req.body;
     const responseUser = await ChatService.getChatUsersDataBefore(
       userId,
       chatId,
-      Number(pageSize)
+      Number(pageSize),
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
@@ -300,13 +300,13 @@ export const getChatUsersDataBeforeController = async (
 
 export const changeStateConnectionController = async (
   req: RequestExt,
-  res: Response
+  res: Response,
 ) => {
   try {
     const { userId, online } = req.body;
     const responseUser = await ChatService.changeStateConnection(
       userId,
-      Boolean(online)
+      Boolean(online),
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
@@ -332,7 +332,7 @@ export const getChatInfoController = async (req: RequestExt, res: Response) => {
     const responseUser = await ChatService.getChatInfo(
       userId,
       userChat,
-      requerimentId
+      requerimentId,
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
@@ -421,14 +421,14 @@ export const getCountUnReadByUser = async (req: RequestExt, res: Response) => {
 
 export const getArchivedChatsController = async (
   req: RequestExt,
-  res: Response
+  res: Response,
 ) => {
   try {
     const { userId, page, pageSize } = req.body;
     const responseUser = await ChatService.getArchivedChats(
       userId,
       Number(page),
-      Number(pageSize)
+      Number(pageSize),
     );
 
     if (responseUser.success) {
@@ -447,14 +447,14 @@ export const getArchivedChatsController = async (
 
 export const getArchivedChatsBeforeController = async (
   req: RequestExt,
-  res: Response
+  res: Response,
 ) => {
   try {
     const { userId, chatId, pageSize } = req.body;
     const responseUser = await ChatService.getArchivedChatsBefore(
       userId,
       chatId,
-      Number(pageSize)
+      Number(pageSize),
     );
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
@@ -472,15 +472,16 @@ export const getArchivedChatsBeforeController = async (
 
 export const getChatStateController = async (
   req: RequestExt,
-  res: Response
+  res: Response,
 ) => {
   try {
     const { userId1, userId2, requerimentId } = req.body;
     const responseUser = await ChatService.getChatState(
       userId1,
       userId2,
-      requerimentId
+      requerimentId,
     );
+
     if (responseUser.success) {
       res.status(responseUser.code).send(responseUser);
     } else {
