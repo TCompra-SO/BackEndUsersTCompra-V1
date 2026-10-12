@@ -87,10 +87,10 @@ export const UtilData = [
           id: 1,
           value: "Cualquier Usuario",
         },
-        {
+        /* {
           id: 2,
           value: "Empresas Premium",
-        },
+        },*/
         {
           id: 3,
           value: "Empresas Certificadas",
