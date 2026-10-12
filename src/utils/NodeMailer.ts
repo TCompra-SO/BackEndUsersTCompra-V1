@@ -5,16 +5,37 @@ import { categories } from "./Categories";
 import { Console } from "console";
 import { number } from "joi";
 import { RequirementType } from "../types/globalTypes";
+
+/*
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: "tcompraperu@gmail.com",
     pass: "uzof pfmc lcwz kgko",
   },
+});*/
+const FROM_EMAIL = process.env.SMTP_USER || "contacto@tcompra.com";
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT) || 587,
+  secure: process.env.SMTP_SECURE === "true", // false en 587
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+  tls: {
+    rejectUnauthorized: false,
+  },
 });
+
+transporter.verify((error) => {
+  if (error) console.error("❌ SMTP error:", error.message);
+  else console.log("✅ Servidor SMTP listo");
+});
+
 export const sendEmail = async (email: string, code: string) => {
   const mailOptions = {
-    from: '"Validate Code" <tcompraperu@gmail.com>', //... Sustituye por el correo de la empresa
+    from: `"Validate Code" <${FROM_EMAIL}>`, //... Sustituye por el correo de la empresa
     to: email,
     subject: "Verification Code - TCompraPeru.com",
     text: `Tu código de verificación es: ${code}`,
@@ -101,7 +122,7 @@ export const sendEmail = async (email: string, code: string) => {
 
 export const sendEmailRecovery = async (email: string, code: string) => {
   const mailOptions = {
-    from: '"Recover Password" <tcompraperu@gmail.com>', //... Sustituye por el correo de la empresa
+    from: `"Recover Password" <${FROM_EMAIL}>`, //... Sustituye por el correo de la empresa
     to: email,
     subject: "Recovery Code - TCompraPeru.com",
     text: `Tu código de de recuperación es: ${code}`,
@@ -483,7 +504,7 @@ const bodyMailCategories = async (
     });
 
     const mailOptions = {
-      from: '"TCompraPeru" <tcompraperu@gmail.com>', //... Sustituye por el correo de la empresa
+      from: `"TCompraPeru" <${FROM_EMAIL}>`, //... Sustituye por el correo de la empresa
       to: email,
       subject: `${title} - TCompraPeru.com`,
       text: `${title}`,
@@ -605,7 +626,7 @@ export const sendEmailCertificate = async (email: string, state: boolean) => {
   }
 
   const mailOptions = {
-    from: '"Estado del Certificado" <tcompraperu@gmail.com>', //... Sustituye por el correo de la empresa
+    from: `"Estado del Certificado" <${FROM_EMAIL}>`, //... Sustituye por el correo de la empresa
     to: email,
     subject: "Estado del Certificado - TCompraPeru.com",
     text: `El estado de tu Certificado es: ${title}`,
@@ -690,7 +711,7 @@ export const sendEmailCertificate = async (email: string, state: boolean) => {
 
 export const sendEmailWelcome = async (email: string, name: string) => {
   const mailOptions = {
-    from: "Registro Exitoso <tcompraperu@gmail.com>", //... Sustituye por el correo de la empresa
+    from: `Registro Exitoso <${FROM_EMAIL}>`, //... Sustituye por el correo de la empresa
     to: email,
     subject: "Registro Exitoso - TCompraPeru.com",
     text: `Bienvenido a TCompra : ${name}`,
@@ -763,6 +784,7 @@ export const sendEmailWelcome = async (email: string, name: string) => {
   try {
     const info = await transporter.sendMail(mailOptions);
     console.log("Message sent: %s", info.messageId);
+    return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error("Failed to send email:", error);
     return { success: false, error: error };
