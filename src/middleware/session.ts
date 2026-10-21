@@ -22,7 +22,10 @@ const checkJwt = async (req: RequestExt, res: Response, next: NextFunction) => {
   try {
     const isTrusted = checkTrust(req);
 
-    if (!isTrusted) {
+    const isLocal =
+      process.env.NODE_ENV === "development" || process.env.NODE_ENV === "dev";
+
+    if (!isTrusted && !isLocal) {
       // Double Submit Cookie
       const csrfCookieToken = req.cookies?.[csrfTokenName];
       const csrfHeaderToken = req.get(csrfTokenName);
@@ -47,9 +50,10 @@ const checkJwt = async (req: RequestExt, res: Response, next: NextFunction) => {
       }
     }
 
-    const jwt = isTrusted
-      ? req.headers.authorization?.split(" ")[1] // Obtener el token después de "Bearer"
-      : req.cookies?.[accessTokenName];
+    const jwt =
+      isLocal || isTrusted
+        ? req.headers.authorization?.split(" ")[1]
+        : req.cookies?.[accessTokenName];
     if (!jwt) {
       return res.status(401).send({
         success: false,

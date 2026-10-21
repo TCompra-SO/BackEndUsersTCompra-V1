@@ -125,6 +125,7 @@ export const uploadCertificateController = async (
   }
 };
 
+/*OLD 21-10-2026
 export const getCertificatesController = async (
   req: RequestExt,
   res: Response,
@@ -132,6 +133,7 @@ export const getCertificatesController = async (
   const { companyID, page, pageSize } = req.params;
   try {
     const { uid } = req.user as JwtPayload;
+    console.log(req);
     if (uid !== companyID) {
       return res.status(400).send({
         success: false,
@@ -157,6 +159,48 @@ export const getCertificatesController = async (
       success: false,
       msg: "Error interno del servidor.",
     });
+  }
+};*/
+
+export const getCertificatesController = async (
+  req: RequestExt,
+  res: Response,
+) => {
+  const { companyID, page, pageSize } = req.params;
+  const user = req.user as JwtPayload & { CompanyID?: string };
+
+  // 1. Validar autenticación
+  if (!user?.uid) {
+    return res.status(401).send({ success: false, msg: "No autenticado." });
+  }
+
+  // 2. Validar autorización según tipo de usuario
+  const authorized =
+    (user.type === "Company" && user.uid === companyID) ||
+    (user.type === "SubUser" && user.CompanyID === companyID);
+
+  if (!authorized) {
+    return res.status(403).send({
+      success: false,
+      msg: "No tienes permiso para acceder a esta empresa.",
+    });
+  }
+
+  // 3. Ejecutar el servicio
+  try {
+    const responseUser = await CertificateService.getCertificates(
+      companyID,
+      Number(page),
+      Number(pageSize),
+    );
+    res
+      .status(responseUser.code)
+      .send(responseUser.success ? responseUser : responseUser.error);
+  } catch (error) {
+    console.error("Error en getCertificatesController", error);
+    res
+      .status(500)
+      .send({ success: false, msg: "Error interno del servidor." });
   }
 };
 export const searchCertificatesController = async (
