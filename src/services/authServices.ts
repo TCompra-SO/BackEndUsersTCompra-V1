@@ -1262,7 +1262,7 @@ export class AuthServices {
       };
     }
   };
-
+  /*OLD
   static createSession = async (
     userId: string,
     ipAgent: string,
@@ -1380,6 +1380,79 @@ export class AuthServices {
         error: {
           msg: "Error at Login",
         },
+      };
+    }
+  };*/
+
+  static createSession = async (
+    userId: string,
+    ipAgent: string,
+    userAgent: string,
+    browserId: string,
+    dataAccessToken: any, // 👈 ya viene con name, type, CompanyID, etc.
+    dataRefreshToken: any,
+  ) => {
+    try {
+      let accessExpiresIn;
+      let refreshExpiresIn;
+      let accessToken: any, refreshToken: any;
+      let sessionData: any;
+
+      sessionData = await SessionModel.findOne({ userId, browserId });
+
+      if (!sessionData) {
+        // Primera vez: firma ambos
+        accessToken = jwt.sign(dataAccessToken, JWT_SECRET, {
+          expiresIn: accessTokenExpiresIn,
+        });
+        refreshToken = jwt.sign(dataRefreshToken, JWT_REFRESH_SECRET, {
+          expiresIn: refreshTokenExpiresIn,
+        });
+
+        await SessionModel.create({
+          userId,
+          ipAgent,
+          userAgent,
+          browserId,
+          accessToken,
+          refreshToken,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      } else {
+        // 👇 SIEMPRE re-firmar access token con el payload COMPLETO
+        accessToken = jwt.sign(dataAccessToken, JWT_SECRET, {
+          expiresIn: accessTokenExpiresIn,
+        });
+
+        // Mantener refresh token actual si sigue vigente
+        const stateRefreshToken = verifyRefreshAccessToken(
+          sessionData.refreshToken,
+        );
+        if (stateRefreshToken?.expired) {
+          refreshToken = jwt.sign(dataRefreshToken, JWT_REFRESH_SECRET, {
+            expiresIn: refreshTokenExpiresIn,
+          });
+        } else {
+          refreshToken = sessionData.refreshToken;
+        }
+
+        await SessionModel.updateOne(
+          { userId: sessionData.userId, browserId: sessionData.browserId },
+          { $set: { accessToken, refreshToken, updatedAt: new Date() } },
+        );
+      }
+
+      accessExpiresIn = decodeToken(accessToken);
+      refreshExpiresIn = decodeToken(refreshToken);
+
+      return { accessToken, refreshToken, refreshExpiresIn, accessExpiresIn };
+    } catch (error) {
+      console.error(error);
+      return {
+        success: false,
+        code: 500,
+        error: { msg: "Error at Login" },
       };
     }
   };

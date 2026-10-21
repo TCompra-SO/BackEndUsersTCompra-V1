@@ -77,6 +77,16 @@ const checkJwt = async (req: RequestExt, res: Response, next: NextFunction) => {
       });
     }
 
+    if (!(decoded as any)?.type) {
+      return res.status(401).send({
+        success: false,
+        code: 401,
+        error: {
+          msg: "TOKEN_INVALIDO",
+        },
+      });
+    }
+
     req.user = decoded; // ✅ Solo si decoded no es null
     req.token = jwt;
     next();

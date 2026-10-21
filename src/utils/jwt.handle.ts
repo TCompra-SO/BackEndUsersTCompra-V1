@@ -18,6 +18,11 @@ import { error } from "console";
 const JWT_SECRET = process.env.JWT_SECRET || "token.01010101";
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "refresh.01010101";
 
+/**
+ * Genera un nuevo par de tokens a partir de un refresh token válido.
+ * ✅ FIX: preserva los claims del access token anterior (name, email, type,
+ * CompanyID, id) para no perder autorización al rotar tokens.
+ */
 const generateToken = async (prevRefreshToken: string) => {
   const decoded: any = verifyRefreshAccessToken(prevRefreshToken);
 
@@ -45,7 +50,16 @@ const generateToken = async (prevRefreshToken: string) => {
     };
   }
 
-  const accessToken = sign({ uid: decoded.uid }, JWT_SECRET, {
+  // ✅ Recuperar claims del access token anterior (aunque esté expirado)
+  const oldPayload =
+    (sessionData?.accessToken
+      ? (jwt.decode(sessionData.accessToken) as any)
+      : null) || {};
+
+  const { iat, exp, ...claims } = oldPayload;
+  if (!claims.uid) claims.uid = decoded.uid;
+
+  const accessToken = sign(claims, JWT_SECRET, {
     expiresIn: accessTokenExpiresIn,
   });
   const refreshToken = sign({ uid: decoded.uid }, JWT_REFRESH_SECRET, {
@@ -54,13 +68,13 @@ const generateToken = async (prevRefreshToken: string) => {
 
   if (sessionData) {
     const response = await SessionModel.updateOne(
-      { userId: sessionData.userId, refreshToken: prevRefreshToken }, // Filtrar por Uid dentro del array
+      { userId: sessionData.userId, refreshToken: prevRefreshToken },
       {
         $set: {
           accessToken,
           refreshToken,
         },
-      } // Actualizar accessToken
+      },
     );
     if (response.modifiedCount < 1) {
       return {
@@ -105,10 +119,16 @@ const verifyToken = async (token: string) => {
   }
 };
 
+/**
+ * Valida un access token (incluso expirado).
+ * ✅ FIX: ahora devuelve también `payload` con TODOS los claims del token,
+ * para que los consumidores (generateRefreshAccessToken) puedan preservarlos.
+ */
 function validateAccessToken(accessToken: string): {
   valid: boolean;
   expired: boolean;
   uid: string | null;
+  payload?: any;
   error?: Error;
 } {
   try {
@@ -116,13 +136,14 @@ function validateAccessToken(accessToken: string): {
       ignoreExpiration: true,
     });
 
-    const now = Math.floor(Date.now() / 1000); // Current time in seconds
+    const now = Math.floor(Date.now() / 1000);
     const expired = decoded.exp ? decoded.exp < now : false;
 
     return {
       valid: true,
       expired,
       uid: typeof decoded.uid === "string" ? decoded.uid : null,
+      payload: decoded, // ✅ payload completo
     };
   } catch (error) {
     if (error instanceof JsonWebTokenError) {
@@ -143,13 +164,17 @@ function validateAccessToken(accessToken: string): {
   }
 }
 
+/**
+ * Genera un nuevo access token a partir de un access token expirado + refresh válido.
+ * ✅ FIX: re-firma con el payload COMPLETO (name, email, type, CompanyID, id)
+ * en lugar de solo { uid }.
+ */
 const generateRefreshAccessToken = async (
   accessToken: string,
-  refreshToken: string
+  refreshToken: string,
 ) => {
   try {
     const decoded = validateAccessToken(accessToken);
-    // const decoded = verify(accessToken, JWT_SECRET) as { uid: string };
 
     if (decoded.valid && decoded.uid) {
       const sessionData = await SessionModel.findOne({
@@ -177,7 +202,6 @@ const generateRefreshAccessToken = async (
         };
       }
       if (accessToken !== sessionData?.accessToken) {
-        // userData.data?.[0].auth_users.refreshToken
         return {
           success: false,
           code: 400,
@@ -187,17 +211,16 @@ const generateRefreshAccessToken = async (
         };
       }
 
-      /* const decodedRefreshToken = verify(refreshToken, JWT_REFRESH_SECRET) as {
-        uid: string;
-      };*/
-      const newAccessToken = sign({ uid: decoded.uid }, JWT_SECRET, {
+      // ✅ Re-firmar con TODOS los claims del payload (quitando iat/exp)
+      const { iat, exp, ...payload } = decoded.payload as any;
+      const newAccessToken = sign(payload, JWT_SECRET, {
         expiresIn: accessTokenExpiresIn,
       });
 
       if (sessionData) {
         const response = await SessionModel.updateOne(
-          { userId: sessionData.userId, refreshToken }, // Filtrar por Uid dentro del array
-          { $set: { accessToken: newAccessToken } } // Actualizar accessToken
+          { userId: sessionData.userId, refreshToken },
+          { $set: { accessToken: newAccessToken } },
         );
 
         if (response.modifiedCount < 1) {
@@ -230,22 +253,17 @@ const generateRefreshAccessToken = async (
 };
 
 const verifyRefreshAccessToken = (
-  token: string
+  token: string,
 ): { uid: string; expired?: boolean } | null => {
   try {
-    // Verifica normalmente primero
     return verify(token, JWT_REFRESH_SECRET) as { uid: string };
   } catch (error: any) {
     if (error instanceof TokenExpiredError) {
-      // El token está expirado: decodifica manualmente para obtener el uid
       const decoded = decode(token) as { uid: string } | null;
       if (decoded && decoded.uid) {
-        return { uid: decoded.uid, expired: true }; // indicamos que está expirado
+        return { uid: decoded.uid, expired: true };
       }
     }
-
-    // Otros errores (token mal formado, clave incorrecta, etc.)
-    // console.error("Error al verificar refresh token:", error);
     return null;
   }
 };
@@ -255,11 +273,12 @@ const decodeToken = (token: string): number => {
 
   if (decoded && decoded.exp) {
     const expiresIn = decoded.exp - Math.floor(Date.now() / 1000);
-    return Math.max(expiresIn); // Nunca negativo
+    return Math.max(expiresIn);
   }
 
-  return 0; // Token inválido o sin expiración
+  return 0;
 };
+
 export {
   generateToken,
   verifyToken,
