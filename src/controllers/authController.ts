@@ -163,24 +163,75 @@ const checkIfIsSystemAdminController = async (req: Request, res: Response) => {
   }
 };
 
-const registerController = async ({ body }: Request, res: Response) => {
-  const { email, password, typeID, dni, ruc } = body;
+const registerController = async (req: Request, res: Response) => {
+  const { email, password, typeID, dni, ruc, browserId } = req.body;
+
   try {
+    // 1) Crear usuario (tu lógica actual, sin cambios)
     const responseUser = await AuthServices.RegisterNewUser(
       email,
       password,
       typeID,
       dni,
-      ruc
+      ruc,
     );
-    if (responseUser.success) {
-      res.status(responseUser.code).send(responseUser);
-    } else {
-      res.status(responseUser.code).send(responseUser.error);
+
+    if (!responseUser.success) {
+      return res.status(responseUser.code).send(responseUser.error);
     }
+
+    // 2) Firmar tokens con el mismo LoginService del login normal
+    const loginResponse = await AuthServices.LoginService(
+      email,
+      password,
+      req.ip ?? "0.0.0.0",
+      req.headers["user-agent"] || "",
+      browserId,
+    );
+
+    // Fallback: si el login automático falla, devolvemos 201 sin cookies
+    if (!loginResponse.success || !loginResponse.res) {
+      return res.status(responseUser.code).send(responseUser);
+    }
+
+    const {
+      accessExpiresIn,
+      refreshExpiresIn,
+      accessToken,
+      refreshToken,
+      ...rest
+    } = loginResponse.res;
+
+    // 3) Excluir el hash del password del documento Mongoose
+    const { password: _pw, ...safeUser } =
+      (responseUser.res as any).toObject?.() ?? responseUser.res;
+
+    // 4) Responder con cookies idénticas a las del login + usuario limpio
+    return res
+      .status(responseUser.code)
+      .cookie(
+        accessTokenName,
+        accessToken,
+        getCookieConfig((accessExpiresIn ?? 0) * 1000),
+      )
+      .cookie(
+        refreshTokenName,
+        refreshToken,
+        getCookieConfig((refreshExpiresIn ?? 0) * 1000),
+      )
+      .send({
+        success: true,
+        code: responseUser.code,
+        res: {
+          ...safeUser, // usuario sin hash
+          ...rest, // dataUser, etc. del LoginService
+          accessExpiresIn,
+          refreshExpiresIn,
+        },
+      });
   } catch (error) {
     console.error("Error en RegisterController", error);
-    res.status(500).send({
+    return res.status(500).send({
       success: false,
       msg: "Error interno del servidor.",
     });
@@ -189,7 +240,7 @@ const registerController = async ({ body }: Request, res: Response) => {
 
 const UpdateprofileCompanyController = async (
   { body }: Request,
-  res: Response
+  res: Response,
 ) => {
   const data = body;
   try {
@@ -210,7 +261,7 @@ const UpdateprofileCompanyController = async (
 
 const UpdateprofileUserController = async (
   { body }: Request,
-  res: Response
+  res: Response,
 ) => {
   const data = body;
   try {
@@ -289,7 +340,7 @@ const ValidateCodeController = async (req: Request, res: Response) => {
     const responseUser = await AuthServices.ValidateCodeService(
       email,
       code,
-      type
+      type,
     );
 
     if (!responseUser.success) {
@@ -315,7 +366,7 @@ const LoginController = async (req: Request, res: Response) => {
       password,
       ipAgent,
       userAgent,
-      browserId
+      browserId,
     );
 
     if (!responseUser.success) {
@@ -334,12 +385,12 @@ const LoginController = async (req: Request, res: Response) => {
           .cookie(
             accessTokenName,
             accessToken,
-            getCookieConfig((accessExpiresIn ?? 0) * 1000)
+            getCookieConfig((accessExpiresIn ?? 0) * 1000),
           )
           .cookie(
             refreshTokenName,
             refreshToken,
-            getCookieConfig((refreshExpiresIn ?? 0) * 1000)
+            getCookieConfig((refreshExpiresIn ?? 0) * 1000),
           )
           .send({
             ...responseUser,
@@ -403,12 +454,12 @@ const RefreshTokenController = async (req: Request, res: Response) => {
         .cookie(
           accessTokenName,
           newAccessToken.res?.accessToken,
-          getCookieConfig(accessExpiresIn * 1000)
+          getCookieConfig(accessExpiresIn * 1000),
         )
         .cookie(
           refreshTokenName,
           newAccessToken.res?.refreshToken,
-          getCookieConfig(refreshExpiresIn * 1000)
+          getCookieConfig(refreshExpiresIn * 1000),
         )
         .send({
           success: true,
@@ -438,7 +489,7 @@ const refreshAccessToken = async (req: Request, res: Response) => {
 
     const result: any = await generateRefreshAccessToken(
       accessToken,
-      refreshToken
+      refreshToken,
     );
 
     if (!result.success) {
@@ -455,7 +506,7 @@ const refreshAccessToken = async (req: Request, res: Response) => {
       .cookie(
         accessTokenName,
         result.accessToken,
-        getCookieConfig(expiresIn * 1000)
+        getCookieConfig(expiresIn * 1000),
       )
       .send({
         success: true,
@@ -478,7 +529,7 @@ const NewPasswordController = async (req: RequestExt, res: Response) => {
     const responseUser = await AuthServices.NewPasswordService(
       email,
       password,
-      userID
+      userID,
     );
     if (!responseUser.success) {
       return res.status(responseUser.code).send(responseUser);
@@ -514,7 +565,7 @@ const RecoveryPasswordController = async (req: Request, res: Response) => {
     const responseUser = await AuthServices.RecoveryPassword(
       email,
       code,
-      password
+      password,
     );
     if (!responseUser.success) {
       return res.status(responseUser.code).send(responseUser.error);
