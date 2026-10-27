@@ -164,10 +164,9 @@ const checkIfIsSystemAdminController = async (req: Request, res: Response) => {
 };
 
 const registerController = async (req: Request, res: Response) => {
-  const { email, password, typeID, dni, ruc, browserId } = req.body;
+  const { email, password, typeID, dni, ruc } = req.body;
 
   try {
-    // 1) Crear usuario (tu lógica actual, sin cambios)
     const responseUser = await AuthServices.RegisterNewUser(
       email,
       password,
@@ -180,55 +179,15 @@ const registerController = async (req: Request, res: Response) => {
       return res.status(responseUser.code).send(responseUser.error);
     }
 
-    // 2) Firmar tokens con el mismo LoginService del login normal
-    const loginResponse = await AuthServices.LoginService(
-      email,
-      password,
-      req.ip ?? "0.0.0.0",
-      req.headers["user-agent"] || "",
-      browserId,
-    );
-
-    // Fallback: si el login automático falla, devolvemos 201 sin cookies
-    if (!loginResponse.success || !loginResponse.res) {
-      return res.status(responseUser.code).send(responseUser);
-    }
-
-    const {
-      accessExpiresIn,
-      refreshExpiresIn,
-      accessToken,
-      refreshToken,
-      ...rest
-    } = loginResponse.res;
-
-    // 3) Excluir el hash del password del documento Mongoose
+    // Sin LoginService, sin cookies. Solo devolvemos el usuario limpio.
     const { password: _pw, ...safeUser } =
       (responseUser.res as any).toObject?.() ?? responseUser.res;
 
-    // 4) Responder con cookies idénticas a las del login + usuario limpio
-    return res
-      .status(responseUser.code)
-      .cookie(
-        accessTokenName,
-        accessToken,
-        getCookieConfig((accessExpiresIn ?? 0) * 1000),
-      )
-      .cookie(
-        refreshTokenName,
-        refreshToken,
-        getCookieConfig((refreshExpiresIn ?? 0) * 1000),
-      )
-      .send({
-        success: true,
-        code: responseUser.code,
-        res: {
-          ...safeUser, // usuario sin hash
-          ...rest, // dataUser, etc. del LoginService
-          accessExpiresIn,
-          refreshExpiresIn,
-        },
-      });
+    return res.status(responseUser.code).send({
+      success: true,
+      code: responseUser.code,
+      res: safeUser,
+    });
   } catch (error) {
     console.error("Error en RegisterController", error);
     return res.status(500).send({
@@ -346,7 +305,45 @@ const ValidateCodeController = async (req: Request, res: Response) => {
     if (!responseUser.success) {
       return res.status(responseUser.code).send(responseUser.error);
     }
-    return res.status(responseUser.code).send(responseUser.res);
+
+    // 👇 AÑADIR: si no hay res, error
+    if (!responseUser.res) {
+      return res.status(500).send({
+        success: false,
+        msg: "Respuesta inválida del servicio de validación",
+      });
+    }
+
+    // A partir de aquí, TS sabe que responseUser.res no es undefined
+    const {
+      accessExpiresIn,
+      refreshExpiresIn,
+      accessToken,
+      refreshToken,
+      ...rest
+    } = responseUser.res;
+
+    return res
+      .status(responseUser.code)
+      .cookie(
+        accessTokenName,
+        accessToken,
+        getCookieConfig((accessExpiresIn ?? 0) * 1000),
+      )
+      .cookie(
+        refreshTokenName,
+        refreshToken,
+        getCookieConfig((refreshExpiresIn ?? 0) * 1000),
+      )
+      .send({
+        success: true,
+        code: responseUser.code,
+        res: {
+          ...rest,
+          accessExpiresIn,
+          refreshExpiresIn,
+        },
+      });
   } catch (error: any) {
     return res.status(500).send({
       success: false,
